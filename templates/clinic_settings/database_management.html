@@ -1,0 +1,540 @@
+{% extends 'base.html' %}
+
+{% block title %}Database Management{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-database-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Database Management</span>
+    </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .db-hero {
+        background: linear-gradient(135deg, #1B5E96 0%, #2980b9 50%, #1B5E96 100%);
+        border-radius: 14px;
+        padding: 32px 36px;
+        color: #fff;
+        margin-bottom: 28px;
+        position: relative;
+        overflow: hidden;
+    }
+    .db-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%; right: -30%;
+        width: 400px; height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .db-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -40%; left: -20%;
+        width: 300px; height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .db-hero-content { position: relative; z-index: 1; }
+    .db-hero h2 { font-size: 22px; font-weight: 700; margin: 0 0 6px 0; }
+    .db-hero p { font-size: 14px; opacity: 0.85; margin: 0; }
+
+    .db-stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+    .db-stat-card {
+        flex: 1; min-width: 150px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px 22px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e8edf2;
+        text-align: center;
+        transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .db-stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    .db-stat-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+    .db-stat-icon.blue { background: #e6f1fa; color: #1B5E96; }
+    .db-stat-icon.green { background: #e8f5f0; color: #2E8B57; }
+    .db-stat-icon.purple { background: #f0e6fa; color: #7c3aed; }
+    .db-stat-icon.amber { background: #fef3c7; color: #d97706; }
+    .db-stat-card .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 4px; }
+    .db-stat-card .stat-value { font-size: 20px; font-weight: 800; color: #1e293b; }
+
+    .db-section-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e8edf2;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .db-section-header {
+        padding: 18px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .db-section-header h3 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .db-section-header h3 i { color: var(--alafia-primary, #1B5E96); font-size: 18px; }
+    .db-section-body { padding: 24px; }
+
+    .btn-export {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 12px 28px;
+        background: linear-gradient(135deg, #1B5E96, #2980b9);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 14px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(27,94,150,0.3);
+    }
+    .btn-export:hover { background: linear-gradient(135deg, #154a7a, #1B5E96); color: #fff; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(27,94,150,0.35); }
+    .btn-export i { font-size: 18px; }
+
+    .btn-import-submit {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 12px 28px;
+        background: linear-gradient(135deg, #2E8B57, #34a065);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(46,139,87,0.3);
+    }
+    .btn-import-submit:hover:not(:disabled) { background: linear-gradient(135deg, #236b43, #2E8B57); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(46,139,87,0.35); }
+    .btn-import-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .drop-zone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 14px;
+        padding: 40px 30px;
+        text-align: center;
+        background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+        transition: all 0.25s;
+        cursor: pointer;
+        position: relative;
+    }
+    .drop-zone:hover { border-color: #1B5E96; background: linear-gradient(180deg, #e6f1fa, #dbeafe); }
+    .drop-zone.dragover { border-color: #1B5E96; background: linear-gradient(180deg, #dbeafe, #bfdbfe); border-style: solid; }
+    .drop-zone.has-file { border-color: #2E8B57; border-style: solid; background: linear-gradient(180deg, #e8f5f0, #d1fae5); }
+    .drop-zone-icon {
+        width: 64px; height: 64px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        display: inline-flex; align-items: center; justify-content: center;
+        margin-bottom: 16px;
+        transition: all 0.25s;
+    }
+    .drop-zone:hover .drop-zone-icon { background: #bfdbfe; }
+    .drop-zone.has-file .drop-zone-icon { background: #bbf7d0; }
+    .drop-zone-icon i { font-size: 28px; color: #64748b; transition: color 0.25s; }
+    .drop-zone:hover .drop-zone-icon i { color: #1B5E96; }
+    .drop-zone.has-file .drop-zone-icon i { color: #16a34a; }
+    .drop-zone h4 { font-size: 15px; font-weight: 700; color: #334155; margin: 0 0 6px 0; }
+    .drop-zone p { font-size: 13px; color: #94a3b8; margin: 0; }
+    .drop-zone .file-selected {
+        display: none;
+        margin-top: 14px;
+        padding: 10px 18px;
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid #d1fae5;
+        font-size: 13px;
+        font-weight: 600;
+        color: #166534;
+    }
+    .drop-zone .file-selected i { margin-right: 6px; color: #16a34a; }
+    .drop-zone.has-file .file-selected { display: inline-block; }
+
+    .warning-banner {
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border: 1px solid #fbbf24;
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+    }
+    .warning-banner-icon {
+        width: 36px; height: 36px;
+        background: #fef08a;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .warning-banner-icon i { font-size: 18px; color: #b45309; }
+    .warning-banner-text { font-size: 13px; color: #92400e; line-height: 1.6; }
+    .warning-banner-text strong { color: #78350f; }
+
+    .backup-table-wrap { overflow-x: auto; }
+    .backup-tbl {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+    }
+    .backup-tbl thead th {
+        background: #f8fafc;
+        padding: 12px 18px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .backup-tbl tbody td {
+        padding: 14px 18px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        vertical-align: middle;
+    }
+    .backup-tbl tbody tr:hover td { background: #f8fafc; }
+    .backup-tbl tbody tr:last-child td { border-bottom: none; }
+    .backup-file-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        background: #e6f1fa;
+        margin-right: 10px;
+        vertical-align: middle;
+    }
+    .backup-file-icon i { font-size: 14px; color: #1B5E96; }
+
+    .sidebar-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e8edf2;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    .sidebar-card-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .sidebar-card-header h4 {
+        font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .sidebar-card-header h4 i { color: var(--alafia-primary, #1B5E96); }
+    .sidebar-card-body { padding: 20px; }
+
+    .step-list { list-style: none; padding: 0; margin: 0; counter-reset: steps; }
+    .step-list li {
+        counter-increment: steps;
+        position: relative;
+        padding: 10px 0 10px 40px;
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.5;
+    }
+    .step-list li::before {
+        content: counter(steps);
+        position: absolute; left: 0; top: 10px;
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1B5E96, #2980b9);
+        color: #fff;
+        font-size: 12px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .step-list li + li { border-top: 1px solid #f1f5f9; }
+
+    .import-actions {
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .import-status { font-size: 13px; color: #64748b; font-style: italic; }
+
+    @media (max-width: 767px) {
+        .db-hero { padding: 24px 20px; }
+        .db-stat-row { gap: 10px; }
+        .db-stat-card { min-width: 120px; padding: 14px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Banner -->
+<div class="db-hero">
+    <div class="db-hero-content d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <h2><i class="bi bi-database-fill me-2"></i>Database Management</h2>
+            <p>Export, import, and manage your clinic database backups securely</p>
+        </div>
+        <a href="{% url 'clinic_settings:settings' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;">
+            <i class="bi bi-arrow-left me-1"></i> Back to Settings
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="border-radius:10px;">
+    <i class="bi bi-{% if 'success' in message.tags %}check-circle-fill{% elif 'error' in message.tags %}exclamation-circle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Stats Row -->
+<div class="db-stat-row">
+    <div class="db-stat-card">
+        <div class="db-stat-icon blue"><i class="bi bi-hdd"></i></div>
+        <div class="stat-label">File Size</div>
+        <div class="stat-value">{{ db_size|filesizeformat }}</div>
+    </div>
+    <div class="db-stat-card">
+        <div class="db-stat-icon green"><i class="bi bi-calendar-check"></i></div>
+        <div class="stat-label">Last Modified</div>
+        <div class="stat-value" style="font-size:16px;">{% if db_modified %}{{ db_modified|date:"M d, Y H:i" }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="db-stat-card">
+        <div class="db-stat-icon purple"><i class="bi bi-gear"></i></div>
+        <div class="stat-label">Engine</div>
+        <div class="stat-value">SQLite 3</div>
+    </div>
+    <div class="db-stat-card">
+        <div class="db-stat-icon amber"><i class="bi bi-shield-check"></i></div>
+        <div class="stat-label">Backups</div>
+        <div class="stat-value">{{ backups|length }}</div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Column -->
+    <div class="col-lg-8">
+        <!-- Export Card -->
+        <div class="db-section-card">
+            <div class="db-section-header">
+                <h3><i class="bi bi-download"></i> Export Database</h3>
+                <span class="badge bg-primary" style="font-size:11px; padding:5px 12px; border-radius:6px;">Recommended</span>
+            </div>
+            <div class="db-section-body">
+                <p style="font-size:14px; color:#475569; margin-bottom:20px;">
+                    Download a complete copy of your database. Use this for backups, data migration, or transferring to another server.
+                </p>
+                <a href="{% url 'clinic_settings:database_export' %}" class="btn-export">
+                    <i class="bi bi-download"></i> Download Database Backup
+                </a>
+            </div>
+        </div>
+
+        <!-- Import Card -->
+        <div class="db-section-card">
+            <div class="db-section-header">
+                <h3><i class="bi bi-upload"></i> Import Database</h3>
+                <span class="badge bg-warning text-dark" style="font-size:11px; padding:5px 12px; border-radius:6px;">Use with caution</span>
+            </div>
+            <div class="db-section-body">
+                <div class="warning-banner">
+                    <div class="warning-banner-icon">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div class="warning-banner-text">
+                        <strong>Important:</strong> Importing will <strong>replace all current data</strong> with the uploaded file.
+                        A backup is created automatically before every import.
+                        After importing, <strong>restart the server</strong> for changes to take full effect.
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'clinic_settings:database_import' %}" enctype="multipart/form-data" id="importForm">
+                    {% csrf_token %}
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('dbFileInput').click();">
+                        <div class="drop-zone-icon">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                        </div>
+                        <h4>Drop your database file here</h4>
+                        <p>or click to browse — accepts <strong>.sqlite3</strong> files only</p>
+                        <div class="file-selected" id="fileName">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span id="fileNameText"></span>
+                        </div>
+                        <input type="file" name="database_file" id="dbFileInput" accept=".sqlite3" style="display:none;">
+                    </div>
+                    <div class="import-actions">
+                        <button type="submit" class="btn-import-submit" id="importBtn" disabled>
+                            <i class="bi bi-upload"></i> Import Database
+                        </button>
+                        <span class="import-status" id="importStatus"></span>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Backups Table -->
+        {% if backups %}
+        <div class="db-section-card">
+            <div class="db-section-header">
+                <h3><i class="bi bi-clock-history"></i> Backup History</h3>
+                <span style="font-size:12px; color:#64748b;">Auto-saved before each import</span>
+            </div>
+            <div class="db-section-body" style="padding:0;">
+                <div class="backup-table-wrap">
+                    <table class="backup-tbl">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Size</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                            <tr>
+                                <td>
+                                    <span class="backup-file-icon"><i class="bi bi-file-earmark-binary"></i></span>
+                                    {{ backup.name }}
+                                </td>
+                                <td>{{ backup.size|filesizeformat }}</td>
+                                <td>{{ backup.date|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- How to Export -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header">
+                <h4><i class="bi bi-download"></i> How to Export</h4>
+            </div>
+            <div class="sidebar-card-body">
+                <ol class="step-list">
+                    <li>Click <strong>"Download Database Backup"</strong> to save a copy of your database</li>
+                    <li>Store the <strong>.sqlite3</strong> file in a safe location (USB drive, cloud, etc.)</li>
+                    <li>Export regularly to keep your backups up to date</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- How to Import -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header">
+                <h4><i class="bi bi-upload"></i> How to Import</h4>
+            </div>
+            <div class="sidebar-card-body">
+                <ol class="step-list">
+                    <li><strong>Export first!</strong> Always download your current database before importing</li>
+                    <li>Drag and drop or browse for the <strong>.sqlite3</strong> file you want to restore</li>
+                    <li>Click <strong>"Import Database"</strong> and confirm the action</li>
+                    <li><strong>Restart the server</strong> after import for changes to take effect</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header">
+                <h4><i class="bi bi-link-45deg"></i> Quick Links</h4>
+            </div>
+            <div class="sidebar-card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'clinic_settings:settings' %}" class="btn btn-outline-primary btn-sm" style="border-radius:8px;">
+                        <i class="bi bi-gear me-1"></i> General Settings
+                    </a>
+                    <a href="{% url 'clinic_settings:modules' %}" class="btn btn-outline-primary btn-sm" style="border-radius:8px;">
+                        <i class="bi bi-grid me-1"></i> System Modules
+                    </a>
+                    <a href="{% url 'clinic_settings:theme_customization' %}" class="btn btn-outline-primary btn-sm" style="border-radius:8px;">
+                        <i class="bi bi-palette me-1"></i> Theme Colors
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('dbFileInput');
+    const fileNameEl = document.getElementById('fileNameText');
+    const importBtn = document.getElementById('importBtn');
+    const importForm = document.getElementById('importForm');
+
+    function setFile(file) {
+        fileNameEl.textContent = file.name + ' (' + formatSize(file.size) + ')';
+        dropZone.classList.add('has-file');
+        importBtn.disabled = false;
+    }
+
+    fileInput.addEventListener('change', function () {
+        if (this.files.length > 0) setFile(this.files[0]);
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropZone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('dragover');
+        });
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        });
+    });
+    dropZone.addEventListener('drop', function (e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            setFile(files[0]);
+        }
+    });
+
+    importForm.addEventListener('submit', function (e) {
+        if (!confirm('Are you sure you want to import this database?\n\nThis will REPLACE all current data.\nA backup will be saved automatically.')) {
+            e.preventDefault();
+            return;
+        }
+        importBtn.disabled = true;
+        importBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Importing...';
+        document.getElementById('importStatus').textContent = 'Please wait, uploading and replacing database...';
+    });
+
+    function formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+});
+</script>
+{% endblock %}

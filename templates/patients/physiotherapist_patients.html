@@ -1,0 +1,593 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Physiotherapy Patients{% endblock %}
+
+{% block extra_css %}
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --physio-primary: #1B5E96;
+        --physio-success: #2E8B57;
+        --physio-accent: #00A86B;
+        --physio-warning: #f59e0b;
+        --physio-danger: #dc2626;
+        --physio-light: #f8fafc;
+        --physio-border: #e2e8f0;
+    }
+
+    .physio-dashboard {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 15px;
+    }
+
+    .dashboard-header {
+        background: white;
+        border-bottom: 3px solid var(--physio-primary);
+        padding: 15px 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .dashboard-header h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 3px;
+        color: var(--physio-primary);
+    }
+
+    .dashboard-header p {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 12px 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        border-left: 3px solid var(--physio-primary);
+    }
+
+    .stat-card:hover {
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-card.success {
+        border-left-color: var(--physio-success);
+    }
+
+    .stat-card.warning {
+        border-left-color: var(--physio-warning);
+    }
+
+    .stat-card.danger {
+        border-left-color: var(--physio-danger);
+    }
+
+    .stat-icon {
+        font-size: 1.2rem;
+        margin-right: 8px;
+        opacity: 0.7;
+        color: var(--physio-primary);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--physio-primary);
+        display: inline;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 400;
+        margin-top: 2px;
+    }
+
+    .filters-section {
+        background: white;
+        padding: 12px 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        margin-bottom: 15px;
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #495057;
+        font-size: 0.85rem;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: var(--physio-primary);
+        box-shadow: 0 0 0 3px rgba(27, 94, 150, 0.1);
+    }
+
+    .btn-filter {
+        background: var(--physio-primary);
+        color: white;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-filter:hover {
+        background: var(--physio-success);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(27, 94, 150, 0.3);
+    }
+
+    .btn-reset {
+        background: #64748b;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-reset:hover {
+        background: #475569;
+    }
+
+    .patients-table-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+    .table-header {
+        background: linear-gradient(135deg, var(--physio-primary) 0%, var(--physio-success) 100%);
+        color: white;
+        padding: 20px 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .patients-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .patients-table thead {
+        background: var(--physio-light);
+    }
+
+    .patients-table th {
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 500;
+        color: var(--physio-primary);
+        font-size: 0.85rem;
+        background: #f8f9fa;
+    }
+
+    .patients-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 0.9rem;
+    }
+
+    .patients-table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+    .patients-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .patient-name {
+        font-weight: 600;
+        color: var(--physio-primary);
+    }
+
+    .patient-id {
+        color: #64748b;
+        font-size: 0.85rem;
+    }
+
+    .badge {
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .badge-primary {
+        background: rgba(27, 94, 150, 0.1);
+        color: var(--physio-primary);
+    }
+
+    .badge-success {
+        background: rgba(46, 139, 87, 0.1);
+        color: var(--physio-success);
+    }
+
+    .badge-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--physio-warning);
+    }
+
+    .badge-danger {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--physio-danger);
+    }
+
+    .btn-action {
+        padding: 5px 12px;
+        border-radius: 4px;
+        border: none;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-view {
+        background: var(--physio-primary);
+        color: white;
+    }
+
+    .btn-view:hover {
+        background: var(--physio-success);
+        opacity: 0.9;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        padding: 25px;
+        background: white;
+    }
+
+    .pagination a,
+    .pagination span {
+        padding: 8px 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--physio-primary);
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .pagination a:hover {
+        background: var(--physio-primary);
+        color: white;
+    }
+
+    .pagination .current {
+        background: var(--physio-primary);
+        color: white;
+    }
+
+    .upcoming-appointments {
+        background: white;
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        margin-top: 20px;
+    }
+
+    .upcoming-appointments h3 {
+        color: var(--physio-primary);
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+        font-size: 1.3rem;
+    }
+
+    .appointment-item {
+        padding: 15px;
+        border-left: 4px solid var(--physio-success);
+        background: var(--physio-light);
+        border-radius: 8px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .appointment-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .appointment-date {
+        font-weight: 700;
+        color: var(--physio-primary);
+        margin-bottom: 5px;
+    }
+
+    .appointment-patient {
+        font-size: 0.95rem;
+        color: #64748b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="physio-dashboard">
+    <!-- Dashboard Header -->
+    <!-- <div class="dashboard-header">
+        <h1><i class="fas fa-user-md"></i> Patient Management</h1>
+        <p>View all patients in the clinic or filter to see only your patients</p>
+    </div> -->
+
+    <!-- View Toggle Buttons -->
+    <div class="mb-4">
+        <div class="btn-group" role="group">
+            <a href="?view=all&status={{ status_filter }}&search={{ search_query }}&sort={{ sort_by }}" 
+               class="btn {% if view_type == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="fas fa-users"></i> All Patients ({{ all_patients_count }})
+            </a>
+            <a href="?view=my_patients&status={{ status_filter }}&search={{ search_query }}&sort={{ sort_by }}" 
+               class="btn {% if view_type == 'my_patients' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="fas fa-user-check"></i> My Patients ({{ my_patients_count }})
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <i class="fas fa-users stat-icon"></i>
+            <span class="stat-value">{{ total_patients }}</span>
+            <div class="stat-label">Total Patients</div>
+        </div>
+
+        <div class="stat-card success">
+            <i class="fas fa-clipboard-check stat-icon"></i>
+            <span class="stat-value">{{ total_assessments }}</span>
+            <div class="stat-label">Total Assessments</div>
+        </div>
+
+        <div class="stat-card warning">
+            <i class="fas fa-calendar-alt stat-icon"></i>
+            <span class="stat-value">{{ total_appointments }}</span>
+            <div class="stat-label">Total Appointments</div>
+        </div>
+
+        <div class="stat-card danger">
+            <i class="fas fa-user-clock stat-icon"></i>
+            <span class="stat-value">{{ follow_up_patients }}</span>
+            <div class="stat-label">Follow-up Required</div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <form method="get" action="{% url 'patients:physiotherapist_patients' %}">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="search">Search Patient</label>
+                    <input type="text" id="search" name="search" placeholder="Name, ID, or Phone" value="{{ search_query }}">
+                </div>
+
+                <div class="filter-group">
+                    <label for="status">Status Filter</label>
+                    <select id="status" name="status">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Patients</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Patients</option>
+                        <option value="follow_up" {% if status_filter == 'follow_up' %}selected{% endif %}>Follow-up Required</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed Treatment</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="sort">Sort By</label>
+                    <select id="sort" name="sort">
+                        <option value="-last_assessment" {% if sort_by == '-last_assessment' %}selected{% endif %}>Latest Assessment</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                        <option value="-assessment_count" {% if sort_by == '-assessment_count' %}selected{% endif %}>Most Assessments</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <button type="submit" class="btn-filter">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </div>
+
+                <div class="filter-group">
+                    <a href="{% url 'patients:physiotherapist_patients' %}" class="btn-reset">
+                        <i class="fas fa-redo"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Patients Table -->
+    <div class="patients-table-container">
+        <div class="table-header">
+            <h2><i class="fas fa-list"></i> Patient List</h2>
+            <span>{{ page_obj.paginator.count }} patient(s) found</span>
+        </div>
+
+        {% if patients %}
+        <table class="patients-table">
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Contact</th>
+                    <th>Assessments</th>
+                    <th>Appointments</th>
+                    <th>Last Assessment</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td>
+                        <div class="patient-name">{{ patient.get_full_name }}</div>
+                        <div class="patient-id">{{ patient.patient_id }}</div>
+                    </td>
+                    <td>
+                        <div><i class="fas fa-phone"></i> {{ patient.phone|default:"N/A" }}</div>
+                        <div><i class="fas fa-envelope"></i> {{ patient.email|default:"N/A" }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-primary">
+                            <i class="fas fa-clipboard-list"></i> {{ patient.assessment_count }} assessment(s)
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-success">
+                            <i class="fas fa-calendar-check"></i> {{ patient.appointment_count }} appointment(s)
+                        </span>
+                    </td>
+                    <td>
+                        {% if patient.last_assessment_date %}
+                            {{ patient.last_assessment_date|date:"M d, Y" }}
+                        {% else %}
+                            <span class="text-muted">No assessments</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if patient.assessments.first.follow_up_required %}
+                            <span class="badge badge-warning">
+                                <i class="fas fa-exclamation-circle"></i> Follow-up
+                            </span>
+                        {% else %}
+                            <span class="badge badge-success">
+                                <i class="fas fa-check-circle"></i> Active
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="btn-action btn-view">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1&status={{ status_filter }}&search={{ search_query }}&sort={{ sort_by }}">
+                    <i class="fas fa-angle-double-left"></i> First
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&search={{ search_query }}&sort={{ sort_by }}">
+                    <i class="fas fa-angle-left"></i> Previous
+                </a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&search={{ search_query }}&sort={{ sort_by }}">
+                    Next <i class="fas fa-angle-right"></i>
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}&status={{ status_filter }}&search={{ search_query }}&sort={{ sort_by }}">
+                    Last <i class="fas fa-angle-double-right"></i>
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-user-injured"></i>
+            <h3>No Patients Found</h3>
+            <p>You haven't worked with any patients yet, or no patients match your search criteria.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Upcoming Appointments -->
+    {% if upcoming_appointments %}
+    <div class="upcoming-appointments">
+        <h3><i class="fas fa-calendar-day"></i> Upcoming Appointments</h3>
+        {% for appointment in upcoming_appointments %}
+        <div class="appointment-item">
+            <div class="appointment-date">
+                <i class="fas fa-clock"></i> {{ appointment.appointment_date|date:"l, F d, Y" }} at {{ appointment.appointment_time|time:"g:i A" }}
+            </div>
+            <div class="appointment-patient">
+                <i class="fas fa-user"></i> {{ appointment.patient.get_full_name }} - {{ appointment.service.name }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

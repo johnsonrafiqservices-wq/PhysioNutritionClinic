@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoice Aging Report - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-graph-up me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Invoice Aging Report</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-primary">
+        <i class="bi bi-receipt"></i> View All Invoices
+    </a>
+    <button class="btn btn-success" onclick="exportReport()">
+        <i class="bi bi-download"></i> Export Report
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-xl-2-4 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Current</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ current_total|floatformat:0 }}</div>
+                        <div class="text-xs text-muted">{{ current_invoices.count }} invoices</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2-4 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">1-30 Days</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ overdue_1_30_total|floatformat:0 }}</div>
+                        <div class="text-xs text-muted">{{ overdue_1_30.count }} invoices</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2-4 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">31-60 Days</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ overdue_31_60_total|floatformat:0 }}</div>
+                        <div class="text-xs text-muted">{{ overdue_31_60.count }} invoices</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2-4 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">61-90 Days</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ overdue_61_90_total|floatformat:0 }}</div>
+                        <div class="text-xs text-muted">{{ overdue_61_90.count }} invoices</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2-4 col-md-6">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">90+ Days</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ overdue_90_plus_total|floatformat:0 }}</div>
+                        <div class="text-xs text-muted">{{ overdue_90_plus.count }} invoices</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-x-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aging Buckets -->
+<div class="row">
+    <!-- Current Invoices -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 bg-success text-white">
+                <h6 class="m-0 font-weight-bold">Current Invoices (Not Yet Due)</h6>
+            </div>
+            <div class="card-body">
+                {% if current_invoices %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in current_invoices %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a>
+                                    </td>
+                                    <td>{{ invoice.patient.get_full_name }}</td>
+                                    <td>{{ invoice.issue_date }}</td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td>UGX {{ invoice.total_amount }}</td>
+                                    <td>
+                                        <span class="fw-semibold text-success">{{ invoice.get_status_display }}</span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No current invoices.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 1-30 Days Overdue -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 bg-warning text-dark">
+                <h6 class="m-0 font-weight-bold">1-30 Days Overdue</h6>
+            </div>
+            <div class="card-body">
+                {% if overdue_1_30 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Days Overdue</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in overdue_1_30 %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a>
+                                    </td>
+                                    <td>{{ invoice.patient.get_full_name }}</td>
+                                    <td>{{ invoice.issue_date }}</td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td>{{ invoice.due_date|timesince }}</td>
+                                    <td>UGX {{ invoice.total_amount }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-primary">View</a>
+                                            <button class="btn btn-outline-warning" onclick="sendReminder({{ invoice.pk }})">Remind</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No invoices in this category.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 31-60 Days Overdue -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 bg-info text-white">
+                <h6 class="m-0 font-weight-bold">31-60 Days Overdue</h6>
+            </div>
+            <div class="card-body">
+                {% if overdue_31_60 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Days Overdue</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in overdue_31_60 %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a>
+                                    </td>
+                                    <td>{{ invoice.patient.get_full_name }}</td>
+                                    <td>{{ invoice.issue_date }}</td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td>{{ invoice.due_date|timesince }}</td>
+                                    <td>UGX {{ invoice.total_amount }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-primary">View</a>
+                                            <button class="btn btn-outline-info" onclick="sendReminder({{ invoice.pk }})">Remind</button>
+                                            <button class="btn btn-outline-success" onclick="createPaymentPlan({{ invoice.pk }})">Payment Plan</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No invoices in this category.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 61-90 Days Overdue -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 bg-primary text-white">
+                <h6 class="m-0 font-weight-bold">61-90 Days Overdue</h6>
+            </div>
+            <div class="card-body">
+                {% if overdue_61_90 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Days Overdue</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in overdue_61_90 %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a>
+                                    </td>
+                                    <td>{{ invoice.patient.get_full_name }}</td>
+                                    <td>{{ invoice.issue_date }}</td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td>{{ invoice.due_date|timesince }}</td>
+                                    <td>UGX {{ invoice.total_amount }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-primary">View</a>
+                                            <button class="btn btn-outline-warning" onclick="escalateCollection({{ invoice.pk }})">Escalate</button>
+                                            <button class="btn btn-outline-success" onclick="createPaymentPlan({{ invoice.pk }})">Payment Plan</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No invoices in this category.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 90+ Days Overdue -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 bg-danger text-white">
+                <h6 class="m-0 font-weight-bold">90+ Days Overdue (Critical)</h6>
+            </div>
+            <div class="card-body">
+                {% if overdue_90_plus %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Days Overdue</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in overdue_90_plus %}
+                                <tr class="table-danger">
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a>
+                                    </td>
+                                    <td>{{ invoice.patient.get_full_name }}</td>
+                                    <td>{{ invoice.issue_date }}</td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td>{{ invoice.due_date|timesince }}</td>
+                                    <td>UGX {{ invoice.total_amount }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-primary">View</a>
+                                            <button class="btn btn-outline-danger" onclick="sendToCollections({{ invoice.pk }})">Collections</button>
+                                            <button class="btn btn-outline-secondary" onclick="writeOff({{ invoice.pk }})">Write Off</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No invoices in this category.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function sendReminder(invoiceId) {
+    if (confirm('Send payment reminder to patient?')) {
+        alert('Reminder functionality would be implemented here.');
+    }
+}
+
+function createPaymentPlan(invoiceId) {
+    window.location.href = `/billing/invoices/${invoiceId}/payment-plan/`;
+}
+
+function escalateCollection(invoiceId) {
+    if (confirm('Escalate this invoice to collections?')) {
+        alert('Collection escalation functionality would be implemented here.');
+    }
+}
+
+function sendToCollections(invoiceId) {
+    if (confirm('Send this invoice to external collections agency?')) {
+        alert('External collections functionality would be implemented here.');
+    }
+}
+
+function writeOff(invoiceId) {
+    if (confirm('Write off this invoice as bad debt? This action cannot be undone.')) {
+        alert('Write-off functionality would be implemented here.');
+    }
+}
+
+function exportReport() {
+    alert('Export functionality would generate CSV/PDF report.');
+}
+</script>
+
+<style>
+.col-xl-2-4 {
+    flex: 0 0 20%;
+    max-width: 20%;
+}
+
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+
+@media (max-width: 768px) {
+    .col-xl-2-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+</style>
+{% endblock %}

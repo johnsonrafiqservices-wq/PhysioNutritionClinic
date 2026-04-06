@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-people me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Staff Management Dashboard</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+{% if request.user.role == 'admin' %}
+<button type="button" class="btn btn-primary btn-sm" onclick="alert('Please use Staff Directory to add new staff members')">
+    <i class="bi bi-person-plus"></i> Add Staff
+</button>
+<a href="{% url 'staff_management:department_list' %}" class="btn btn-success btn-sm">
+    <i class="bi bi-building"></i> Departments
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Total Staff</div>
+                        <div class="metric-value">{{ total_staff }}</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Today's Shifts</div>
+                        <div class="metric-value">{{ today_shifts.count }}</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Pending Leave</div>
+                        <div class="metric-value">{{ pending_leave }}</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-calendar-x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card danger h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Pending Swaps</div>
+                        <div class="metric-value">{{ pending_swaps }}</div>
+                    </div>
+                    <div class="metric-icon danger">
+                        <i class="bi bi-arrow-left-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<style>
+.staff-qa .alafia-action-btn{padding:8px 6px;min-height:0;flex:1;min-width:80px;}
+.staff-qa .alafia-action-btn i{font-size:1.15rem;margin-bottom:4px;}
+.staff-qa .alafia-action-btn span{font-size:.73rem;}
+</style>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Actions
+            </div>
+            <div class="card-body py-2 staff-qa">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'staff_management:staff_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-person-badge"></i>
+                        <span>Staff Directory</span>
+                    </a>
+                    <a href="{% url 'staff_management:duty_roster_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-calendar-week"></i>
+                        <span>Duty Roster</span>
+                    </a>
+                    <a href="{% url 'staff_management:leave_request_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-calendar-x"></i>
+                        <span>Leave Requests</span>
+                    </a>
+                    <a href="{% url 'staff_management:shift_swap_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Shift Swaps</span>
+                    </a>
+                    <a href="{% url 'staff_management:attendance_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Attendance</span>
+                    </a>
+                    <a href="{% url 'staff_management:department_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-building"></i>
+                        <span>Departments</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Main Content Row -->
+    <div class="row g-4">
+        <!-- Today's Shifts -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-calendar-day me-2"></i>Today's Shifts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if today_shifts %}
+                        <div class="list-group list-group-flush">
+                            {% for shift in today_shifts %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ shift.staff.get_full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ shift.get_shift_type_display }} 
+                                                ({{ shift.shift_start|time:"H:i" }} - {{ shift.shift_end|time:"H:i" }})
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-{{ shift.department.code|lower }}-10 text-{{ shift.department.code|lower }}">
+                                            {{ shift.department.name }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x mb-3 d-block"></i>
+                            No shifts scheduled for today
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Departments -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-building me-2"></i>Departments
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if departments %}
+                        <div class="list-group list-group-flush">
+                            {% for dept in departments %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ dept.name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ dept.code }}</small>
+                                        </div>
+                                        <span class="badge bg-primary">{{ dept.active_staff_count }} staff</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="fas fa-building fa-3x mb-3 d-block"></i>
+                            No departments created yet
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Row -->
+    <div class="row g-4 mt-2">
+        <!-- Recent Leave Requests -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-umbrella-beach me-2"></i>Recent Leave Requests
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_leave %}
+                        <div class="list-group list-group-flush">
+                            {% for leave in recent_leave %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ leave.staff.get_full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ leave.get_leave_type_display }} - {{ leave.number_of_days }} days
+                                                <br>
+                                                {{ leave.start_date }} to {{ leave.end_date }}
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-{% if leave.status == 'pending' %}warning{% elif leave.status == 'approved' %}success{% else %}danger{% endif %}">
+                                            {{ leave.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'staff_management:leave_request_list' %}" class="btn btn-sm btn-outline-primary">
+                                View All Leave Requests
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="fas fa-umbrella-beach fa-3x mb-3 d-block"></i>
+                            No recent leave requests
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Shift Swaps -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-exchange-alt me-2"></i>Recent Shift Swaps
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_swaps %}
+                        <div class="list-group list-group-flush">
+                            {% for swap in recent_swaps %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ swap.requested_by.get_full_name }}</strong>
+                                            <i class="fas fa-arrows-alt-h mx-2"></i>
+                                            <strong>{{ swap.requested_with.get_full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ swap.created_at|timesince }} ago</small>
+                                        </div>
+                                        <span class="badge bg-{% if swap.status == 'pending' %}warning{% elif swap.status == 'approved' %}success{% else %}danger{% endif %}">
+                                            {{ swap.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'staff_management:shift_swap_list' %}" class="btn btn-sm btn-outline-primary">
+                                View All Shift Swaps
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="fas fa-exchange-alt fa-3x mb-3 d-block"></i>
+                            No recent shift swap requests
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

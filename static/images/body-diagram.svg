@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="300" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients for body -->
+    <linearGradient id="skinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdbcb4"/>
+      <stop offset="50%" stop-color="#f4a6a0"/>
+      <stop offset="100%" stop-color="#e8958f"/>
+    </linearGradient>
+    
+    <!-- Node styles -->
+    <radialGradient id="nodeGradient" cx="0.3" cy="0.3" r="0.7">
+      <stop offset="0%" stop-color="#4a90e2"/>
+      <stop offset="70%" stop-color="#357abd"/>
+      <stop offset="100%" stop-color="#2c5aa0"/>
+    </radialGradient>
+    
+    <radialGradient id="selectedNodeGradient" cx="0.3" cy="0.3" r="0.7">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="70%" stop-color="#ff4757"/>
+      <stop offset="100%" stop-color="#ff3838"/>
+    </radialGradient>
+    
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#00000030"/>
+    </filter>
+  </defs>
+  
+  <!-- Human body silhouette -->
+  <g id="front-view">
+    <!-- Body outline -->
+    <path d="M 150 50 
+             Q 140 40 130 50
+             Q 120 60 125 80
+             L 125 120
+             Q 120 130 110 140
+             L 100 180
+             Q 95 200 100 220
+             L 105 280
+             Q 110 300 120 320
+             L 125 380
+             Q 130 420 135 460
+             L 140 520
+             Q 145 540 150 560
+             L 155 580
+             Q 160 590 170 585
+             L 180 580
+             Q 185 575 185 570
+             L 185 540
+             Q 190 520 195 500
+             L 200 460
+             Q 205 420 210 380
+             L 215 320
+             Q 225 300 230 280
+             L 235 220
+             Q 240 200 235 180
+             L 225 140
+             Q 215 130 210 120
+             L 210 80
+             Q 215 60 205 50
+             Q 195 40 185 50
+             Q 175 45 150 50 Z"
+          fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+    
+    <!-- Head -->
+    <ellipse cx="150" cy="60" rx="25" ry="30" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+    
+    <!-- Face features -->
+    <circle cx="142" cy="55" r="1.5" fill="#333"/>
+    <circle cx="158" cy="55" r="1.5" fill="#333"/>
+    <path d="M 145 65 Q 150 68 155 65" stroke="#333" stroke-width="1" fill="none"/>
+    
+    <!-- Neck -->
+    <rect x="140" y="90" width="20" height="15" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="1"/>
+    
+    <!-- Clickable nodes with labels -->
+    <!-- Head node -->
+    <circle id="node-head" cx="150" cy="60" r="6" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="head" 
+            style="cursor: pointer;"/>
+    <text x="165" y="65" font-family="Arial" font-size="10" fill="#333">Head</text>
+    
+    <!-- Neck node -->
+    <circle id="node-neck" cx="150" cy="97" r="5" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="neck" 
+            style="cursor: pointer;"/>
+    <text x="160" y="102" font-family="Arial" font-size="9" fill="#333">Neck</text>
+    
+    <!-- Shoulder nodes -->
+    <circle id="node-left-shoulder" cx="125" cy="120" r="5" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-shoulder" 
+            style="cursor: pointer;"/>
+    <text x="95" y="115" font-family="Arial" font-size="9" fill="#333">L.Shoulder</text>
+    
+    <circle id="node-right-shoulder" cx="175" cy="120" r="5" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-shoulder" 
+            style="cursor: pointer;"/>
+    <text x="180" y="115" font-family="Arial" font-size="9" fill="#333">R.Shoulder</text>
+    
+    <!-- Chest node -->
+    <circle id="node-chest" cx="150" cy="150" r="6" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="chest" 
+            style="cursor: pointer;"/>
+    <text x="160" y="155" font-family="Arial" font-size="9" fill="#333">Chest</text>
+    
+    <!-- Upper arm nodes -->
+    <circle id="node-left-upper-arm" cx="110" cy="160" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-upper-arm" 
+            style="cursor: pointer;"/>
+    <text x="75" y="155" font-family="Arial" font-size="8" fill="#333">L.Upper Arm</text>
+    
+    <circle id="node-right-upper-arm" cx="190" cy="160" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-upper-arm" 
+            style="cursor: pointer;"/>
+    <text x="195" y="155" font-family="Arial" font-size="8" fill="#333">R.Upper Arm</text>
+    
+    <!-- Elbow nodes -->
+    <circle id="node-left-elbow" cx="105" cy="200" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-elbow" 
+            style="cursor: pointer;"/>
+    <text x="75" y="195" font-family="Arial" font-size="8" fill="#333">L.Elbow</text>
+    
+    <circle id="node-right-elbow" cx="195" cy="200" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-elbow" 
+            style="cursor: pointer;"/>
+    <text x="200" y="195" font-family="Arial" font-size="8" fill="#333">R.Elbow</text>
+    
+    <!-- Abdomen node -->
+    <circle id="node-abdomen" cx="150" cy="200" r="5" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="abdomen" 
+            style="cursor: pointer;"/>
+    <text x="160" y="205" font-family="Arial" font-size="9" fill="#333">Abdomen</text>
+    
+    <!-- Forearm nodes -->
+    <circle id="node-left-forearm" cx="100" cy="240" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-forearm" 
+            style="cursor: pointer;"/>
+    <text x="65" y="235" font-family="Arial" font-size="8" fill="#333">L.Forearm</text>
+    
+    <circle id="node-right-forearm" cx="200" cy="240" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-forearm" 
+            style="cursor: pointer;"/>
+    <text x="205" y="235" font-family="Arial" font-size="8" fill="#333">R.Forearm</text>
+    
+    <!-- Wrist nodes -->
+    <circle id="node-left-wrist" cx="100" cy="280" r="3" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-wrist" 
+            style="cursor: pointer;"/>
+    <text x="70" y="275" font-family="Arial" font-size="8" fill="#333">L.Wrist</text>
+    
+    <circle id="node-right-wrist" cx="200" cy="280" r="3" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-wrist" 
+            style="cursor: pointer;"/>
+    <text x="205" y="275" font-family="Arial" font-size="8" fill="#333">R.Wrist</text>
+    
+    <!-- Hand nodes -->
+    <circle id="node-left-hand" cx="100" cy="300" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-hand" 
+            style="cursor: pointer;"/>
+    <text x="70" y="295" font-family="Arial" font-size="8" fill="#333">L.Hand</text>
+    
+    <circle id="node-right-hand" cx="200" cy="300" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-hand" 
+            style="cursor: pointer;"/>
+    <text x="205" y="295" font-family="Arial" font-size="8" fill="#333">R.Hand</text>
+    
+    <!-- Pelvis node -->
+    <circle id="node-pelvis" cx="150" cy="250" r="5" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="pelvis" 
+            style="cursor: pointer;"/>
+    <text x="160" y="255" font-family="Arial" font-size="9" fill="#333">Pelvis</text>
+    
+    <!-- Hip nodes -->
+    <circle id="node-left-hip" cx="135" cy="280" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-hip" 
+            style="cursor: pointer;"/>
+    <text x="105" y="275" font-family="Arial" font-size="8" fill="#333">L.Hip</text>
+    
+    <circle id="node-right-hip" cx="165" cy="280" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-hip" 
+            style="cursor: pointer;"/>
+    <text x="170" y="275" font-family="Arial" font-size="8" fill="#333">R.Hip</text>
+    
+    <!-- Thigh nodes -->
+    <circle id="node-left-thigh" cx="135" cy="340" r="5" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-thigh" 
+            style="cursor: pointer;"/>
+    <text x="100" y="335" font-family="Arial" font-size="8" fill="#333">L.Thigh</text>
+    
+    <circle id="node-right-thigh" cx="165" cy="340" r="5" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-thigh" 
+            style="cursor: pointer;"/>
+    <text x="170" y="335" font-family="Arial" font-size="8" fill="#333">R.Thigh</text>
+    
+    <!-- Knee nodes -->
+    <circle id="node-left-knee" cx="135" cy="400" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-knee" 
+            style="cursor: pointer;"/>
+    <text x="105" y="395" font-family="Arial" font-size="8" fill="#333">L.Knee</text>
+    
+    <circle id="node-right-knee" cx="165" cy="400" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-knee" 
+            style="cursor: pointer;"/>
+    <text x="170" y="395" font-family="Arial" font-size="8" fill="#333">R.Knee</text>
+    
+    <!-- Shin nodes -->
+    <circle id="node-left-shin" cx="140" cy="460" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-shin" 
+            style="cursor: pointer;"/>
+    <text x="110" y="455" font-family="Arial" font-size="8" fill="#333">L.Shin</text>
+    
+    <circle id="node-right-shin" cx="160" cy="460" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-shin" 
+            style="cursor: pointer;"/>
+    <text x="165" y="455" font-family="Arial" font-size="8" fill="#333">R.Shin</text>
+    
+    <!-- Ankle nodes -->
+    <circle id="node-left-ankle" cx="150" cy="520" r="3" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-ankle" 
+            style="cursor: pointer;"/>
+    <text x="115" y="515" font-family="Arial" font-size="8" fill="#333">L.Ankle</text>
+    
+    <circle id="node-right-ankle" cx="170" cy="520" r="3" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-ankle" 
+            style="cursor: pointer;"/>
+    <text x="175" y="515" font-family="Arial" font-size="8" fill="#333">R.Ankle</text>
+    
+    <!-- Foot nodes -->
+    <circle id="node-left-foot" cx="155" cy="550" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="left-foot" 
+            style="cursor: pointer;"/>
+    <text x="120" y="545" font-family="Arial" font-size="8" fill="#333">L.Foot</text>
+    
+    <circle id="node-right-foot" cx="175" cy="550" r="4" 
+            fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+            filter="url(#shadow)" class="body-node" data-part="right-foot" 
+            style="cursor: pointer;"/>
+    <text x="180" y="545" font-family="Arial" font-size="8" fill="#333">R.Foot</text>
+    
+    <!-- Spine nodes -->
+    <g id="spine-nodes">
+      <!-- Cervical spine -->
+      <circle id="node-cervical-spine" cx="150" cy="110" r="4" 
+              fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+              filter="url(#shadow)" class="body-node" data-part="cervical-spine" 
+              style="cursor: pointer;"/>
+      <text x="155" y="115" font-family="Arial" font-size="8" fill="#333">C-Spine</text>
+      
+      <!-- Thoracic spine -->
+      <circle id="node-thoracic-spine" cx="150" cy="170" r="4" 
+              fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+              filter="url(#shadow)" class="body-node" data-part="thoracic-spine" 
+              style="cursor: pointer;"/>
+      <text x="155" y="175" font-family="Arial" font-size="8" fill="#333">T-Spine</text>
+      
+      <!-- Lumbar spine -->
+      <circle id="node-lumbar-spine" cx="150" cy="220" r="4" 
+              fill="url(#nodeGradient)" stroke="#fff" stroke-width="2" 
+              filter="url(#shadow)" class="body-node" data-part="lumbar-spine" 
+              style="cursor: pointer;"/>
+      <text x="155" y="225" font-family="Arial" font-size="8" fill="#333">L-Spine</text>
+    </g>
+  </g>
+  
+  <!-- Back view - simplified for now -->
+  <g id="back-view" style="display: none;">
+    <!-- Similar structure but mirrored -->
+    <text x="150" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Back View</text>
+  </g>
+</svg>

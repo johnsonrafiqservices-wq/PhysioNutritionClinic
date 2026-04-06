@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{{ title }} - {{ clinic_settings.clinic_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-receipt me-2"></i>{{ title }}</h2>
+                    <p class="text-muted">Submit a new expense for approval</p>
+                </div>
+                <a href="{% url 'budget:dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                </a>
+            </div>
+
+            <!-- Expense Form -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-info-circle me-2"></i>Basic Information
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    Category <span class="text-danger">*</span>
+                                </label>
+                                {{ form.category|add_class:"form-select" }}
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.budget_item.id_for_label }}" class="form-label">
+                                    Budget Item <small class="text-muted">(Optional)</small>
+                                </label>
+                                {{ form.budget_item|add_class:"form-select" }}
+                                <small class="form-text text-muted">Link to a specific budget item</small>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    Description <span class="text-danger">*</span>
+                                </label>
+                                {{ form.description|add_class:"form-control" }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.amount.id_for_label }}" class="form-label">
+                                    Amount <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">UGX</span>
+                                    {{ form.amount|add_class:"form-control" }}
+                                </div>
+                                {% if form.amount.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.expense_date.id_for_label }}" class="form-label">
+                                    Expense Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.expense_date|add_class:"form-control" }}
+                                {% if form.expense_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.expense_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Payment Details -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-credit-card me-2"></i>Payment Details
+                                </h5>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.payment_method.id_for_label }}" class="form-label">
+                                    Payment Method <span class="text-danger">*</span>
+                                </label>
+                                {{ form.payment_method|add_class:"form-select" }}
+                                {% if form.payment_method.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.payment_method.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.reference_number.id_for_label }}" class="form-label">
+                                    Receipt/Invoice Number
+                                </label>
+                                {{ form.reference_number|add_class:"form-control" }}
+                                <small class="form-text text-muted">Receipt or invoice number if available</small>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.vendor_name.id_for_label }}" class="form-label">
+                                    Vendor Name
+                                </label>
+                                {{ form.vendor_name|add_class:"form-control" }}
+                                <small class="form-text text-muted">Name of the supplier or service provider</small>
+                            </div>
+                        </div>
+
+                        <!-- Additional Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-file-text me-2"></i>Additional Information
+                                </h5>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                    Notes
+                                </label>
+                                {{ form.notes|add_class:"form-control" }}
+                                <small class="form-text text-muted">Any additional information or justification</small>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.receipt_file.id_for_label }}" class="form-label">
+                                    Receipt/Invoice Upload
+                                </label>
+                                {{ form.receipt_file|add_class:"form-control" }}
+                                <small class="form-text text-muted">Upload receipt or invoice (PDF, JPG, PNG)</small>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'budget:dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle me-1"></i> Submit Expense
+                            </button>
+                        </div>
+
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Note:</strong> Your expense will be submitted for approval. You'll be notified once it's reviewed.
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

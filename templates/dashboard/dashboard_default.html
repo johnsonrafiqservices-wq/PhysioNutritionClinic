@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - {{ role_display }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">Dashboard</h2>
+                    <p class="text-muted mb-0">Welcome, {{ user.get_full_name }}</p>
+                </div>
+                <div class="text-end">
+                    <span class="fw-semibold text-secondary">{{ role_display }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Modules -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Your Available Modules</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for app in user_apps %}
+                        {% if app != 'all' %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    {% if app == 'patients' %}
+                                        <i class="bi bi-people text-primary" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Patient Management</h6>
+                                        <a href="{% url 'patients:patient_list' %}" class="btn btn-sm btn-outline-primary mt-2">Access</a>
+                                    {% elif app == 'appointments' %}
+                                        <i class="bi bi-calendar text-info" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Appointments</h6>
+                                        <a href="{% url 'appointments:appointment_list' %}" class="btn btn-sm btn-outline-info mt-2">Access</a>
+                                    {% elif app == 'billing' %}
+                                        <i class="bi bi-receipt text-warning" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Billing</h6>
+                                        <a href="{% url 'billing:billing_dashboard' %}" class="btn btn-sm btn-outline-warning mt-2">Access</a>
+                                    {% elif app == 'laboratory' %}
+                                        <i class="bi bi-flask text-success" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Laboratory</h6>
+                                        <a href="{% url 'laboratory:dashboard' %}" class="btn btn-sm btn-outline-success mt-2">Access</a>
+                                    {% elif app == 'pharmacy' %}
+                                        <i class="bi bi-capsule text-danger" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Pharmacy</h6>
+                                        <a href="{% url 'pharmacy:inventory_dashboard' %}" class="btn btn-sm btn-outline-danger mt-2">Access</a>
+                                    {% elif app == 'medical_records' %}
+                                        <i class="bi bi-folder text-secondary" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Medical Records</h6>
+                                        <a href="{% url 'medical_records:document_list' %}" class="btn btn-sm btn-outline-secondary mt-2">Access</a>
+                                    {% elif app == 'reports' %}
+                                        <i class="bi bi-graph-up text-primary" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Reports</h6>
+                                        <a href="{% url 'reports:dashboard' %}" class="btn btn-sm btn-outline-primary mt-2">Access</a>
+                                    {% elif app == 'staff_management' %}
+                                        <i class="bi bi-person-badge text-info" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Staff Management</h6>
+                                        <a href="{% url 'staff_management:staff_list' %}" class="btn btn-sm btn-outline-info mt-2">Access</a>
+                                    {% elif app == 'budget' %}
+                                        <i class="bi bi-piggy-bank text-success" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Budget</h6>
+                                        <a href="{% url 'budget:dashboard' %}" class="btn btn-sm btn-outline-success mt-2">Access</a>
+                                    {% elif app == 'clinic_settings' %}
+                                        <i class="bi bi-gear text-warning" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Settings</h6>
+                                        <a href="{% url 'clinic_settings:settings' %}" class="btn btn-sm btn-outline-warning mt-2">Access</a>
+                                    {% else %}
+                                        <i class="bi bi-box text-secondary" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">{{ app|title|cut:"_" }}</h6>
+                                        <button class="btn btn-sm btn-outline-secondary mt-2" disabled>Access</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% empty %}
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                No modules available for your role. Please contact the administrator.
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

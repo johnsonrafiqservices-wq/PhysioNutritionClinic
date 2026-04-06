@@ -1,0 +1,303 @@
+<!-- Service Pricing Modal -->
+<div class="modal fade" id="servicePricingModal" tabindex="-1" aria-labelledby="servicePricingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" style="max-width: 900px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="servicePricingModalLabel">
+                    <i class="bi bi-currency-dollar me-2"></i>Service Pricing by Group
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Active Group Indicator -->
+                <div id="serviceActiveGroupIndicator" class="alert alert-primary mb-3" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-diagram-3 me-2"></i>
+                            <strong>Setting prices for:</strong> <span id="serviceActiveGroupName" class="ms-2"></span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('serviceGroupFilter').value=''; filterServiceByGroup();">
+                            <i class="bi bi-x-circle"></i> Show All Groups
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Select Patient Group <span class="text-danger">*</span></label>
+                        <select id="serviceGroupFilter" class="form-select form-select-lg">
+                            <option value="">-- Select a Group --</option>
+                            {% for group in patient_groups %}
+                            <option value="{{ group.id }}" data-name="{{ group.name }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Category</label>
+                        <select id="serviceCategoryFilter" class="form-select">
+                            <option value="">All Categories</option>
+                            <option value="physiotherapy">Physiotherapy</option>
+                            <option value="nutrition">Nutrition</option>
+                            <option value="consultation">Consultation</option>
+                            <option value="assessment">Assessment</option>
+                            <option value="treatment">Treatment</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Search</label>
+                        <input type="text" id="serviceSearchInput" class="form-control" placeholder="Search service name...">
+                    </div>
+                </div>
+
+                <!-- Services Table -->
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 30%;">Service</th>
+                                <th style="width: 15%;">Default Price</th>
+                                {% for group in patient_groups %}
+                                <th class="service-group-column" data-group-id="{{ group.id }}" style="min-width: 200px;">{{ group.name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody id="serviceModalBody">
+                            {% for service in services %}
+                            <tr class="service-modal-row" 
+                                data-category="{{ service.category }}" 
+                                data-name="{{ service.name|lower }}">
+                                <td>
+                                    <div class="fw-semibold">{{ service.name }}</div>
+                                    <small class="text-muted">{{ service.description|truncatewords:8 }}</small>
+                                    <span class="badge bg-info ms-2">{{ service.get_category_display }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">UGX {{ service.base_price }}</span>
+                                </td>
+                                {% for group in patient_groups %}
+                                <td class="service-group-column" data-group-id="{{ group.id }}">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" 
+                                               class="form-control service-price-input" 
+                                               data-service-id="{{ service.id }}" 
+                                               data-group-id="{{ group.id }}"
+                                               placeholder="{{ service.base_price }}"
+                                               step="0.01"
+                                               min="0"
+                                               value="{% for price in service.group_prices.all %}{% if price.patient_group_id == group.id %}{{ price.price }}{% endif %}{% endfor %}">
+                                        <button class="btn btn-outline-success btn-sm service-set-price-btn" 
+                                                data-service-id="{{ service.id }}" 
+                                                data-group-id="{{ group.id }}"
+                                                type="button">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                        {% for price in service.group_prices.all %}
+                                        {% if price.patient_group_id == group.id %}
+                                        <button class="btn btn-outline-danger btn-sm service-remove-price-btn" 
+                                                data-service-id="{{ service.id }}" 
+                                                data-group-id="{{ group.id }}"
+                                                type="button">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Summary -->
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Tip:</strong> Enter a price and click <i class="bi bi-check"></i> to set group-specific pricing. 
+                    Click <i class="bi bi-x"></i> to remove custom pricing and use default.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter functionality
+    const serviceGroupFilter = document.getElementById('serviceGroupFilter');
+    const serviceCategoryFilter = document.getElementById('serviceCategoryFilter');
+    const serviceSearchInput = document.getElementById('serviceSearchInput');
+    
+    function filterServiceByGroup() {
+        const selectedGroup = serviceGroupFilter ? serviceGroupFilter.value : '';
+        const selectedOption = serviceGroupFilter.options[serviceGroupFilter.selectedIndex];
+        const groupName = selectedOption ? selectedOption.dataset.name : '';
+        
+        // Show/hide group indicator
+        const indicator = document.getElementById('serviceActiveGroupIndicator');
+        const activeGroupName = document.getElementById('serviceActiveGroupName');
+        
+        if (selectedGroup) {
+            indicator.style.display = 'block';
+            activeGroupName.textContent = groupName;
+        } else {
+            indicator.style.display = 'none';
+        }
+        
+        // Show/hide group columns
+        const groupColumns = document.querySelectorAll('.service-group-column');
+        groupColumns.forEach(col => {
+            const colGroupId = col.dataset.groupId;
+            if (!selectedGroup || colGroupId === selectedGroup) {
+                col.style.display = '';
+            } else {
+                col.style.display = 'none';
+            }
+        });
+        
+        filterServices();
+    }
+    
+    function filterServices() {
+        const selectedCategory = serviceCategoryFilter ? serviceCategoryFilter.value : '';
+        const searchTerm = serviceSearchInput ? serviceSearchInput.value.toLowerCase() : '';
+        
+        const rows = document.querySelectorAll('.service-modal-row');
+        rows.forEach(row => {
+            const category = row.dataset.category;
+            const name = row.dataset.name;
+            
+            const categoryMatch = !selectedCategory || category === selectedCategory;
+            const searchMatch = !searchTerm || name.includes(searchTerm);
+            
+            if (categoryMatch && searchMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    if (serviceGroupFilter) serviceGroupFilter.addEventListener('change', filterServiceByGroup);
+    if (serviceCategoryFilter) serviceCategoryFilter.addEventListener('change', filterServices);
+    if (serviceSearchInput) serviceSearchInput.addEventListener('input', filterServices);
+    
+    // Set price functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.service-set-price-btn')) {
+            const btn = e.target.closest('.service-set-price-btn');
+            const serviceId = btn.dataset.serviceId;
+            const groupId = btn.dataset.groupId;
+            const input = document.querySelector(`.service-price-input[data-service-id="${serviceId}"][data-group-id="${groupId}"]`);
+            const price = input.value;
+            
+            if (!price || parseFloat(price) < 0) {
+                alert('Please enter a valid price');
+                return;
+            }
+            
+            fetch('{% url "patients:service_price_group_set" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `service_id=${serviceId}&patient_group_id=${groupId}&price=${price}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    input.style.backgroundColor = '#dcfce7';
+                    setTimeout(() => input.style.backgroundColor = '', 2000);
+                    
+                    // Add remove button if not exists
+                    if (!btn.nextElementSibling || !btn.nextElementSibling.classList.contains('service-remove-price-btn')) {
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'btn btn-outline-danger btn-sm service-remove-price-btn';
+                        removeBtn.dataset.serviceId = serviceId;
+                        removeBtn.dataset.groupId = groupId;
+                        removeBtn.type = 'button';
+                        removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                        btn.parentElement.appendChild(removeBtn);
+                    }
+                } else {
+                    alert(data.message || 'Error setting price');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred');
+            });
+        }
+        
+        // Remove price functionality
+        if (e.target.closest('.service-remove-price-btn')) {
+            const btn = e.target.closest('.service-remove-price-btn');
+            const serviceId = btn.dataset.serviceId;
+            const groupId = btn.dataset.groupId;
+            
+            if (!confirm('Remove custom pricing for this group?')) return;
+            
+            fetch('{% url "patients:service_price_group_delete" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `service_id=${serviceId}&patient_group_id=${groupId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const input = document.querySelector(`.service-price-input[data-service-id="${serviceId}"][data-group-id="${groupId}"]`);
+                    input.value = '';
+                    input.style.backgroundColor = '#fee2e2';
+                    setTimeout(() => input.style.backgroundColor = '', 2000);
+                    btn.remove();
+                } else {
+                    alert(data.message || 'Error removing price');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred');
+            });
+        }
+    });
+});
+</script>
+
+<style>
+.service-price-input {
+    font-size: 0.875rem;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fa;
+}
+
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>

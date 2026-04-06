@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Request Lab Test for Patient</h2>
+<form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Request Test</button>
+    <a href="{% url 'laboratory:labtest_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

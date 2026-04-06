@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+
+{% block title %}Medical Records - {{ patient.get_full_name }} - Alafia Point Wellness Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-file-medical-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Medical Records - {{ patient.get_full_name }}</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'medical_records:record_create' patient.patient_id %}" class="btn btn-primary">
+        <i class="bi bi-file-medical"></i> Add Medical Record
+    </a>
+    <a href="{% url 'medical_records:document_upload' patient.patient_id %}" class="btn btn-success">
+        <i class="bi bi-upload"></i> Upload Document
+    </a>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportMedicalRecordsToExcel()"><i class="bi bi-file-earmark-excel"></i> Export to Excel</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportMedicalRecordsToPDF()"><i class="bi bi-file-earmark-pdf"></i> Export to PDF</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Patient Summary -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Patient Information</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h5>{{ patient.get_full_name }} <span class="fw-semibold text-primary">{{ patient.patient_id }}</span></h5>
+                <p class="text-muted mb-2">
+                    Age: {{ patient.get_age }} | Gender: {{ patient.get_gender_display }} | 
+                    Phone: {{ patient.phone }}
+                </p>
+                {% if patient.allergies %}
+                <div class="alert alert-warning">
+                    <strong><i class="bi bi-exclamation-triangle"></i> Allergies:</strong> {{ patient.allergies }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-person"></i> View Full Profile
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Medical Records -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Medical Records History</h6>
+    </div>
+    <div class="card-body">
+        {% if medical_records %}
+            <div class="medical-records-container">
+                {% for record in medical_records %}
+                <div class="record-item mb-3" data-record-type="{{ record.record_type }}">
+                    <div class="d-flex">
+                        <!-- Record Icon -->
+                        <div class="record-icon me-3">
+                            {% if record.record_type == 'diagnosis' %}
+                                <i class="bi bi-clipboard-pulse text-danger"></i>
+                            {% elif record.record_type == 'treatment' %}
+                                <i class="bi bi-bandaid text-success"></i>
+                            {% elif record.record_type == 'assessment' %}
+                                <i class="bi bi-clipboard-check text-info"></i>
+                            {% elif record.record_type == 'prescription' %}
+                                <i class="bi bi-capsule text-warning"></i>
+                            {% elif record.record_type == 'lab_result' %}
+                                <i class="bi bi-clipboard-data text-primary"></i>
+                            {% else %}
+                                <i class="bi bi-file-medical text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Record Content -->
+                        <div class="record-content flex-grow-1">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-light border-0 py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <h6 class="mb-0 me-2">{{ record.title }}</h6>
+                                            <span class="fw-semibold text-{% if record.record_type == 'diagnosis' %}danger{% elif record.record_type == 'treatment' %}success{% elif record.record_type == 'assessment' %}info{% elif record.record_type == 'prescription' %}warning{% elif record.record_type == 'lab_result' %}primary{% else %}secondary{% endif %} badge-sm">
+                                                {{ record.get_record_type_display }}
+                                            </span>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted d-block">{{ record.record_date|date:"d/m/Y H:i" }}</small>
+                                            <small class="text-muted">{{ record.created_by.get_full_name }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body py-2">
+                                    <div class="record-summary">
+                                        <p class="mb-2 text-muted">{{ record.description|truncatewords:25 }}</p>
+                                        
+                                        <!-- Expandable Details -->
+                                        <div class="record-details collapse" id="details-{{ record.id }}">
+                                            {% if record.diagnosis %}
+                                                <div class="detail-item mb-2">
+                                                    <strong class="text-danger">Diagnosis:</strong>
+                                                    <span class="ms-2">{{ record.diagnosis }}</span>
+                                                </div>
+                                            {% endif %}
+                                            {% if record.treatment_plan %}
+                                                <div class="detail-item mb-2">
+                                                    <strong class="text-success">Treatment Plan:</strong>
+                                                    <span class="ms-2">{{ record.treatment_plan }}</span>
+                                                </div>
+                                            {% endif %}
+                                            {% if record.medications %}
+                                                <div class="detail-item mb-2">
+                                                    <strong class="text-warning">Medications:</strong>
+                                                    <span class="ms-2">{{ record.medications }}</span>
+                                                </div>
+                                            {% endif %}
+                                            {% if record.notes %}
+                                                <div class="detail-item mb-2">
+                                                    <strong class="text-info">Notes:</strong>
+                                                    <span class="ms-2">{{ record.notes }}</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Action Buttons -->
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ record.id }}" aria-expanded="false">
+                                                <i class="bi bi-chevron-down"></i> <span class="expand-text">Expand</span>
+                                            </button>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'medical_records:record_detail' record.id %}" class="btn btn-outline-primary" title="View Full Record">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="{% url 'medical_records:record_edit' record.id %}" class="btn btn-outline-warning" title="Edit Record">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <button class="btn btn-outline-info" onclick="printRecord('{{ record.id }}')" title="Print Record">
+                                                    <i class="bi bi-printer"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-file-medical text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No Medical Records</h4>
+                <p class="text-muted">Start by adding the first medical record for this patient.</p>
+                <a href="{% url 'medical_records:record_create' patient.patient_id %}" class="btn btn-primary">
+                    <i class="bi bi-file-medical"></i> Add First Record
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Documents Section -->
+<div class="card shadow mt-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Documents</h6>
+        <a href="{% url 'medical_records:document_list' patient.patient_id %}" class="btn btn-sm btn-outline-primary">
+            View All Documents
+        </a>
+    </div>
+    <div class="card-body">
+        {% if recent_documents %}
+            <div class="row">
+                {% for document in recent_documents %}
+                <div class="col-md-6 mb-3">
+                    <div class="card border-left-info">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ document.title }}</h6>
+                                    <small class="text-muted">
+                                        {{ document.document_type|title }} | 
+                                        {{ document.upload_date|date:"M d, Y" }}
+                                    </small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ document.file.url }}" class="btn btn-outline-primary" target="_blank" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ document.file.url }}" class="btn btn-outline-secondary" download title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No documents uploaded yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.medical-records-container {
+    max-height: 800px;
+    overflow-y: auto;
+}
+
+.record-item {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.record-item:hover {
+    background-color: #f8f9fa;
+}
+
+.record-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    font-size: 1.2rem;
+}
+
+.record-icon i {
+    font-size: 1.5rem;
+}
+
+.badge-sm {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+}
+
+.detail-item {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.expand-text::after {
+    content: " Details";
+}
+
+.collapsed .expand-text::after {
+    content: " Details";
+}
+
+.expand-text {
+    transition: all 0.2s ease;
+}
+
+[aria-expanded="true"] .expand-text::after {
+    content: " Less";
+}
+
+[aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease;
+}
+</style>
+
+<!-- JavaScript for Advanced Export Features -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// Print individual record
+function printRecord(recordId) {
+    const recordElement = document.querySelector(`[data-record-type]`);
+    if (recordElement) {
+        window.print();
+    }
+}
+
+// Toggle expand/collapse functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const expandButtons = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    expandButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const chevron = this.querySelector('.bi-chevron-down');
+            const expandText = this.querySelector('.expand-text');
+            
+            setTimeout(() => {
+                const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                if (isExpanded) {
+                    chevron.style.transform = 'rotate(180deg)';
+                } else {
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+            }, 100);
+        });
+    });
+});
+
+// Export medical records to Excel
+function exportMedicalRecordsToExcel() {
+    const records = [];
+    const recordElements = document.querySelectorAll('.record-item');
+    
+    recordElements.forEach(item => {
+        const title = item.querySelector('h6').textContent.trim();
+        const date = item.querySelector('small').textContent.trim();
+        const type = item.querySelector('.badge').textContent.trim();
+        const description = item.querySelector('.record-summary p').textContent.trim();
+        
+        records.push({
+            'Title': title,
+            'Date': date,
+            'Type': type,
+            'Description': description
+        });
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(records);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Medical Records');
+    
+    const filename = `{{ clinic_settings.clinic_name|slugify }}_Medical_Records_{{ patient.get_full_name|slugify }}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
+// Export medical records to PDF
+function exportMedicalRecordsToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Add header
+    doc.setFontSize(16);
+    doc.text('Alafia Point Wellness Clinic', 20, 20);
+    doc.setFontSize(12);
+    doc.text('Medical Records Report', 20, 30);
+    doc.text('Patient: {{ patient.get_full_name }}', 20, 40);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 50);
+    
+    // Get medical records data
+    const records = [];
+    const recordElements = document.querySelectorAll('.timeline-item');
+    
+    recordElements.forEach(item => {
+        const title = item.querySelector('h6').textContent.trim();
+        const date = item.querySelector('small').textContent.split(' by ')[0].trim();
+        const type = item.querySelector('.badge').textContent.trim();
+        const description = item.querySelector('.card-body p').textContent.trim();
+        
+        records.push([title, date, type, description]);
+    });
+    
+    // Add table
+    doc.autoTable({
+        head: [['Title', 'Date', 'Type', 'Description']],
+        body: records,
+        startY: 60,
+        theme: 'striped',
+        headStyles: { fillColor: [27, 94, 150] },
+        styles: { fontSize: 8 }
+    });
+    
+    const filename = `Alafia_Point_Medical_Records_{{ patient.get_full_name|slugify }}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+}
+</script>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--alafia-primary);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -22px;
+    top: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--alafia-primary);
+}
+
+.timeline-content {
+    margin-left: 20px;
+}
+
+.border-left-info {
+    border-left: 0.25rem solid var(--alafia-info) !important;
+}
+</style>
+{% endblock %}

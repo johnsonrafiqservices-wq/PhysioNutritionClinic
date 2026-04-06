@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Record Vitals - {{ patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-heart-pulse-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Record Vital Signs - {{ patient.get_full_name }}</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    Vital Signs for {{ patient.get_full_name }} 
+                    <span class="fw-semibold text-primary">{{ patient.patient_id }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Measurements -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Basic Measurements</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.height|as_crispy_field }}
+                            <small class="text-muted">Height in centimeters</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.weight|as_crispy_field }}
+                            <small class="text-muted">Weight in kilograms</small>
+                        </div>
+                    </div>
+
+                    <!-- Vital Signs -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Vital Signs</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.blood_pressure_systolic|as_crispy_field }}
+                            <small class="text-muted">Systolic pressure (mmHg)</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.blood_pressure_diastolic|as_crispy_field }}
+                            <small class="text-muted">Diastolic pressure (mmHg)</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.heart_rate|as_crispy_field }}
+                            <small class="text-muted">Beats per minute</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.temperature|as_crispy_field }}
+                            <small class="text-muted">Temperature in Celsius</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.respiratory_rate|as_crispy_field }}
+                            <small class="text-muted">Breaths per minute</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.oxygen_saturation|as_crispy_field }}
+                            <small class="text-muted">Oxygen saturation (%)</small>
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Additional Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Patient
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-heart-pulse"></i> Record Vitals
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- BMI Calculator -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">BMI Calculator</h6>
+            </div>
+            <div class="card-body">
+                <div id="bmi-result" class="text-center">
+                    <p class="text-muted">Enter height and weight to calculate BMI</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previous Vitals -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Previous Vitals</h6>
+            </div>
+            <div class="card-body">
+                {% if previous_vitals %}
+                    {% for vital in previous_vitals %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <small class="text-muted">{{ vital.recorded_date|date:"M d, Y" }}</small>
+                        <div class="row">
+                            <div class="col-6">
+                                <small><strong>Height:</strong> {{ vital.height }} cm</small><br>
+                                <small><strong>Weight:</strong> {{ vital.weight }} kg</small><br>
+                                <small><strong>BMI:</strong> {{ vital.bmi|floatformat:1 }}</small>
+                            </div>
+                            <div class="col-6">
+                                <small><strong>BP:</strong> {{ vital.blood_pressure_systolic }}/{{ vital.blood_pressure_diastolic }}</small><br>
+                                <small><strong>HR:</strong> {{ vital.heart_rate }} bpm</small><br>
+                                <small><strong>Temp:</strong> {{ vital.temperature }}°C</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No previous vitals recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Normal Ranges -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Normal Ranges</h6>
+            </div>
+            <div class="card-body">
+                <small>
+                    <strong>Blood Pressure:</strong> 90-120 / 60-80 mmHg<br>
+                    <strong>Heart Rate:</strong> 60-100 bpm<br>
+                    <strong>Temperature:</strong> 36.1-37.2°C<br>
+                    <strong>Respiratory Rate:</strong> 12-20 breaths/min<br>
+                    <strong>Oxygen Saturation:</strong> 95-100%<br>
+                    <strong>BMI:</strong> 18.5-24.9 (Normal)
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const heightInput = document.getElementById('id_height');
+    const weightInput = document.getElementById('id_weight');
+    const bmiResult = document.getElementById('bmi-result');
+
+    function calculateBMI() {
+        const height = parseFloat(heightInput.value);
+        const weight = parseFloat(weightInput.value);
+        
+        if (height && weight && height > 0 && weight > 0) {
+            const heightInMeters = height / 100;
+            const bmi = weight / (heightInMeters * heightInMeters);
+            
+            let category = '';
+            let categoryClass = '';
+            
+            if (bmi < 18.5) {
+                category = 'Underweight';
+                categoryClass = 'text-info';
+            } else if (bmi < 25) {
+                category = 'Normal';
+                categoryClass = 'text-success';
+            } else if (bmi < 30) {
+                category = 'Overweight';
+                categoryClass = 'text-warning';
+            } else {
+                category = 'Obese';
+                categoryClass = 'text-danger';
+            }
+            
+            bmiResult.innerHTML = `
+                <h4 class="text-primary">${bmi.toFixed(1)}</h4>
+                <p class="${categoryClass}"><strong>${category}</strong></p>
+            `;
+        } else {
+            bmiResult.innerHTML = '<p class="text-muted">Enter height and weight to calculate BMI</p>';
+        }
+    }
+
+    if (heightInput && weightInput) {
+        heightInput.addEventListener('input', calculateBMI);
+        weightInput.addEventListener('input', calculateBMI);
+        
+        // Calculate on page load if values exist
+        calculateBMI();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,885 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Patient Reports & Analytics{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-people-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Patient Reports & Analytics</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#customReportModal">
+    <i class="bi bi-funnel"></i> Generate Custom Report
+</button>
+<a href="{% url 'reports:download_patient_report' %}?period={{ period }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if gender_filter %}&gender={{ gender_filter }}{% endif %}"
+   class="btn btn-success">
+    <i class="bi bi-file-earmark-excel"></i> Download Excel Report
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- ── DATE FILTER BAR ── -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Period</label>
+                <select class="form-select form-select-sm" name="period" id="id_period">
+                    <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This Month</option>
+                    <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last Month</option>
+                    <option value="this_quarter" {% if period == 'this_quarter' %}selected{% endif %}>This Quarter</option>
+                    <option value="last_quarter" {% if period == 'last_quarter' %}selected{% endif %}>Last Quarter</option>
+                    <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This Year</option>
+                    <option value="last_year" {% if period == 'last_year' %}selected{% endif %}>Last Year</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            <div class="col-md-2" id="wrap_from" style="{% if period != 'custom' %}display:none{% endif %}">
+                <label class="form-label small fw-semibold mb-1">From</label>
+                <input type="date" class="form-control form-control-sm" name="date_from" value="{{ date_from|default:'' }}">
+            </div>
+            <div class="col-md-2" id="wrap_to" style="{% if period != 'custom' %}display:none{% endif %}">
+                <label class="form-label small fw-semibold mb-1">To</label>
+                <input type="date" class="form-control form-control-sm" name="date_to" value="{{ date_to|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Gender</label>
+                <select class="form-select form-select-sm" name="gender">
+                    <option value="">All</option>
+                    <option value="M" {% if gender_filter == 'M' %}selected{% endif %}>Male</option>
+                    <option value="F" {% if gender_filter == 'F' %}selected{% endif %}>Female</option>
+                    <option value="O" {% if gender_filter == 'O' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel"></i> Apply Filters</button>
+            </div>
+            <div class="col-md-2 text-end">
+                <span class="text-muted small"><i class="bi bi-calendar3"></i> {{ start_date }} — {{ end_date }}</span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── OVERVIEW CARDS ── -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-primary border-4 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small fw-bold mb-1">Total Patients</div>
+                <h3 class="mb-0 fw-bold">{{ demographics.total_patients }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-success border-4 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small fw-bold mb-1">New Patients (Period)</div>
+                <h3 class="mb-0 fw-bold text-success">{{ demographics.new_patients }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-info border-4 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small fw-bold mb-1">Average Age</div>
+                <h3 class="mb-0 fw-bold text-info">{{ demographics.average_age }} yrs</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-warning border-4 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small fw-bold mb-1">Insured / Uninsured</div>
+                <h3 class="mb-0 fw-bold"><span class="text-warning">{{ demographics.insured_count }}</span> / {{ demographics.uninsured_count }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── TABBED NAVIGATION ── -->
+<ul class="nav nav-pills mb-4" id="patientReportTabs" role="tablist">
+    {% for tab in app_tabs %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if forloop.first %}active{% endif %} px-4" id="tab-{{ tab.key }}"
+                data-bs-toggle="pill" data-bs-target="#pane-{{ tab.key }}" type="button" role="tab">
+            <i class="bi {{ tab.icon }} me-1"></i> {{ tab.label }}
+        </button>
+    </li>
+    {% endfor %}
+</ul>
+
+<div class="tab-content" id="patientReportContent">
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- DEMOGRAPHICS TAB                                        -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade show active" id="pane-demographics" role="tabpanel">
+
+    <!-- Age & Gender Charts -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart"></i> Age Distribution</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartAge"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart"></i> Gender Distribution</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartGender"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Trend & Blood Type -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-graph-up"></i> Registration Trend (6 months)</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartRegTrend"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-droplet-fill"></i> Blood Type</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartBlood"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department & Insurance -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-building"></i> Patients by Department</h6></div>
+                <div class="card-body">
+                    <div class="row text-center mb-3">
+                        <div class="col-4"><div class="border rounded p-2"><i class="bi bi-heart-pulse fs-3 text-primary"></i><h4 class="mt-1 mb-0 text-primary">{{ demographics.physio_patients }}</h4><small class="text-muted">Physio</small></div></div>
+                        <div class="col-4"><div class="border rounded p-2"><i class="bi bi-apple fs-3 text-success"></i><h4 class="mt-1 mb-0 text-success">{{ demographics.nutrition_patients }}</h4><small class="text-muted">Nutrition</small></div></div>
+                        <div class="col-4"><div class="border rounded p-2"><i class="bi bi-hospital fs-3 text-info"></i><h4 class="mt-1 mb-0 text-info">{{ demographics.general_patients }}</h4><small class="text-muted">General</small></div></div>
+                    </div>
+                    <div style="position:relative;height:220px"><canvas id="chartDept"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-shield-check"></i> Insurance Breakdown</h6></div>
+                <div class="card-body">
+                    {% if demographics.insurance_labels %}
+                    <div style="position:relative;height:300px"><canvas id="chartInsurance"></canvas></div>
+                    {% else %}<p class="text-muted text-center mt-4">No insurance data available.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visit Reasons & Provider Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-list-check"></i> Visit Reasons</h6></div>
+                <div class="card-body">
+                    {% if demographics.visit_reasons %}
+                    <div class="table-responsive" style="max-height:350px">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top"><tr><th>Reason</th><th class="text-end">Patients</th></tr></thead>
+                            <tbody>
+                                {% for vr in demographics.visit_reasons %}<tr><td>{{ vr.reason }}</td><td class="text-end fw-semibold">{{ vr.count }}</td></tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}<p class="text-muted text-center mt-3">No visit reason data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-person-badge"></i> Provider Statistics</h6></div>
+                <div class="card-body">
+                    {% if demographics.provider_data %}
+                    <div class="table-responsive" style="max-height:350px">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top"><tr><th>Provider</th><th>Department</th><th class="text-center">Patients</th><th class="text-center">Assessments</th></tr></thead>
+                            <tbody>
+                                {% for p in demographics.provider_data %}
+                                <tr><td><i class="bi bi-person-circle text-primary me-1"></i><strong>{{ p.name }}</strong></td><td>{{ p.department }}</td><td class="text-center">{{ p.patient_count }}</td><td class="text-center">{{ p.assessment_count }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}<p class="text-muted text-center mt-3">No provider data for the selected period.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- /demographics -->
+
+
+{% if 'laboratory' in enabled_modules %}
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- LAB TESTS TAB                                           -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="pane-labtests" role="tabpanel">
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Total Requests</div><h3 class="mb-0 fw-bold">{{ labtests.total_requests }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Completed</div><h3 class="mb-0 fw-bold text-success">{{ labtests.completed }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Pending</div><h3 class="mb-0 fw-bold text-warning">{{ labtests.pending }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Completion Rate</div><h3 class="mb-0 fw-bold text-info">{{ labtests.completion_rate }}%</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Abnormal Rate</div><h3 class="mb-0 fw-bold text-danger">{{ labtests.abnormal_rate }}%</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Patients Tested</div><h3 class="mb-0 fw-bold text-primary">{{ labtests.patients_with_tests }}</h3></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <!-- Monthly Trend -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-graph-up"></i> Lab Requests Trend</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartLabTrend"></canvas></div></div>
+            </div>
+        </div>
+        <!-- Tests by Category -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart"></i> Tests by Category</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartLabCat"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <!-- Top Tests -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-trophy"></i> Top Requested Tests</h6></div>
+                <div class="card-body">
+                    {% if labtests.top_tests %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Test</th><th>Category</th><th class="text-end">Count</th></tr></thead>
+                        <tbody>{% for t in labtests.top_tests %}<tr><td>{{ t.test__name }}</td><td><span class="badge bg-secondary">{{ t.test__category }}</span></td><td class="text-end fw-semibold">{{ t.cnt }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No test data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- Top Patients by Tests -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-people"></i> Top Patients by Test Count</h6></div>
+                <div class="card-body">
+                    {% if labtests.top_patients %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Patient ID</th><th>Name</th><th class="text-end">Tests</th></tr></thead>
+                        <tbody>{% for p in labtests.top_patients %}<tr><td><strong>{{ p.patient__patient_id }}</strong></td><td>{{ p.patient__first_name }} {{ p.patient__last_name }}</td><td class="text-end fw-semibold">{{ p.cnt }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No patient data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- /labtests -->
+{% endif %}
+
+
+{% if 'pharmacy' in enabled_modules %}
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- MEDICATIONS TAB                                         -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="pane-medications" role="tabpanel">
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Total Prescriptions</div><h3 class="mb-0 fw-bold">{{ medications.total_prescriptions }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Dispensed</div><h3 class="mb-0 fw-bold text-success">{{ medications.dispensed }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Pending</div><h3 class="mb-0 fw-bold text-warning">{{ medications.pending }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Dispensed Rate</div><h3 class="mb-0 fw-bold text-info">{{ medications.dispensed_rate }}%</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Patients with Rx</div><h3 class="mb-0 fw-bold text-primary">{{ medications.patients_with_rx }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Sales Revenue</div><h3 class="mb-0 fw-bold text-success">{{ medications.total_sales_revenue|floatformat:0 }}</h3></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-graph-up"></i> Prescription Trend</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartMedTrend"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart"></i> Prescription Status</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartMedStatus"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-capsule"></i> Top Prescribed Medications</h6></div>
+                <div class="card-body">
+                    {% if medications.top_meds %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Medication</th><th>Form</th><th class="text-end">Rx Count</th><th class="text-end">Total Qty</th></tr></thead>
+                        <tbody>{% for m in medications.top_meds %}<tr><td><strong>{{ m.medication__name }}</strong></td><td>{{ m.medication__form }}</td><td class="text-end">{{ m.cnt }}</td><td class="text-end">{{ m.total_qty }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No medication data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-people"></i> Top Patients by Prescriptions</h6></div>
+                <div class="card-body">
+                    {% if medications.top_patients %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Patient ID</th><th>Name</th><th class="text-end">Rx</th></tr></thead>
+                        <tbody>{% for p in medications.top_patients %}<tr><td><strong>{{ p.patient__patient_id }}</strong></td><td>{{ p.patient__first_name }} {{ p.patient__last_name }}</td><td class="text-end fw-semibold">{{ p.cnt }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No patient data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if medications.by_prescriber %}
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-person-badge"></i> Prescriptions by Prescriber</h6></div>
+                <div class="card-body">
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Prescriber</th><th class="text-end">Count</th></tr></thead>
+                        <tbody>{% for pr in medications.by_prescriber %}<tr><td>{{ pr.prescribed_by__first_name }} {{ pr.prescribed_by__last_name }}</td><td class="text-end fw-semibold">{{ pr.cnt }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div><!-- /medications -->
+{% endif %}
+
+
+{% if 'billing' in enabled_modules %}
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- BILLING TAB                                             -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="pane-billing" role="tabpanel">
+
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Total Invoices</div><h3 class="mb-0 fw-bold">{{ billing.total_invoices }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Total Billed</div><h3 class="mb-0 fw-bold text-primary">{{ billing.total_billed|floatformat:0 }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Total Paid</div><h3 class="mb-0 fw-bold text-success">{{ billing.total_paid|floatformat:0 }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Outstanding</div><h3 class="mb-0 fw-bold text-danger">{{ billing.outstanding|floatformat:0 }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Avg Invoice</div><h3 class="mb-0 fw-bold text-info">{{ billing.avg_invoice|floatformat:0 }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Patients Billed</div><h3 class="mb-0 fw-bold">{{ billing.patients_with_inv }}</h3></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-graph-up"></i> Billing vs Payments Trend</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartBillTrend"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart"></i> Payment Methods</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartBillPM"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-receipt"></i> Invoices by Status</h6></div>
+                <div class="card-body">
+                    {% if billing.by_status %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Status</th><th class="text-end">Count</th><th class="text-end">Total</th></tr></thead>
+                        <tbody>{% for s in billing.by_status %}<tr><td><span class="badge bg-{% if s.status == 'paid' %}success{% elif s.status == 'overdue' %}danger{% elif s.status == 'sent' %}warning{% else %}secondary{% endif %}">{{ s.status|title }}</span></td><td class="text-end">{{ s.cnt }}</td><td class="text-end">{{ s.total|floatformat:0 }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No invoice data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-people"></i> Top Patients by Billing</h6></div>
+                <div class="card-body">
+                    {% if billing.top_patients %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Patient ID</th><th>Name</th><th class="text-end">Total Billed</th><th class="text-end">Invoices</th></tr></thead>
+                        <tbody>{% for p in billing.top_patients %}<tr><td><strong>{{ p.patient__patient_id }}</strong></td><td>{{ p.patient__first_name }} {{ p.patient__last_name }}</td><td class="text-end">{{ p.total|floatformat:0 }}</td><td class="text-end">{{ p.cnt }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- /billing -->
+{% endif %}
+
+
+{% if 'appointments' in enabled_modules %}
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- APPOINTMENTS TAB                                        -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="pane-appointments" role="tabpanel">
+
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Total</div><h3 class="mb-0 fw-bold">{{ appointments.total }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Completed</div><h3 class="mb-0 fw-bold text-success">{{ appointments.completed }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Scheduled</div><h3 class="mb-0 fw-bold text-primary">{{ appointments.scheduled }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Cancelled</div><h3 class="mb-0 fw-bold text-danger">{{ appointments.cancelled }}</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Completion Rate</div><h3 class="mb-0 fw-bold text-info">{{ appointments.completion_rate }}%</h3></div></div>
+        <div class="col-xl-2 col-md-4"><div class="card shadow-sm text-center p-3"><div class="text-muted small">Unique Patients</div><h3 class="mb-0 fw-bold">{{ appointments.patients_with_appts }}</h3></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-graph-up"></i> Appointment Trend</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartApptTrend"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart"></i> Status Breakdown</h6></div>
+                <div class="card-body"><div style="position:relative;height:280px"><canvas id="chartApptStatus"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-list-task"></i> By Service</h6></div>
+                <div class="card-body">
+                    {% if appointments.by_service %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Service</th><th class="text-end">Count</th></tr></thead>
+                        <tbody>{% for s in appointments.by_service %}<tr><td>{{ s.service__name|default:"N/A" }}</td><td class="text-end fw-semibold">{{ s.cnt }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No service data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-person-badge"></i> By Provider</h6></div>
+                <div class="card-body">
+                    {% if appointments.by_provider %}
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Provider</th><th class="text-end">Total</th><th class="text-end">Completed</th></tr></thead>
+                        <tbody>{% for p in appointments.by_provider %}<tr><td>{{ p.provider__first_name }} {{ p.provider__last_name }}</td><td class="text-end">{{ p.total }}</td><td class="text-end text-success">{{ p.comp }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                    {% else %}<p class="text-muted text-center">No provider data.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if appointments.top_patients %}
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm"><div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-people"></i> Top Patients by Appointments</h6></div>
+                <div class="card-body">
+                    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+                        <thead class="table-light"><tr><th>Patient ID</th><th>Name</th><th class="text-end">Appointments</th></tr></thead>
+                        <tbody>{% for p in appointments.top_patients %}<tr><td><strong>{{ p.patient__patient_id }}</strong></td><td>{{ p.patient__first_name }} {{ p.patient__last_name }}</td><td class="text-end fw-semibold">{{ p.cnt }}</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div><!-- /appointments -->
+{% endif %}
+
+</div><!-- /tab-content -->
+
+
+<!-- ═══════════════════ CHART.JS ═══════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const COLORS = ['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b','#858796','#5a5c69','#2e59d9','#17a673','#2c9faf'];
+function mkBar(id,labels,data,label){const el=document.getElementById(id);if(!el)return;new Chart(el,{type:'bar',data:{labels:labels,datasets:[{label:label||'',data:data,backgroundColor:COLORS[0]}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}}});}
+function mkLine(id,labels,datasets){const el=document.getElementById(id);if(!el)return;new Chart(el,{type:'line',data:{labels:labels,datasets:datasets.map(function(ds,i){return{label:ds.label,data:ds.data,borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+'33',borderWidth:2,fill:ds.fill||false,tension:0.3};})},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});}
+function mkDoughnut(id,labels,data){const el=document.getElementById(id);if(!el)return;new Chart(el,{type:'doughnut',data:{labels:labels,datasets:[{data:data,backgroundColor:COLORS.slice(0,labels.length)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});}
+
+document.addEventListener('DOMContentLoaded', function(){
+    // Period toggle
+    var sel=document.getElementById('id_period');
+    function toggleCustom(){var c=sel.value==='custom';document.getElementById('wrap_from').style.display=c?'':'none';document.getElementById('wrap_to').style.display=c?'':'none';}
+    sel.addEventListener('change',toggleCustom);toggleCustom();
+
+    // ── Demographics charts ──
+    var demo = {{ demographics_json|safe }};
+    mkBar('chartAge', demo.age_labels, demo.age_data, 'Patients');
+    mkDoughnut('chartGender', demo.gender_labels, demo.gender_data);
+    mkLine('chartRegTrend', demo.trend_labels, [{label:'New Registrations', data:demo.trend_data, fill:true}]);
+    if(demo.blood_labels && demo.blood_labels.length) mkDoughnut('chartBlood', demo.blood_labels, demo.blood_data);
+    mkDoughnut('chartDept', ['Physiotherapy','Nutrition','General'], [demo.physio_patients, demo.nutrition_patients, demo.general_patients]);
+    if(demo.insurance_labels && demo.insurance_labels.length) mkDoughnut('chartInsurance', demo.insurance_labels, demo.insurance_data);
+
+    {% if labtests %}
+    // ── Lab Tests charts ──
+    var lab = {{ labtests_json|safe }};
+    mkLine('chartLabTrend', lab.monthly_labels, [{label:'Requests', data:lab.monthly_data, fill:true}]);
+    if(lab.by_category && lab.by_category.length){
+        var catLabels=lab.by_category.map(function(c){return c.test__category||'N/A';});
+        var catData=lab.by_category.map(function(c){return c.cnt;});
+        mkDoughnut('chartLabCat', catLabels, catData);
+    }
+    {% endif %}
+
+    {% if medications %}
+    // ── Medications charts ──
+    var meds = {{ medications_json|safe }};
+    mkLine('chartMedTrend', meds.monthly_labels, [{label:'Prescriptions', data:meds.monthly_data, fill:true}]);
+    mkDoughnut('chartMedStatus', ['Dispensed','Pending','Cancelled'], [meds.dispensed, meds.pending, meds.cancelled]);
+    {% endif %}
+
+    {% if billing %}
+    // ── Billing charts ──
+    var bill = {{ billing_json|safe }};
+    mkLine('chartBillTrend', bill.monthly_labels, [{label:'Billed', data:bill.monthly_billed, fill:false},{label:'Paid', data:bill.monthly_paid, fill:false}]);
+    if(bill.by_pm && bill.by_pm.length){
+        var pmLabels=bill.by_pm.map(function(p){return p.payment_method||'N/A';});
+        var pmData=bill.by_pm.map(function(p){return parseFloat(p.total)||0;});
+        mkDoughnut('chartBillPM', pmLabels, pmData);
+    }
+    {% endif %}
+
+    {% if appointments %}
+    // ── Appointments charts ──
+    var appt = {{ appointments_json|safe }};
+    mkLine('chartApptTrend', appt.monthly_labels, [{label:'Appointments', data:appt.monthly_data, fill:true}]);
+    mkDoughnut('chartApptStatus', ['Completed','Scheduled','Cancelled','No Show'], [appt.completed, appt.scheduled, appt.cancelled, appt.no_show]);
+    {% endif %}
+});
+</script>
+
+<style>
+.nav-pills .nav-link{color:#6c757d;border-radius:8px;font-weight:500}
+.nav-pills .nav-link.active{background:var(--alafia-gradient,linear-gradient(135deg,#667eea 0%,#764ba2 100%));color:#fff;font-weight:600}
+.nav-pills .nav-link:hover:not(.active){background:#f0f0f0}
+</style>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  CUSTOM REPORT GENERATOR MODAL                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="modal fade" id="customReportModal" tabindex="-1" aria-labelledby="customReportModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-xl modal-dialog-scrollable">
+<div class="modal-content">
+    <div class="modal-header" style="background:var(--alafia-gradient,linear-gradient(135deg,#667eea 0%,#764ba2 100%));">
+        <h5 class="modal-title text-white" id="customReportModalLabel">
+            <i class="bi bi-funnel-fill me-2"></i>Generate Custom Patient Report
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    </div>
+    <form method="get" action="{% url 'reports:custom_patient_report' %}" id="customReportForm">
+    <input type="hidden" name="generate" value="1">
+    <div class="modal-body">
+        <p class="text-muted mb-3">Select criteria below to filter patients. Only filled fields will be applied. Leave fields blank to skip that filter.</p>
+
+        <div class="accordion" id="filterAccordion">
+
+            <!-- ── DEMOGRAPHICS ── -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDemo">
+                        <i class="bi bi-people-fill me-2 text-primary"></i><strong>Demographics &amp; Registration</strong>
+                    </button>
+                </h2>
+                <div id="collapseDemo" class="accordion-collapse collapse show" data-bs-parent="#filterAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Registration From</label>
+                                <input type="date" class="form-control form-control-sm" name="date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Registration To</label>
+                                <input type="date" class="form-control form-control-sm" name="date_to">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Gender</label>
+                                <select class="form-select form-select-sm" name="gender">
+                                    <option value="">All</option>
+                                    {% for val, label in genders %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Blood Type</label>
+                                <select class="form-select form-select-sm" name="blood_type">
+                                    <option value="">All</option>
+                                    {% for val, label in blood_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Age Min</label>
+                                <input type="number" class="form-control form-control-sm" name="age_min" min="0" max="150" placeholder="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Age Max</label>
+                                <input type="number" class="form-control form-control-sm" name="age_max" min="0" max="150" placeholder="150">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Insurance Provider</label>
+                                <input type="text" class="form-control form-control-sm" name="insurance_provider" placeholder="Type to search...">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Patient Group</label>
+                                <select class="form-select form-select-sm" name="patient_group">
+                                    <option value="">All</option>
+                                    {% for g in patient_groups %}<option value="{{ g.pk }}">{{ g.name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">City</label>
+                                <input type="text" class="form-control form-control-sm" name="city" placeholder="City...">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Visit Reason</label>
+                                <select class="form-select form-select-sm" name="visit_reason">
+                                    <option value="">All</option>
+                                    {% for val, label in visit_reasons %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── LABORATORY ── -->
+            {% if 'laboratory' in enabled_modules %}
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
+                        <i class="bi bi-droplet-half me-2 text-info"></i><strong>Laboratory Tests</strong>
+                    </button>
+                </h2>
+                <div id="collapseLab" class="accordion-collapse collapse" data-bs-parent="#filterAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Specific Test</label>
+                                <select class="form-select form-select-sm" name="lab_test">
+                                    <option value="">All Tests</option>
+                                    {% for t in lab_tests %}<option value="{{ t.pk }}">{{ t.name }} ({{ t.code }})</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Test Category</label>
+                                <select class="form-select form-select-sm" name="lab_category">
+                                    <option value="">All</option>
+                                    {% for category in lab_categories %}<option value="{{ category.code }}">{{ category.name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Request Status</label>
+                                <select class="form-select form-select-sm" name="lab_status">
+                                    <option value="">All</option>
+                                    <option value="requested">Requested</option>
+                                    <option value="sample_collected">Sample Collected</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Priority</label>
+                                <select class="form-select form-select-sm" name="lab_priority">
+                                    <option value="">All</option>
+                                    <option value="routine">Routine</option>
+                                    <option value="urgent">Urgent</option>
+                                    <option value="stat">STAT</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Abnormal Results</label>
+                                <select class="form-select form-select-sm" name="lab_abnormal">
+                                    <option value="">All</option>
+                                    <option value="yes">Abnormal Only</option>
+                                    <option value="no">Normal Only</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Lab Date From</label>
+                                <input type="date" class="form-control form-control-sm" name="lab_date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Lab Date To</label>
+                                <input type="date" class="form-control form-control-sm" name="lab_date_to">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ── PHARMACY / PRESCRIPTIONS ── -->
+            {% if 'pharmacy' in enabled_modules %}
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRx">
+                        <i class="bi bi-capsule me-2 text-success"></i><strong>Prescriptions &amp; Medications</strong>
+                    </button>
+                </h2>
+                <div id="collapseRx" class="accordion-collapse collapse" data-bs-parent="#filterAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Medication</label>
+                                <select class="form-select form-select-sm" name="medication">
+                                    <option value="">All Medications</option>
+                                    {% for m in medications_list %}<option value="{{ m.pk }}">{{ m.name }} {{ m.strength }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Medication Form</label>
+                                <select class="form-select form-select-sm" name="med_form">
+                                    <option value="">All</option>
+                                    {% for val, label in med_forms %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Prescription Status</label>
+                                <select class="form-select form-select-sm" name="rx_status">
+                                    <option value="">All</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="dispensed">Dispensed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Prescriber</label>
+                                <select class="form-select form-select-sm" name="prescriber">
+                                    <option value="">All</option>
+                                    {% for p in providers %}<option value="{{ p.pk }}">{{ p.get_full_name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Rx Date From</label>
+                                <input type="date" class="form-control form-control-sm" name="rx_date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Rx Date To</label>
+                                <input type="date" class="form-control form-control-sm" name="rx_date_to">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ── BILLING ── -->
+            {% if 'billing' in enabled_modules %}
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBill">
+                        <i class="bi bi-credit-card me-2 text-warning"></i><strong>Billing &amp; Payments</strong>
+                    </button>
+                </h2>
+                <div id="collapseBill" class="accordion-collapse collapse" data-bs-parent="#filterAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Invoice Status</label>
+                                <select class="form-select form-select-sm" name="inv_status">
+                                    <option value="">All</option>
+                                    {% for val, label in invoice_statuses %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Payment Method</label>
+                                <select class="form-select form-select-sm" name="payment_method">
+                                    <option value="">All</option>
+                                    {% for val, label in payment_methods %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Amount Min (UGX)</label>
+                                <input type="number" class="form-control form-control-sm" name="amount_min" min="0" placeholder="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Amount Max (UGX)</label>
+                                <input type="number" class="form-control form-control-sm" name="amount_max" min="0" placeholder="No limit">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Billing Date From</label>
+                                <input type="date" class="form-control form-control-sm" name="bill_date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Billing Date To</label>
+                                <input type="date" class="form-control form-control-sm" name="bill_date_to">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ── APPOINTMENTS ── -->
+            {% if 'appointments' in enabled_modules %}
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAppt">
+                        <i class="bi bi-calendar-check me-2" style="color:#6f42c1;"></i><strong>Appointments</strong>
+                    </button>
+                </h2>
+                <div id="collapseAppt" class="accordion-collapse collapse" data-bs-parent="#filterAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Service</label>
+                                <select class="form-select form-select-sm" name="service">
+                                    <option value="">All Services</option>
+                                    {% for s in services %}<option value="{{ s.pk }}">{{ s.name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Service Category</label>
+                                <select class="form-select form-select-sm" name="service_category">
+                                    <option value="">All</option>
+                                    {% for val, label in service_categories %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Provider</label>
+                                <select class="form-select form-select-sm" name="appt_provider">
+                                    <option value="">All</option>
+                                    {% for p in providers %}<option value="{{ p.pk }}">{{ p.get_full_name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Status</label>
+                                <select class="form-select form-select-sm" name="appt_status">
+                                    <option value="">All</option>
+                                    {% for val, label in appt_statuses %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Appt Date From</label>
+                                <input type="date" class="form-control form-control-sm" name="appt_date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Appt Date To</label>
+                                <input type="date" class="form-control form-control-sm" name="appt_date_to">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div><!-- /accordion -->
+    </div>
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary" id="btnResetCustom">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset All
+        </button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-search me-1"></i> Generate Report
+        </button>
+    </div>
+    </form>
+</div>
+</div>
+</div>
+<script>
+document.getElementById('btnResetCustom').addEventListener('click', function(){
+    var form = document.getElementById('customReportForm');
+    form.querySelectorAll('input, select').forEach(function(el){
+        if(el.type === 'hidden') return;
+        if(el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+    });
+});
+</script>
+{% endblock %}

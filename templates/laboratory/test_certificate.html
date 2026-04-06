@@ -1,0 +1,569 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratory Test Certificate - {{ patient.get_full_name }}</title>
+    <style>
+        @page { size: A4; margin: 6mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 6.5pt; line-height: 1.2; color: #000; background: #fff; }
+
+        .certificate-container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 5mm; padding-bottom: 100px; background: white; border: 1px solid #000; position: relative; }
+        .certificate-content { min-height: calc(100% - 100px); }
+        .certificate-footer-wrapper { position: fixed; bottom: 0; left: 0; right: 0; width: 210mm; margin: 0 auto; background: white; z-index: 100; }
+
+        /* === HEADER (aligned to request print style) === */
+        .header { position: relative; margin-bottom: 20px; }
+        .header-top { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 10px; margin-bottom: -40px; position: relative; z-index: 10; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .logo-circle { width: 90px; height: 90px; border: 3px solid #8B0000; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: white; flex-shrink: 0; position: relative; z-index: 15; margin-top: 9px; }
+        .logo-icon { font-size: 34pt; line-height: 1; }
+        .clinic-name-block h1 { font-size: 15pt; font-weight: bold; color: #0099CC; margin: 0; line-height: 1.2; font-family: Arial, Helvetica, sans-serif; white-space: nowrap; }
+        .clinic-tagline { font-size: 8.5pt; color: #8B0000; font-style: italic; margin-top: 2px; font-family: Arial, sans-serif; white-space: nowrap; }
+        .header-right { display: grid; grid-template-columns: auto 1fr; gap: 3px 5px; font-size: 7.5pt; line-height: 1.3; color: #333; font-family: Arial, sans-serif; flex-shrink: 0; align-items: center; }
+        .contact-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; background: #444; border-radius: 50%; color: white; font-size: 6pt; flex-shrink: 0; }
+        .contact-text { text-align: left; }
+        .heartbeat-line { width: 100%; height: 24px; position: relative; z-index: 5; }
+        .heartbeat-line svg { width: 100%; height: 24px; display: block; }
+
+        /* === Report title row === */
+        .report-id-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin: 1px 0 1px;
+        }
+        .report-id-left { display: flex; align-items: center; gap: 8px; }
+        .report-label {
+            font-size: 10pt; font-weight: 900; color: #0099CC;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .report-badge {
+            background: #0099CC; color: #fff;
+            padding: 1px 8px; border-radius: 3px;
+            font-size: 7pt; font-weight: 700; letter-spacing: 0.06em;
+        }
+        .report-dates { font-size: 6.5pt; color: #444; text-align: right; line-height: 1.3; }
+        .report-dates span { font-weight: 600; }
+        .title-divider { border: none; border-top: 1.5px solid #0d6efd; margin: 1px 0 2px; }
+
+        /* === Patient info section === */
+        .patient-section { margin-bottom: 3px; }
+        .patient-hdr {
+            background: #1a3a5c; color: #fff;
+            font-size: 7pt; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; padding: 2px 6px;
+        }
+
+        /* === BODY LAYOUT === */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; }
+        .full-width { grid-column: 1 / -1; }
+
+        /* Section box */
+        .box { margin-bottom: 3px; }
+        .box-bordered { border-bottom: 1px solid #333; }
+        .box-header { color: #000; padding: 2px 4px; font-size: 8pt; font-weight: bold; text-align: left; border-bottom: 1.5px solid #000; margin-top: 6px; }
+        .box-header.blue { border-bottom-color: #0099CC; color: #0099CC; }
+        .box-body { padding: 2px; }
+
+        /* Row item: label + value */
+        .row-item { display: flex;  padding: 0.5px 2px; font-size: 6.5pt; }
+        .row-item label { font-weight: bold; white-space: nowrap; margin-right: 3px; color: #0099CC; }
+
+        /* Exam two-col rows */
+        .exam-row { display: grid; grid-template-columns: 1fr 1fr; }
+        .exam-cell { display: flex; justify-content: space-between; padding: 1px 2px; border-bottom: 1px solid #333; border-right: 1px solid #333; font-size: 7.5pt; }
+        .exam-cell:nth-child(even) { border-right: none; }
+        .exam-cell label { font-weight: bold; white-space: nowrap; margin-right: 4px; }
+        .exam-cell .fill { flex: 1; border-bottom: 1px dotted #999; min-width: 40px; }
+
+        /* Lab category */
+        .lab-cat-header { background: #0099CC; color: white; padding: 1.5px 3px; font-size: 7.5pt; font-weight: bold; }
+        .lab-cat-body { padding: 1.5px; }
+        .lab-row { display: flex; justify-content: space-between; padding: 0.5px 1.5px; font-size: 7pt; border-bottom: 1px dotted #ddd; }
+        .lab-row:last-child { border-bottom: none; }
+        .lab-row label { font-weight: 500; }
+
+        /* Results table */
+        .results-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+        .results-table th { background: #0099CC; color: white; border: 1px solid #000; padding: 1.5px 2px; font-size: 7pt; text-align: left; }
+        .results-table td { border: 1px solid #000; padding: 1.5px 2px; font-size: 7.5pt; }
+        .abnormal { color: #d9534f; font-weight: bold; }
+
+        /* Footer */
+        .sig-row { display: flex; justify-content: space-between; margin-top: 6px; padding-top: 3px; border-top: 1px solid #000; }
+        .sig-block { text-align: center; width: 45%; }
+        .sig-line { border-top: 1px solid #000; margin-top: 20px; padding-top: 2px; font-size: 6.5pt; }
+
+        .services-footer { background: linear-gradient(135deg, #0099CC 0%, #0077AA 100%); color: white; padding: 4px 8px; font-size: 6pt; line-height: 1.3; text-align: center; border-radius: 2px; }
+
+        .report-date { font-size: 6pt; text-align: center; color: #666; margin-top: 3px; }
+
+        /* Report-style info footer */
+        .report-footer { margin-top: 10px; border-top: 2px solid #0099CC; padding-top: 8px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 48px; }
+        .footer-text { font-size: 7pt; color: #555; line-height: 1.5; }
+        .footer-text strong { color: #0099CC; font-size: 8pt; }
+        .qr-block { text-align: center; flex-shrink: 0; background: #fff; border: 1.5px solid #ddd; border-radius: 6px; padding: 6px 6px 4px; }
+        .qr-block img { width: 80px; height: 80px; display: block; image-rendering: pixelated; }
+        .qr-block small { font-size: 6pt; color: #666; display: block; margin-top: 3px; letter-spacing: 0.3px; }
+
+        .print-button { position: fixed; top: 10px; right: 10px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12pt; z-index: 1000; }
+        .print-button:hover { background: #0056b3; }
+
+        @media print {
+            body { margin: 0; padding: 0; }
+            .certificate-container { border: none; margin: 0; padding: 8mm; padding-bottom: 120px; min-height: 100vh; }
+            .no-print { display: none !important; }
+            .report-footer { margin-top: 8px !important; }
+            .certificate-footer-wrapper { 
+                position: fixed; 
+                bottom: 0; 
+                left: 0; 
+                right: 0; 
+                page-break-inside: avoid;
+                background: white;
+                padding: 0 8mm 8mm 8mm;
+            }
+        }
+
+        /* Page numbering via @page CSS (Chromium print) */
+        @page {
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 7pt;
+                color: #666;
+            }
+        }
+        .page-number-row { text-align: center; margin-top: 6px; font-size: 8pt; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="position:fixed;top:10px;right:10px;z-index:1000;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        <button id="cloudinaryUploadBtn" onclick="publishTo('cloudinary')" style="display:none;padding:8px 14px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">{% if cloud_url %}&#128260; Update on Cloudinary{% else %}&#9729; Upload to Cloudinary{% endif %}</button>
+        <button id="firebaseUploadBtn" onclick="publishTo('firebase')" style="padding:8px 14px;background:#FFA000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">{% if gdrive_url %}&#128260; Update on Firebase{% else %}&#128293; Upload to Firebase{% endif %}</button>
+        <a id="cloudinaryLink" href="{{ cloud_url }}" target="_blank" style="display:none;padding:8px 14px;background:#1B8754;color:#fff;border-radius:4px;font-size:12px;text-decoration:none;">&#9729; Cloudinary PDF</a>
+        <a id="firebaseLink" href="{{ gdrive_url }}" target="_blank" style="padding:8px 14px;background:#E65100;color:#fff;border-radius:4px;font-size:12px;text-decoration:none;display:{% if gdrive_url %}inline-block{% else %}none{% endif %};">&#128293; Firebase PDF</a>
+        <button class="print-button" style="position:static;" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    </div>
+    <div id="publishToast" style="display:none;position:fixed;top:60px;right:10px;z-index:1001;background:#343a40;color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;max-width:400px;"></div>
+    <script>
+    function publishTo(target) {
+        var cBtn = document.getElementById('cloudinaryUploadBtn');
+        var fBtn = document.getElementById('firebaseUploadBtn');
+        var btn = (target === 'firebase') ? fBtn : cBtn;
+        var label = (target === 'firebase') ? 'Firebase' : 'Cloudinary';
+        btn.disabled = true; btn.textContent = 'Uploading to ' + label + '...';
+        var baseUrl = '{% url "laboratory:publish_certificate" request_obj.pk %}';
+        fetch(baseUrl + '?target=' + target + window.location.search.replace('?','&'), {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}','Content-Type':'application/json'}})
+        .then(r => { if (!r.ok) return r.text().then(t => { throw new Error('Server ' + r.status + ': ' + t.substring(0, 200)); }); return r.json(); })
+        .then(data => {
+            var toast = document.getElementById('publishToast');
+            if (data.success) {
+                toast.style.background = '#155724';
+                toast.innerHTML = '&#10003; Uploaded to ' + label + '!';
+                btn.textContent = '\u{1F500} Update on ' + label;
+                if (data.url) { var cl = document.getElementById('cloudinaryLink'); cl.href = data.url; cl.style.display = 'inline-block'; }
+                if (data.gdrive_url) { var fl = document.getElementById('firebaseLink'); fl.href = data.gdrive_url; fl.style.display = 'inline-block'; }
+            } else {
+                toast.style.background = '#721c24';
+                toast.textContent = 'Error: ' + (data.error || 'Unknown error');
+            }
+            toast.style.display='block'; btn.disabled=false;
+            setTimeout(()=>{ toast.style.display='none'; }, 8000);
+        }).catch(e => { var toast = document.getElementById('publishToast'); toast.style.background='#721c24'; toast.textContent='Error: ' + e.message; toast.style.display='block'; btn.textContent='Upload to ' + label; btn.disabled=false; setTimeout(()=>{ toast.style.display='none'; }, 10000); });
+    }
+    </script>
+    
+    <div class="certificate-container">
+        <div class="watermark">CONFIDENTIAL</div>
+        
+        <div class="certificate-content">
+        <div class="header">
+            <!-- Top row: Logo + Clinic Name on left, Contact info on right -->
+            <div class="header-top">
+                <div class="header-left">
+                    <div class="logo-circle">
+                        {% if clinic_settings and clinic_settings.logo %}
+                            <img src="{{ clinic_settings.logo.url }}" alt="Clinic Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        {% else %}
+                            <div class="logo-icon">🔬</div>
+                        {% endif %}
+                    </div>
+                    <div class="clinic-name-block">
+                        <h1>{% if clinic_settings and clinic_settings.clinic_name %}{{ clinic_settings.clinic_name }}{% else %}Alafia Point Wellness Clinic{% endif %}</h1>
+                        <div class="clinic-tagline">{% if clinic_settings and clinic_settings.website %}{{ clinic_settings.website }}{% elif clinic_settings and clinic_settings.email %}{{ clinic_settings.email }}{% endif %}</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    {% if clinic_settings and clinic_settings.box_number %}
+                    <span class="contact-icon">@</span>
+                    <div class="contact-text">{{ clinic_settings.box_number }}</div>
+                    {% endif %}
+                    
+                    {% if clinic_settings and clinic_settings.postal_address %}
+                    <span class="contact-icon">@</span>
+                    <div class="contact-text">{{ clinic_settings.postal_address|linebreaksbr }}</div>
+                    {% endif %}
+                    
+                    {% if clinic_settings and clinic_settings.address %}
+                    <span class="contact-icon">@</span>
+                    <div class="contact-text">{{ clinic_settings.address|linebreaksbr }}</div>
+                    {% endif %}
+                    
+                    {% if clinic_settings and clinic_settings.phone %}
+                    <span class="contact-icon">☎</span>
+                    <div class="contact-text">{{ clinic_settings.phone }}</div>
+                    {% endif %}
+                    
+                    {% if clinic_settings and clinic_settings.email %}
+                    <span class="contact-icon">✉</span>
+                    <div class="contact-text">{{ clinic_settings.email }}</div>
+                    {% endif %}
+
+                    {% if clinic_settings and clinic_settings.website %}
+                    <span class="contact-icon">⌂</span>
+                    <div class="contact-text">{{ clinic_settings.website }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Red heartbeat line below, spanning full width with ECG pulse and red dot -->
+            <div class="heartbeat-line">
+                <svg viewBox="0 0 680 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="0" y1="12" x2="290" y2="12" stroke="#8B0000" stroke-width="2"/>
+                    <polyline points="290,12 300,12 308,2 316,22 324,6 332,18 340,12 350,12" 
+                              fill="none" stroke="#8B0000" stroke-width="2"/>
+                    <line x1="350" y1="12" x2="668" y2="12" stroke="#8B0000" stroke-width="2"/>
+                    <circle cx="672" cy="12" r="6" fill="#8B0000"/>
+                </svg>
+            </div>
+        </div>
+        <!-- ═══ REPORT TITLE ROW ═══ -->
+        <div class="report-id-row">
+            <div class="report-id-left">
+                <span style="font-size:11pt; color:#0099CC;">&#x1F9EA;</span>
+                <span class="report-label">Laboratory Medical Certificate</span>
+                <!-- <span class="report-badge">LAB-{% if request_obj %}{{ request_obj.pk|stringformat:"05d" }}{% else %}00000{% endif %}</span> -->
+            </div>
+            <div class="report-dates">
+                Sampling Date: <span>{% if request_obj and request_obj.sample_collected_at %}{{ request_obj.sample_collected_at|date:"F d, Y" }}{% else %}—{% endif %}</span><br>
+                Approved Date: <span>{% if result and result.verified and result.verified_at %}{{ result.verified_at|date:"F d, Y" }}{% else %}—{% endif %}</span><br>
+                Report Date: <span>{% if result and result.date_reported %}{{ result.date_reported|date:"F d, Y" }}{% else %}{% now "F d, Y" %}{% endif %}</span>
+            </div>
+        </div>
+        <hr class="title-divider">
+
+        <!-- ═══ PATIENT INFORMATION ═══ -->
+        {% if show_patient %}
+        <div class="patient-section">
+            <div class="patient-hdr">Patient Information</div>
+            <div style="padding: 2px 6px;">
+                <div class="three-col">
+                    {% if show_patient_name %}<div class="row-item"><label>Patient Name:</label><span>{{ patient.get_full_name|upper }}</span></div>{% endif %}
+                    {% if show_patient_id %}<div class="row-item"><label>Patient ID:</label><span>{{ patient.patient_id }}</span></div>{% endif %}
+                    {% if show_age %}<div class="row-item"><label>Age:</label><span>{{ patient.get_age }} years</span></div>{% endif %}
+                    {% if show_gender %}<div class="row-item"><label>Gender:</label><span>{{ patient.get_gender_display }}</span></div>{% endif %}
+                    {% if show_dob %}<div class="row-item"><label>Date of Birth:</label><span>{% if patient.date_of_birth %}{{ patient.date_of_birth|date:"d/m/Y" }}{% else %}—{% endif %}</span></div>{% endif %}
+                    {% if show_phone %}<div class="row-item"><label>Phone:</label><span>{% if patient.phone %}{{ patient.phone }}{% else %}—{% endif %}</span></div>{% endif %}
+                    {% if show_nationality %}<div class="row-item"><label>Nationality:</label><span>Ugandan</span></div>{% endif %}
+                    {% if show_id_type %}<div class="row-item"><label>ID Type:</label><span>{% if patient.id_type %}{{ patient.get_id_type_display }}{% else %}—{% endif %}</span></div>{% endif %}
+                    {% if show_id_number %}<div class="row-item"><label>ID Number:</label><span>{% if patient.id_number %}{{ patient.id_number }}{% else %}—{% endif %}</span></div>{% endif %}
+                    <!-- <div class="row-item"><label>Referring Doctor:</label><span>{% if request_obj %}{{ request_obj.requested_by.get_full_name|default:"—" }}{% else %}—{% endif %}</span></div> -->
+                    {% if show_test_date %}<div class="row-item"><label>Test Date:</label><span>{% if request_obj %}{{ request_obj.date_requested|date:"d/m/Y" }}{% else %}—{% endif %}</span></div>{% endif %}
+                    <div class="row-item"><label>Reason for Test:</label><span>{% if request_obj and request_obj.reason_for_test %}{{ request_obj.reason_for_test }}{% else %}—{% endif %}</span></div>
+                    {% if vitals and vitals.height %}<div class="row-item"><label>Height:</label><span>{{ vitals.height }} cm</span></div>{% endif %}
+                    {% if vitals and vitals.weight %}<div class="row-item"><label>Weight:</label><span>{{ vitals.weight }} kg</span></div>{% endif %}
+                    {% if vitals and vitals.bmi %}<div class="row-item"><label>BMI:</label><span>{{ vitals.bmi }} kg/m²</span></div>{% endif %}
+                    {% if vitals and vitals.blood_pressure_systolic %}<div class="row-item"><label>BP Systolic:</label><span>{{ vitals.blood_pressure_systolic }} mmHg</span></div>{% endif %}
+                    {% if vitals and vitals.blood_pressure_diastolic %}<div class="row-item"><label>BP Diastolic:</label><span>{{ vitals.blood_pressure_diastolic }} mmHg</span></div>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if show_physical %}
+        <div class="box box-bordered">
+            <div class="box-header">Physical Examination</div>
+            <div class="box-body">
+                <div class="three-col">
+                    {% if show_eyes_ears %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Eyes & Ears</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Eyes (RT):</label><span>{% if vitals and vitals.eyes_rt %}{{ vitals.eyes_rt }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Eyes (LT):</label><span>{% if vitals and vitals.eyes_lt %}{{ vitals.eyes_lt }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Ears (RT):</label><span>{% if vitals and vitals.ears_rt %}{{ vitals.ears_rt }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Ears (LT):</label><span>{% if vitals and vitals.ears_lt %}{{ vitals.ears_lt }}{% else %}—{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_cardiovascular %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Cardiovascular System</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Cardiovascular:</label><span>{% if vitals and vitals.cardiovascular %}{{ vitals.cardiovascular }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Blood Pressure:</label><span>{% if vitals %}{{ vitals.blood_pressure_systolic }}/{{ vitals.blood_pressure_diastolic }} mmHg{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Heart:</label><span>{% if vitals and vitals.heart %}{{ vitals.heart }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Heart Rate:</label><span>{% if vitals and vitals.heart_rate %}{{ vitals.heart_rate }} BPM{% else %}—{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_respiratory %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Respiratory System</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Lungs:</label><span>{% if vitals and vitals.lungs %}{{ vitals.lungs }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Chest X-Ray:</label><span>{% if vitals and vitals.chest_xray %}{{ vitals.chest_xray }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Respiratory Exam:</label><span>{% if vitals and vitals.respiratory_exam %}{{ vitals.respiratory_exam }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Respiratory Rate:</label><span>{% if vitals and vitals.respiratory_rate %}{{ vitals.respiratory_rate }} /min{% else %}—{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_body_systems %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Body Systems</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>GI/Abdomen:</label><span>{% if vitals and vitals.gi_abdomen %}{{ vitals.gi_abdomen }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>CNS:</label><span>{% if vitals and vitals.cns %}{{ vitals.cns }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Psychiatry:</label><span>{% if vitals and vitals.psychiatry %}{{ vitals.psychiatry }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Extremities:</label><span>{% if vitals and vitals.extremities %}{{ vitals.extremities }}{% else %}—{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_skin_other %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Skin & Other</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Skin:</label><span>{% if vitals and vitals.skin %}{{ vitals.skin }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Deformities:</label><span>{% if vitals and vitals.deformities %}{{ vitals.deformities }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Hernia:</label><span>{% if vitals and vitals.hernia %}{{ vitals.hernia }}{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Varicose Veins:</label><span>{% if vitals and vitals.varicose_veins %}{{ vitals.varicose_veins }}{% else %}—{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_vital_signs %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Vital Signs</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Temperature:</label><span>{% if vitals and vitals.temperature %}{{ vitals.temperature }} —C{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Oxygen Saturation:</label><span>{% if vitals and vitals.oxygen_saturation %}{{ vitals.oxygen_saturation }}%{% else %}—{% endif %}</span></div>
+                            <div class="lab-row"><label>Venereal Diseases:</label><span>{% if vitals and vitals.venereal_diseases %}{{ vitals.venereal_diseases }}{% else %}—{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+<!-- ============ ROW 2: Lab Investigation (full width, 3 columns) ============ -->
+        {% if show_labinv %}
+        <div class="box box-bordered">
+            <div class="box-header">Laboratory Investigation</div>
+            <div class="box-body">
+                <div class="three-col">
+                    {% if show_urine %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Urine</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Sugar:</label><span>{% if lab_test and lab_test.urine_sugar %}{{ lab_test.urine_sugar }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>Albumin:</label><span>{% if lab_test and lab_test.urine_albumin %}{{ lab_test.urine_albumin }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>Bilharziasis:</label><span>{% if lab_test and lab_test.urine_bilharziasis %}{{ lab_test.urine_bilharziasis }}{% else %}NIL{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_stool %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Stool / Routine</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>1. Helminthes:</label><span>{% if lab_test and lab_test.stool_helminthes %}{{ lab_test.stool_helminthes }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>2. Giardia:</label><span>{% if lab_test and lab_test.stool_giardia %}{{ lab_test.stool_giardia }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>3. Bilharziasis:</label><span>{% if lab_test and lab_test.stool_bilharziasis %}{{ lab_test.stool_bilharziasis }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>4. Culture Salmonella/Shigella:</label><span>{% if lab_test and lab_test.stool_culture_salmonella %}{{ lab_test.stool_culture_salmonella }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>5. V. Cholerae:</label><span>{% if lab_test and lab_test.stool_v_cholerae %}{{ lab_test.stool_v_cholerae }}{% else %}NIL{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_blood %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Blood</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Haemoglobin:</label><span>{% if lab_test and lab_test.blood_haemoglobin %}{{ lab_test.blood_haemoglobin }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>Thick film Malaria:</label><span>{% if lab_test and lab_test.blood_malaria %}{{ lab_test.blood_malaria }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>Micro Filaria:</label><span>{% if lab_test and lab_test.blood_micro_filaria %}{{ lab_test.blood_micro_filaria }}{% else %}NIL{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_chemistry %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Chemistry</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>1. F.B.S:</label><span>{% if lab_test and lab_test.chemistry_fbs %}{{ lab_test.chemistry_fbs }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>2. L.F.T.S:</label><span>{% if lab_test and lab_test.chemistry_lfts %}{{ lab_test.chemistry_lfts }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>3. KFTS:</label><span>{% if lab_test and lab_test.chemistry_kfts %}{{ lab_test.chemistry_kfts }}{% else %}NIL{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_elisa %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Elisa</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>1. HCV Ab:</label><span>{% if lab_test and lab_test.elisa_hcv_ab %}{{ lab_test.elisa_hcv_ab }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>2. Hbs Ag:</label><span>{% if lab_test and lab_test.elisa_hbs_ag %}{{ lab_test.elisa_hbs_ag }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>3. HIV 1/2 Test:</label><span>{% if lab_test and lab_test.elisa_hiv %}{{ lab_test.elisa_hiv }}{% else %}NIL{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if show_other_tests %}
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Other Tests</div>
+                        <div class="lab-cat-body">
+                            <div class="lab-row"><label>Blood Group:</label><span>{% if lab_test and lab_test.other_blood_group %}{{ lab_test.other_blood_group }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>Pregnancy Test:</label><span>{% if lab_test and lab_test.other_pregnancy_test %}{{ lab_test.other_pregnancy_test }}{% else %}NIL{% endif %}</span></div>
+                            <div class="lab-row"><label>VDRL / TPHA:</label><span>{% if lab_test and lab_test.other_vdrl_tpha %}{{ lab_test.other_vdrl_tpha }}{% else %}NIL{% endif %}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ============ Selected Lab Test Results ============ -->
+        {% if show_results and lab_request_data %}
+        <div class="box box-bordered">
+            <div class="box-header">Lab Test Results</div>
+            <div class="box-body">
+                {% for item in lab_request_data %}
+                <div style="margin-bottom: 12px;">
+                    <div style="background: #0099CC; color: white; padding: 3px 8px; font-size: 9pt; font-weight: bold; margin-bottom: 2px;">
+                        {{ item.test.name|upper }} - {{ item.test.code }}
+                    </div>
+                    <table class="results-table" style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; width: 30%;">Parameter</th>
+                                <th style="text-align:left; width: 20%;">Result</th>
+                                <th style="text-align:center; width: 10%;">Flag</th>
+                                <th style="text-align:left; width: 15%;">Unit</th>
+                                <th style="text-align:left; width: 25%;">Methodology</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if item.result %}
+                                {% for pr in item.result.parameter_results.all %}
+                                    {% if not item.allowed_params or pr.parameter.pk in item.allowed_params %}
+                                    <tr>
+                                        <td>{{ pr.parameter.name }}</td>
+                                        <td><strong>{{ pr.result_value|default:"—" }}</strong></td>
+                                        <td style="text-align:center;">
+                                            {% if pr.flag == 'H' %}<span style="color:red; font-weight:bold;">H</span>
+                                            {% elif pr.flag == 'L' %}<span style="color:blue; font-weight:bold;">L</span>
+                                            {% elif pr.flag == 'N' %}<span style="color:green;">N</span>
+                                            {% else %}—{% endif %}
+                                        </td>
+                                        <td>{{ pr.parameter.unit|default:"—" }}</td>
+                                        <td style="font-size: 7pt;">{{ pr.notes|default:"—" }}</td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align:center; font-style:italic; color:#999;">No results available</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        <p>“Some test results are within normal reference ranges, while others fall outside the expected limits. These findings
+        should be interpreted in conjunction with the patient’s clinical condition, and further evaluation or follow-up is
+        recommended as appropriate.”<br> <b>Refer to attached Laboratory results For Details</b></p>
+
+{% if comment %}
+        <div style="margin-top:8px; padding:8px 12px; border-left:3px solid #1B5C38; background:#f6fbf8; font-size:8pt;">
+            <strong style="color:#1B5C38;">Comment / Remarks:</strong><br>
+            {{ comment }}
+        </div>
+        {% endif %}
+
+        </div><!-- /.certificate-content -->
+
+        <!-- ═══ FOOTER WRAPPER — pushed to bottom of last page ═══ -->
+        <div class="certificate-footer-wrapper">
+
+<!-- ============ ROW 4: Approved By + Signatures (always shown) ============ -->
+        <div class="two-col" style="margin-top: 6px; font-size: 7pt;">
+            <div>
+                <strong>Approved By:</strong> {% if clinic_settings and clinic_settings.clinic_name %}{{ clinic_settings.clinic_name }}{% else %}Alafia Point Wellness Clinic{% endif %}<br>
+                <strong>Medical Date:</strong> {{ request_obj.date_requested|date:"Y/m/d" }}
+            </div>
+        </div>
+
+        <div class="sig-row">
+            <div class="sig-block">
+                <div class="sig-line">
+                    <strong>Tested By</strong><br>
+                    {% if result %}{{ result.tested_by.get_full_name }}{% else %}________________{% endif %}<br>
+                    <small>Laboratory Technician</small>
+                </div>
+            </div>
+            <div class="sig-block">
+                <div class="sig-line">
+                    <strong>Verified By</strong><br>
+                    {% if result and result.verified_by %}{{ result.verified_by.get_full_name }}{% else %}________________{% endif %}<br>
+                    <small>Medical Officer</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info footer with QR code -->
+        <div class="report-footer" style="margin-top: 8px; margin-bottom: 0;">
+            <div class="footer-text">
+                <strong>{% if clinic_settings and clinic_settings.clinic_name %}{{ clinic_settings.clinic_name }}{% else %}Alafia Point Wellness Clinic{% endif %}</strong><br>
+                {% if clinic_settings and clinic_settings.address %}{{ clinic_settings.address }}<br>{% endif %}
+                {% if clinic_settings and clinic_settings.phone %}Tel: {{ clinic_settings.phone }}{% endif %}{% if clinic_settings and clinic_settings.email %} &nbsp;|&nbsp; {{ clinic_settings.email }}{% endif %}<br>
+                Printed: {% now "d M Y, g:i A" %} &nbsp;|&nbsp; Cert No: CERT-{{ request_obj.pk|stringformat:"05d" }}
+                {% if result %}&nbsp;|&nbsp;{% if result.verified %}<span style="color:#1a7a1a; font-weight:700;">&#10003; Verified</span>{% else %}<span style="color:#856404;">Unverified</span>{% endif %}{% endif %}
+                {% if result %}&nbsp;|&nbsp;Report Status: <strong>{% if result.verified %}Final{% else %}Preliminary{% endif %}</strong>{% endif %}
+            </div>
+            {% if qr_code %}
+            <div class="qr-block">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR">
+                <small>Scan to verify authenticity</small>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="services-footer">
+            <strong>Our Services:</strong> General Laboratory Diagnostic Services, Wellness and Preventive Health Packages, Specialized Diagnostic Services,
+            Home-Based and Community Outreach Services, Counseling and Health Advisory Services, Corporate and Institutional Health Programs
+        </div>
+
+        <div class="page-number-row">
+            Page <span class="page-number"></span> of <span class="total-pages"></span>
+        </div>
+
+        </div><!-- /.certificate-footer-wrapper -->
+    </div><!-- /.certificate-container -->
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

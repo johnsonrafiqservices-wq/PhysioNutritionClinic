@@ -1,0 +1,836 @@
+{% extends 'base.html' %}
+
+{% block title %}Patients - Alafia Point Wellness Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-people-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Patient Management</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#patientRegistrationModal">
+        <i class="bi bi-person-plus"></i> Register New Patient
+    </button>
+    <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#visitingPatientModal">
+        <i class="bi bi-person-walking"></i> Quick Visiting Patient
+    </button>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel"></i> Export to Excel</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf"></i> Export to PDF</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Simple Search Bar -->
+<div class="card mb-3" style="border: 1px solid #e3e6f0;">
+    <div class="card-body py-2">
+        <div class="row align-items-center g-2">
+            <div class="col-md-3">
+                <input type="text" class="form-control form-control-sm" id="globalPatientSearch" placeholder="Search patients..." style="border: 1px solid var(--alafia-primary);" onkeyup="filterPatients()">
+            </div>
+            <div class="col-md-2">
+                <input type="text" class="form-control form-control-sm" id="patientIdFilter" name="patient_id" placeholder="Patient ID" value="{{ request.GET.patient_id }}" onkeyup="filterPatients()">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="genderFilter" name="gender" onchange="filterPatients()">
+                    <option value="">All Gender</option>
+                    <option value="M" {% if request.GET.gender == 'M' %}selected{% endif %}>Male</option>
+                    <option value="F" {% if request.GET.gender == 'F' %}selected{% endif %}>Female</option>
+                    <option value="O" {% if request.GET.gender == 'O' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="ageRangeFilter" name="age_range" onchange="filterPatients()">
+                    <option value="">All Ages</option>
+                    <option value="0-18" {% if request.GET.age_range == '0-18' %}selected{% endif %}>0-18</option>
+                    <option value="19-35" {% if request.GET.age_range == '19-35' %}selected{% endif %}>19-35</option>
+                    <option value="36-55" {% if request.GET.age_range == '36-55' %}selected{% endif %}>36-55</option>
+                    <option value="56+" {% if request.GET.age_range == '56+' %}selected{% endif %}>56+</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" class="form-control form-control-sm" id="registrationDateFilter" name="registration_date" value="{{ request.GET.registration_date }}" onchange="filterPatients()">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPatientFilters()" title="Clear Filters">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patients Table -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Patients 
+            {% if search_query %}
+                - Search Results for "{{ search_query }}"
+            {% endif %}
+            {% if page_obj %}
+                <span class="fw-semibold text-primary ms-2">{{ page_obj.paginator.count }} total</span>
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        {% if page_obj %}
+            <!-- Column Filters (Hidden by default) -->
+            <div id="columnFilters" class="p-3 border-bottom" style="display: none; background: var(--alafia-light);">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Patient ID..." onkeyup="filterColumn(0, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Name..." onkeyup="filterColumn(1, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Age..." onkeyup="filterColumn(2, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select form-select-sm" onchange="filterColumn(3, this.value)">
+                            <option value="">All Genders</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Phone..." onkeyup="filterColumn(4, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Date..." onkeyup="filterColumn(5, this.value)">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover table-sm table-striped" id="patientsTable" style="border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <thead style="background: var(--alafia-gradient); color: white;">
+                        <tr>
+                            <th onclick="sortTable(0)" style="cursor: pointer; user-select: none;">
+                                Patient ID <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortTable(1)" style="cursor: pointer; user-select: none;">
+                                Name <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortTable(2)" style="cursor: pointer; user-select: none;">
+                                Age <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortTable(3)" style="cursor: pointer; user-select: none;">
+                                Gender <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortTable(4)" style="cursor: pointer; user-select: none;">
+                                Phone <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortTable(5)" style="cursor: pointer; user-select: none;">
+                                Registration Date <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>
+                                {{ patient.patient_id }}
+                            </td>
+                            <td>
+                                <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="text-decoration-none">
+                                    {{ patient.get_full_name }}
+                                </a>
+                            </td>
+                            <td>{{ patient.get_age }} years</td>
+                            <td>{{ patient.get_gender_display }}</td>
+                            <td>{{ patient.phone }}</td>
+                            <td>{{ patient.registration_date|date:"M d, Y" }}</td>
+                            <td class="text-center" style="width: 120px; padding: 0.25rem;">
+                                <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="btn btn-sm btn-link text-muted p-1" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'patients:record_vitals' patient.patient_id %}" class="btn btn-sm btn-link text-muted p-1" title="Vitals">
+                                    <i class="bi bi-heart-pulse"></i>
+                                </a>
+                                <!-- <a href="{% url 'patients:triage_assessment' patient.patient_id %}" class="btn btn-sm btn-link text-muted p-1" title="Triage">
+                                    <i class="bi bi-clipboard-check"></i>
+                                </a> -->
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination with Page Size Selector -->
+            {% include 'includes/pagination_with_size.html' %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-people text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No Patients Found</h4>
+                {% if search_query %}
+                    <p class="text-muted">No patients match your search criteria.</p>
+                    <a href="{% url 'patients:patient_list' %}" class="btn btn-outline-primary">View All Patients</a>
+                {% else %}
+                    <p class="text-muted">Start by registering your first patient.</p>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#patientRegistrationModal">
+                        <i class="bi bi-person-plus"></i> Register First Patient
+                    </button>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- JavaScript for Advanced Table Features -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// Toggle column filters
+function toggleColumnFilters() {
+    const filters = document.getElementById('columnFilters');
+    filters.style.display = filters.style.display === 'none' ? 'block' : 'none';
+}
+
+// Toggle column visibility
+function toggleColumnVisibility() {
+    // Implementation for column visibility toggle
+    alert('Column visibility toggle - to be implemented');
+}
+
+// Advanced search function for patients
+function filterPatients() {
+    const globalSearch = document.getElementById('globalPatientSearch').value.toLowerCase();
+    const patientIdFilter = document.getElementById('patientIdFilter').value.toLowerCase();
+    const genderFilter = document.getElementById('genderFilter').value.toLowerCase();
+    const ageRangeFilter = document.getElementById('ageRangeFilter').value;
+    const registrationDateFilter = document.getElementById('registrationDateFilter').value;
+    
+    const table = document.getElementById('patientsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let showRow = true;
+        
+        // Global search across all columns
+        if (globalSearch) {
+            let found = false;
+            for (let j = 0; j < cells.length - 1; j++) { // Exclude actions column
+                const cellText = (cells[j].textContent || cells[j].innerText).toLowerCase();
+                if (cellText.indexOf(globalSearch) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) showRow = false;
+        }
+        
+        // Patient ID filter (column 0)
+        if (showRow && patientIdFilter) {
+            const patientIdCell = cells[0];
+            if (patientIdCell) {
+                const cellText = (patientIdCell.textContent || patientIdCell.innerText).toLowerCase();
+                if (cellText.indexOf(patientIdFilter) === -1) showRow = false;
+            }
+        }
+        
+        // Gender filter (column 3)
+        if (showRow && genderFilter) {
+            const genderCell = cells[3];
+            if (genderCell) {
+                const cellText = (genderCell.textContent || genderCell.innerText).toLowerCase();
+                if (cellText.indexOf(genderFilter) === -1) showRow = false;
+            }
+        }
+        
+        // Age range filter (column 2)
+        if (showRow && ageRangeFilter) {
+            const ageCell = cells[2];
+            if (ageCell) {
+                const age = parseInt(ageCell.textContent.trim()) || 0;
+                let ageInRange = false;
+                
+                switch(ageRangeFilter) {
+                    case '0-18':
+                        ageInRange = age >= 0 && age <= 18;
+                        break;
+                    case '19-35':
+                        ageInRange = age >= 19 && age <= 35;
+                        break;
+                    case '36-55':
+                        ageInRange = age >= 36 && age <= 55;
+                        break;
+                    case '56+':
+                        ageInRange = age >= 56;
+                        break;
+                }
+                
+                if (!ageInRange) showRow = false;
+            }
+        }
+        
+        // Registration date filter (column 5)
+        if (showRow && registrationDateFilter) {
+            const dateCell = cells[5];
+            if (dateCell) {
+                const cellDate = new Date(dateCell.textContent.trim());
+                const filterDate = new Date(registrationDateFilter);
+                if (cellDate.toDateString() !== filterDate.toDateString()) showRow = false;
+            }
+        }
+        
+        rows[i].style.display = showRow ? '' : 'none';
+    }
+}
+
+// Clear all patient filters
+function clearPatientFilters() {
+    document.getElementById('globalPatientSearch').value = '';
+    document.getElementById('patientIdFilter').value = '';
+    document.getElementById('genderFilter').value = '';
+    document.getElementById('ageRangeFilter').value = '';
+    document.getElementById('registrationDateFilter').value = '';
+    filterPatients();
+}
+
+// Filter table columns (legacy function for column filters)
+function filterColumn(columnIndex, filterValue) {
+    const table = document.getElementById('patientsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const cell = rows[i].getElementsByTagName('td')[columnIndex];
+        if (cell) {
+            const cellText = cell.textContent || cell.innerText;
+            if (cellText.toLowerCase().indexOf(filterValue.toLowerCase()) > -1) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    }
+}
+
+// Sort table
+let sortDirection = {};
+function sortTable(columnIndex) {
+    const table = document.getElementById('patientsTable');
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = Array.from(tbody.getElementsByTagName('tr'));
+    
+    const isAscending = sortDirection[columnIndex] !== 'asc';
+    sortDirection[columnIndex] = isAscending ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        const aText = a.getElementsByTagName('td')[columnIndex].textContent.trim();
+        const bText = b.getElementsByTagName('td')[columnIndex].textContent.trim();
+        
+        if (isAscending) {
+            return aText.localeCompare(bText, undefined, {numeric: true});
+        } else {
+            return bText.localeCompare(aText, undefined, {numeric: true});
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort indicators
+    const headers = table.getElementsByTagName('th');
+    for (let i = 0; i < headers.length; i++) {
+        const icon = headers[i].querySelector('i');
+        if (icon) {
+            if (i === columnIndex) {
+                icon.className = isAscending ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+            } else {
+                icon.className = 'bi bi-arrow-down-up text-muted';
+            }
+        }
+    }
+}
+
+// Export to Excel
+function exportToExcel() {
+    const table = document.getElementById('patientsTable');
+    const wb = XLSX.utils.table_to_book(table, {sheet: 'Patients'});
+    const filename = `Alafia_Point_Patients_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
+// Export to PDF
+function exportToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Add header
+    doc.setFontSize(16);
+    doc.text('Alafia Point Wellness Clinic', 20, 20);
+    doc.setFontSize(12);
+    doc.text('Patient List Report', 20, 30);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 40);
+    
+    // Get table data
+    const table = document.getElementById('patientsTable');
+    const headers = [];
+    const data = [];
+    
+    // Extract headers
+    const headerCells = table.querySelectorAll('thead th');
+    headerCells.forEach((cell, index) => {
+        if (index < headerCells.length - 1) { // Exclude Actions column
+            headers.push(cell.textContent.replace(/\s+/g, ' ').trim());
+        }
+    });
+    
+    // Extract data
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const rowData = [];
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, index) => {
+            if (index < cells.length - 1) { // Exclude Actions column
+                rowData.push(cell.textContent.replace(/\s+/g, ' ').trim());
+            }
+        });
+        data.push(rowData);
+    });
+    
+    // Add table
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 50,
+        theme: 'striped',
+        headStyles: { fillColor: [27, 94, 150] },
+        styles: { fontSize: 8 }
+    });
+    
+    const filename = `Alafia_Point_Patients_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+}
+
+// Real-time search
+document.getElementById('globalSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('patientsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+        
+        for (let j = 0; j < cells.length - 1; j++) { // Exclude Actions column
+            const cellText = cells[j].textContent.toLowerCase();
+            if (cellText.indexOf(searchTerm) > -1) {
+                found = true;
+                break;
+            }
+        }
+        
+        row.style.display = found ? '' : 'none';
+    }
+});
+</script>
+
+<!-- Patient Registration Modal -->
+{% load crispy_forms_tags %}
+<div class="modal fade" id="patientRegistrationModal" tabindex="-1" aria-labelledby="patientRegistrationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="patientRegistrationModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Register New Patient
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'patients:patient_register' %}" id="patientRegistrationForm">
+                    {% csrf_token %}
+                    
+                    <!-- Personal Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Personal Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="first_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="last_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" name="date_of_birth">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" name="gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                    <option value="O">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" name="phone" placeholder="+1234567890">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Identification Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Identification Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Type</label>
+                                <select class="form-select" name="id_type">
+                                    <option value="">Select ID Type</option>
+                                    <option value="NATIONAL">National ID</option>
+                                    <option value="DRIVERS">Driver's License</option>
+                                    <option value="PASSPORT">Passport</option>
+                                    <option value="VOTER">Voter's ID</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Number</label>
+                                <input type="text" class="form-control" name="id_number" placeholder="Enter ID number">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visit Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Visit Information</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Visit</label>
+                                <select class="form-select" name="reason_for_visit">
+                                    <option value="">Select Reason</option>
+                                    <option value="CONSULTATION">General Consultation</option>
+                                    <option value="CHECKUP">Routine Checkup</option>
+                                    <option value="EMERGENCY">Emergency</option>
+                                    <option value="FOLLOWUP">Follow-up Visit</option>
+                                    <option value="REFERRAL">Referral</option>
+                                    <option value="TREATMENT">Treatment</option>
+                                    <option value="SCREENING">Screening</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                                <small class="text-muted">Select the primary reason for this visit</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Address Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Address Line 1</label>
+                                <input type="text" class="form-control" name="address_line1">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Address Line 2</label>
+                                <input type="text" class="form-control" name="address_line2">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" name="city">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">State/Province</label>
+                                <input type="text" class="form-control" name="state">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Postal Code</label>
+                                <input type="text" class="form-control" name="postal_code">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Country</label>
+                                <input type="text" class="form-control" name="country" value="Uganda">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Emergency Contact</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Emergency Contact Name</label>
+                                <input type="text" class="form-control" name="emergency_contact_name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Emergency Contact Phone</label>
+                                <input type="tel" class="form-control" name="emergency_contact_phone">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Relationship</label>
+                                <input type="text" class="form-control" name="emergency_contact_relationship" placeholder="e.g., Spouse, Parent, Sibling">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Medical Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Blood Type</label>
+                                <select class="form-select" name="blood_type">
+                                    <option value="">Select Blood Type</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Allergies</label>
+                                <textarea class="form-control" name="allergies" rows="2" placeholder="List any known allergies"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Medical History</label>
+                                <textarea class="form-control" name="medical_history" rows="2" placeholder="Previous conditions, surgeries, etc."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Current Medications</label>
+                                <textarea class="form-control" name="current_medications" rows="2" placeholder="List current medications"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insurance Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Insurance Information</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Insurance Provider</label>
+                                <input type="text" class="form-control" name="insurance_provider">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Policy Number</label>
+                                <input type="text" class="form-control" name="insurance_policy_number">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Group Number</label>
+                                <input type="text" class="form-control" name="insurance_group_number">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Group -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Patient Group</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Patient Group (for Pricing)</label>
+                                <select class="form-select" name="patient_group">
+                                    <option value="">Default Pricing</option>
+                                    {% for group in patient_groups %}
+                                    <option value="{{ group.id }}">{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Assign patient to a group for differential pricing (e.g., Corporate, Insurance, VIP)</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="submit" form="patientRegistrationForm" class="btn btn-primary">
+                    <i class="bi bi-person-plus"></i> Register Patient
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Visiting Patient Registration Modal -->
+<div class="modal fade" id="visitingPatientModal" tabindex="-1" aria-labelledby="visitingPatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" style="width: 70% !important;">
+        <div class="modal-content" >
+            <div class="modal-header">
+                <h5 class="modal-title" id="visitingPatientModalLabel">
+                    <i class="bi bi-person-walking me-2"></i>Register Visiting Patient
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Quick Registration for Visiting Patients</strong><br>
+                    This form is designed for walk-in or visiting patients who need immediate care. 
+                    Only essential information is required. All fields are optional and can be updated later.
+                </div>
+
+                <form method="post" action="{% url 'patients:visiting_patient_register' %}" id="visitingPatientForm">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Basic Information (Optional)</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" name="gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                    <option value="O">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" name="date_of_birth">
+                                <small class="text-muted">Helps with age-appropriate care</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Contact Information (Optional)</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" name="phone">
+                                <small class="text-muted">For follow-up if needed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" class="form-control" name="email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Medical Information (Optional but Important)</h6>
+                        </div>
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                    Known Allergies
+                                </label>
+                                <textarea class="form-control" name="allergies" rows="2"></textarea>
+                                <small class="text-muted">Critical for safe treatment - list any known allergies</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Medical History</label>
+                                <textarea class="form-control" name="medical_history" rows="2"></textarea>
+                                <small class="text-muted">Previous conditions, surgeries, etc.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Current Medications</label>
+                                <textarea class="form-control" name="current_medications" rows="2"></textarea>
+                                <small class="text-muted">Current prescriptions and supplements</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="is_visiting_patient" value="True">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="submit" form="visitingPatientForm" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Register Visiting Patient
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

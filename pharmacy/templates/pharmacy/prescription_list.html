@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-prescription2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Prescriptions</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:pharmacy_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Dashboard
+</a>
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#prescriptionCreateModal">
+    <i class="bi bi-plus-circle"></i> New Prescription
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="dispensed" {% if status_filter == 'dispensed' %}selected{% endif %}>Dispensed</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-funnel me-1"></i>Apply
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Prescriptions Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-prescription2 text-primary me-1"></i>Prescription List</h6>
+        <span class="badge bg-primary-subtle text-primary" style="font-size:.75rem;">{{ prescriptions.count }} prescriptions</span>
+    </div>
+    <div class="card-body p-0">
+        {% if prescriptions %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 ps-3">Patient</th>
+                        <th class="border-0">Prescribed By</th>
+                        <th class="border-0">Date</th>
+                        <th class="border-0">Medications</th>
+                        <th class="border-0 text-center">Status</th>
+                        <th class="border-0 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prescription in prescriptions %}
+                    <tr>
+                        <td class="ps-3">
+                            <span class="fw-medium">{{ prescription.patient.get_full_name }}</span>
+                            <br><small class="text-muted">{{ prescription.patient.patient_id }}</small>
+                        </td>
+                        <td class="text-muted">{{ prescription.prescribed_by.get_full_name }}</td>
+                        <td class="text-muted">{{ prescription.prescribed_date|date:"d M Y" }}</td>
+                        <td>
+                            {% with medications=prescription.items.all %}
+                                {% if medications %}
+                                    {% for item in medications|slice:":2" %}
+                                        <div><small class="text-primary fw-medium">{{ item.medication.name }}</small></div>
+                                        <div class="text-muted" style="font-size:.75rem;margin-left:8px;">{{ item.dosage }}, {{ item.frequency }} &middot; {{ item.quantity }} units</div>
+                                    {% endfor %}
+                                    {% if medications.count > 2 %}
+                                        <small class="text-muted fst-italic">+{{ medications.count|add:"-2" }} more</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">No medications</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            {% if prescription.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+                            {% elif prescription.status == 'dispensed' %}<span class="badge bg-success">Dispensed</span>
+                            {% elif prescription.status == 'cancelled' %}<span class="badge bg-danger">Cancelled</span>
+                            {% else %}<span class="badge bg-secondary">{{ prescription.status|title }}</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group">
+                                {% if prescription.status == 'pending' %}
+                                <a href="{% url 'pharmacy:dispense_prescription' prescription.pk %}" class="btn btn-success py-0 px-2" title="Dispense" style="font-size:.72rem;">
+                                    <i class="bi bi-check-lg"></i> Dispense
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'pharmacy:prescription_print' prescription.id %}" class="btn btn-outline-primary py-0 px-1" title="Print" target="_blank" style="font-size:.72rem;">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-prescription2 text-muted" style="font-size:2rem;"></i>
+            <p class="text-muted mt-1 mb-2 small">No prescriptions found</p>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#prescriptionCreateModal">
+                <i class="bi bi-plus-circle me-1"></i>Create First Prescription
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.submitPrescriptionForm = function(formId, url) {
+    const form = document.getElementById(formId);
+    if (!form) { alert('Form not found'); return; }
+    const formData = new FormData(form);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    fetch(url, {
+        method: 'POST', body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('prescriptionCreateModal'));
+            if (modal) modal.hide();
+            setTimeout(() => window.location.href = data.redirect_url || window.location.href, 400);
+        } else {
+            if (data.errors) {
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    const input = form.querySelector(`[name="${field}"]`);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback d-block';
+                        errorDiv.textContent = Array.isArray(errors) ? errors.join(', ') : errors;
+                        input.parentNode.appendChild(errorDiv);
+                    }
+                }
+            }
+            alert(data.message || 'Please correct errors');
+        }
+    })
+    .catch(error => alert('Error: ' + error.message));
+};
+</script>
+{% include 'pharmacy/modals/all_pharmacy_modals.html' %}
+{% endblock %}

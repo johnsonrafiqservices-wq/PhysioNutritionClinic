@@ -1,0 +1,597 @@
+{% extends 'base.html' %}
+
+{% block title %}Financial Reports - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-currency-dollar me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Financial Reports & Analytics</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <button type="button" class="btn btn-outline-secondary dropdown-toggle" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-download"></i> Export
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportReport('financial', 'pdf'); return false;">
+            <i class="bi bi-file-pdf"></i> Export as PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="exportReport('financial', 'excel'); return false;">
+            <i class="bi bi-file-excel"></i> Export as Excel
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Controls -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Financial Report Filters</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Time Period</label>
+                <select class="form-select" name="period" id="period-select">
+                    <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This Month</option>
+                    <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last Month</option>
+                    <option value="this_quarter" {% if period == 'this_quarter' %}selected{% endif %}>This Quarter</option>
+                    <option value="last_quarter" {% if period == 'last_quarter' %}selected{% endif %}>Last Quarter</option>
+                    <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This Year</option>
+                    <option value="last_year" {% if period == 'last_year' %}selected{% endif %}>Last Year</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            <div class="col-md-2" id="custom-from" style="display: none;">
+                <label class="form-label">From Date</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2" id="custom-to" style="display: none;">
+                <label class="form-label">To Date</label>
+                <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Service Type</label>
+                <select class="form-select" name="service_type">
+                    <option value="">All Services</option>
+                    <option value="physiotherapy" {% if service_type == 'physiotherapy' %}selected{% endif %}>Physiotherapy</option>
+                    <option value="nutrition" {% if service_type == 'nutrition' %}selected{% endif %}>Nutrition</option>
+                    <option value="assessment" {% if service_type == 'assessment' %}selected{% endif %}>Assessment</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary d-block w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Financial Overview Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Revenue
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ total_revenue|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cash fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Outstanding Amount
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ outstanding_amount|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Collection Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ collection_rate }}%</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-graph-up fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Avg Invoice Value
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ avg_invoice_value|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-receipt fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Revenue Trend -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Revenue Trend</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="revenueTrendChart" width="100%" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Methods</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="paymentMethodsChart" width="100%" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Service Revenue Breakdown -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Revenue by Service</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="serviceRevenueChart" width="100%" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Comparison -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Monthly Comparison</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyComparisonChart" width="100%" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Summary Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Financial Summary</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Metric</th>
+                        <th>Current Period</th>
+                        <th>Previous Period</th>
+                        <th>Change</th>
+                        <th>% Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Revenue</strong></td>
+                        <td>UGX {{ total_revenue|floatformat:0 }}</td>
+                        <td>UGX {{ previous_revenue|floatformat:0 }}</td>
+                        <td class="{% if revenue_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            UGX {{ revenue_change|floatformat:0 }}
+                        </td>
+                        <td class="{% if revenue_change_percent >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ revenue_change_percent|floatformat:1 }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Invoices</strong></td>
+                        <td>{{ total_invoices }}</td>
+                        <td>{{ previous_invoices }}</td>
+                        <td class="{% if invoice_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ invoice_change }}
+                        </td>
+                        <td class="{% if invoice_change_percent >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ invoice_change_percent|floatformat:1 }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Payments Received</strong></td>
+                        <td>UGX {{ payments_received|floatformat:0 }}</td>
+                        <td>UGX {{ previous_payments|floatformat:0 }}</td>
+                        <td class="{% if payment_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            UGX {{ payment_change|floatformat:0 }}
+                        </td>
+                        <td class="{% if payment_change_percent >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ payment_change_percent|floatformat:1 }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Outstanding Balance</strong></td>
+                        <td>UGX {{ outstanding_amount|floatformat:0 }}</td>
+                        <td>UGX {{ previous_outstanding|floatformat:0 }}</td>
+                        <td class="{% if outstanding_change <= 0 %}text-success{% else %}text-danger{% endif %}">
+                            UGX {{ outstanding_change|floatformat:0 }}
+                        </td>
+                        <td class="{% if outstanding_change_percent <= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ outstanding_change_percent|floatformat:1 }}%
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performing Services -->
+<div class="row">
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Top Performing Services</h6>
+            </div>
+            <div class="card-body">
+                {% if top_services %}
+                    {% for service in top_services %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-0">{{ service.name }}</h6>
+                            <small class="text-muted">UGX {{ service.total_revenue|floatformat:0 }} revenue</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-semibold text-success">{{ service.appointment_count }} appointments</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No service data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Outstanding Invoices by Age -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Outstanding Invoices by Age</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-3">
+                        <h5 class="text-info">UGX {{ outstanding_0_30|floatformat:0 }}</h5>
+                        <small class="text-muted">0-30 Days</small>
+                    </div>
+                    <div class="col-3">
+                        <h5 class="text-warning">UGX {{ outstanding_31_60|floatformat:0 }}</h5>
+                        <small class="text-muted">31-60 Days</small>
+                    </div>
+                    <div class="col-3">
+                        <h5 class="text-danger">UGX {{ outstanding_61_90|floatformat:0 }}</h5>
+                        <small class="text-muted">61-90 Days</small>
+                    </div>
+                    <div class="col-3">
+                        <h5 class="text-dark">UGX {{ outstanding_90_plus|floatformat:0 }}</h5>
+                        <small class="text-muted">90+ Days</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar" style="width: {{ outstanding_0_30_percent }}%; background-color: var(--alafia-chart-3);" title="0-30 Days"></div>
+                    <div class="progress-bar" style="width: {{ outstanding_31_60_percent }}%; background-color: var(--alafia-chart-4);" title="31-60 Days"></div>
+                    <div class="progress-bar" style="width: {{ outstanding_61_90_percent }}%; background-color: var(--alafia-chart-5);" title="61-90 Days"></div>
+                    <div class="progress-bar" style="width: {{ outstanding_90_plus_percent }}%; background-color: var(--alafia-dark);" title="90+ Days"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Insurance Claims Summary -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Insurance Claims Summary</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 text-center">
+                <h4 class="text-primary">{{ claims_submitted }}</h4>
+                <small class="text-muted">Claims Submitted</small>
+            </div>
+            <div class="col-md-3 text-center">
+                <h4 class="text-success">{{ claims_approved }}</h4>
+                <small class="text-muted">Claims Approved</small>
+            </div>
+            <div class="col-md-3 text-center">
+                <h4 class="text-warning">{{ claims_pending }}</h4>
+                <small class="text-muted">Claims Pending</small>
+            </div>
+            <div class="col-md-3 text-center">
+                <h4 class="text-danger">{{ claims_denied }}</h4>
+                <small class="text-muted">Claims Denied</small>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col-md-6 text-center">
+                <h5 class="text-info">UGX {{ claims_total_amount|floatformat:0 }}</h5>
+                <small class="text-muted">Total Claims Amount</small>
+            </div>
+            <div class="col-md-6 text-center">
+                <h5 class="text-success">UGX {{ claims_reimbursed|floatformat:0 }}</h5>
+                <small class="text-muted">Amount Reimbursed</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Helper function to get CSS variable values
+function getCSSVariable(name) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Period selection handler
+    const periodSelect = document.getElementById('period-select');
+    const customFrom = document.getElementById('custom-from');
+    const customTo = document.getElementById('custom-to');
+    
+    periodSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customFrom.style.display = 'block';
+            customTo.style.display = 'block';
+        } else {
+            customFrom.style.display = 'none';
+            customTo.style.display = 'none';
+        }
+    });
+    
+    // Initialize display
+    if (periodSelect.value === 'custom') {
+        customFrom.style.display = 'block';
+        customTo.style.display = 'block';
+    }
+});
+
+// Revenue Trend Chart
+const revenueTrendCtx = document.getElementById('revenueTrendChart').getContext('2d');
+const revenueTrendChart = new Chart(revenueTrendCtx, {
+    type: 'line',
+    data: {
+        labels: {{ revenue_trend_labels|safe }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ revenue_trend_data|safe }},
+            borderColor: getCSSVariable('--alafia-chart-2') || '#1cc88a',
+            backgroundColor: (getCSSVariable('--alafia-chart-2') || '#1cc88a') + '33',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Payment Methods Chart
+const paymentMethodsCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+const paymentMethodsChart = new Chart(paymentMethodsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ payment_method_labels|safe }},
+        datasets: [{
+            data: {{ payment_method_data|safe }},
+            backgroundColor: [
+                getCSSVariable('--alafia-chart-1') || '#4e73df',
+                getCSSVariable('--alafia-chart-2') || '#1cc88a',
+                getCSSVariable('--alafia-chart-3') || '#36b9cc',
+                getCSSVariable('--alafia-chart-4') || '#f6c23e'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Service Revenue Chart
+const serviceRevenueCtx = document.getElementById('serviceRevenueChart').getContext('2d');
+const serviceRevenueChart = new Chart(serviceRevenueCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ service_labels|safe }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ service_revenue_data|safe }},
+            backgroundColor: getCSSVariable('--alafia-chart-1') || '#4e73df'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Monthly Comparison Chart
+const monthlyComparisonCtx = document.getElementById('monthlyComparisonChart').getContext('2d');
+const monthlyComparisonChart = new Chart(monthlyComparisonCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ monthly_labels|safe }},
+        datasets: [{
+            label: 'Current Year',
+            data: {{ current_year_data|safe }},
+            backgroundColor: getCSSVariable('--alafia-chart-2') || '#1cc88a'
+        }, {
+            label: 'Previous Year',
+            data: {{ previous_year_data|safe }},
+            backgroundColor: getCSSVariable('--alafia-chart-3') || '#36b9cc'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+function exportReport(reportType, format) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "reports:export_report" %}';
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add report type
+    const reportTypeInput = document.createElement('input');
+    reportTypeInput.type = 'hidden';
+    reportTypeInput.name = 'report_type';
+    reportTypeInput.value = reportType;
+    form.appendChild(reportTypeInput);
+    
+    // Add export format
+    const formatInput = document.createElement('input');
+    formatInput.type = 'hidden';
+    formatInput.name = 'export_format';
+    formatInput.value = format;
+    form.appendChild(formatInput);
+    
+    // Add report name
+    const nameInput = document.createElement('input');
+    nameInput.type = 'hidden';
+    nameInput.name = 'report_name';
+    nameInput.value = 'Financial Report';
+    form.appendChild(nameInput);
+    
+    // Add period filter
+    const periodInput = document.createElement('input');
+    periodInput.type = 'hidden';
+    periodInput.name = 'period';
+    periodInput.value = '{{ period }}';
+    form.appendChild(periodInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+</script>
+
+<!-- Hidden form for CSRF token -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+
+<style>
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+</style>
+{% endblock %}

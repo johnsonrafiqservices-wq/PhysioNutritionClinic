@@ -1,0 +1,743 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+.hover-row {
+    transition: all 0.2s ease-in-out;
+}
+.hover-row:hover {
+    background-color: #f8f9fa !important;
+    transform: translateX(2px);
+}
+.metric-card {
+    transition: transform 0.2s ease-in-out;
+}
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+.card {
+    transition: box-shadow 0.2s ease-in-out;
+}
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+#filtersSection {
+    transition: all 0.3s ease-in-out;
+}
+.badge {
+    font-weight: 500;
+}
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+.btn:hover {
+    transform: translateY(-1px);
+}
+.form-select:focus, .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-list-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Laboratory Test Requests</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex flex-wrap gap-2 align-items-center">
+    <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#testRequestModal">
+        <i class="bi bi-plus-circle me-1"></i> New Request
+    </button>
+    <button type="button" class="btn btn-outline-success btn-sm px-3" onclick="exportRequests()">
+        <i class="bi bi-download me-1"></i> Export
+    </button>
+    <a href="{% url 'laboratory:dashboard' %}" class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-arrow-left me-1"></i> Dashboard
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Time Period Statistics - Top Row -->
+<div class="row mb-4">
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card metric-card primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Today</div>
+                        <div class="metric-value">{{ today_count }}</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="bi bi-calendar-day"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card metric-card info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">This Week</div>
+                        <div class="metric-value">{{ week_count }}</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="bi bi-calendar-week"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card metric-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">This Month</div>
+                        <div class="metric-value">{{ month_count }}</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-calendar-month"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Filters Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-funnel me-2"></i>Advanced Filters</h6>
+                    <button type="button" class="btn btn-outline-light btn-sm" onclick="toggleFilters()">
+                        <i class="bi bi-chevron-up" id="filterToggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" id="filtersSection">
+                <form method="get" id="filterForm">
+                    <!-- Search Bar -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" class="form-control" placeholder="Search by patient name, test name, or request ID..." value="{{ request.GET.search }}">
+                                <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Main Filters Row -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-muted">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-muted">Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="">All Priorities</option>
+                                {% for value, label in priority_choices %}
+                                    <option value="{{ value }}" {% if selected_priority == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-muted">Date Range</label>
+                            <select name="date_range" class="form-select" onchange="toggleDateInputs(this.value)">
+                                <option value="">All Dates</option>
+                                <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>Today</option>
+                                <option value="week" {% if request.GET.date_range == 'week' %}selected{% endif %}>This Week</option>
+                                <option value="month" {% if request.GET.date_range == 'month' %}selected{% endif %}>This Month</option>
+                                <option value="custom" {% if request.GET.date_range == 'custom' %}selected{% endif %}>Custom Range</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-muted">Results</label>
+                            <select name="has_results" class="form-select">
+                                <option value="">All</option>
+                                <option value="yes" {% if request.GET.has_results == 'yes' %}selected{% endif %}>With Results</option>
+                                <option value="no" {% if request.GET.has_results == 'no' %}selected{% endif %}>Without Results</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Date Range (Hidden by default) -->
+                    <div class="row g-3 mb-3" id="customDateRange" style="display: none;">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-muted">From Date</label>
+                            <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-muted">To Date</label>
+                            <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i> Apply Filters
+                            </button>
+                            <a href="{% url 'laboratory:request_list' %}" class="btn btn-outline-secondary ms-2">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Filter Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="quickFilter('urgent')">
+                                    <i class="bi bi-exclamation-triangle me-1"></i> Urgent Only
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="quickFilter('pending')">
+                                    <i class="bi bi-clock me-1"></i> Pending Only
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="quickFilter('completed')">
+                                    <i class="bi bi-check-circle me-1"></i> Completed Today
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="quickFilter('my')">
+                                    <i class="bi bi-person me-1"></i> My Requests
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row">
+    <!-- Main Column: Table -->
+    <div class="col-lg-9 mb-4">
+        
+        <!-- Requests Table -->
+        <div class="card shadow-sm border-0">
+    <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="mb-0 fw-bold text-white"><i class="bi bi-list-ul me-2"></i>Test Requests</h6>
+            <div class="d-flex align-items-center gap-2">
+                <label class="text-white mb-0" style="font-size: 0.75rem;">Show:</label>
+                <select id="rowsPerPage" class="form-select form-select-sm" style="width: 70px; font-size: 0.75rem;">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if requests %}
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" style="font-size: 0.875rem;">
+                    <thead>
+                        <tr style="background: #fff; border-bottom: 1px solid #e9ecef;">
+                            <th class="ps-4 py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Request ID</th>
+                            <th class="py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Patient</th>
+                            <th class="py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Test Details</th>
+                            <th class="py-3 text-uppercase text-center" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Status</th>
+                            <th class="py-3 text-uppercase text-center" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Priority</th>
+                            <th class="py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Date</th>
+                            <th class="pe-4 py-3 text-uppercase text-center" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsTableBody">
+                        {% for req in requests %}
+                        <tr class="request-row hover-row" style="border-bottom: 1px solid #f1f3f5; cursor: pointer;" onclick="window.location.href='{% url 'laboratory:request_detail' req.pk %}'">
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark fw-semibold" style="font-size: 0.75rem;">REQ-{{ req.id|stringformat:"05d" }}</span>
+                                    {% if req.priority == 'urgent' or req.priority == 'stat' %}
+                                    <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 0.875rem;" title="Urgent"></i>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted d-block">{{ req.date_requested|time:"g:i A" }}</small>
+                            </td>
+                            <td class="py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="bi bi-person-fill text-primary" style="font-size: 0.875rem;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size: 0.875rem;">{{ req.patient.get_full_name }}</div>
+                                        <small class="text-muted">{{ req.patient.patient_id }}</small>
+                                        {% if req.patient.age %}
+                                        <small class="text-muted d-block">{{ req.patient.age }}y, {{ req.patient.get_gender_display }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div>
+                                    <div class="fw-semibold" style="font-size: 0.875rem;">{{ req.test.name }}</div>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <small class="text-muted">{{ req.test.code }}</small>
+                                        {% if req.test.category %}
+                                        <span class="badge bg-light text-muted" style="font-size: 0.7rem;">{{ req.test.category.name }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 text-center">
+                                {% if req.status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% elif req.status == 'in_progress' %}
+                                    <span class="badge bg-info">In Progress</span>
+                                {% elif req.status == 'sample_collected' %}
+                                    <span class="badge bg-primary">Sample Collected</span>
+                                {% elif req.status == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                                {% if req.result %}
+                                <div class="mt-1">
+                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 0.75rem;"></i>
+                                    <small class="text-muted ms-1">Results</small>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-center">
+                                {% if req.priority == 'stat' %}
+                                    <span class="badge bg-danger">STAT</span>
+                                {% elif req.priority == 'urgent' %}
+                                    <span class="badge bg-warning text-dark">Urgent</span>
+                                {% elif req.priority == 'high' %}
+                                    <span class="badge bg-info">High</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Normal</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                <div>
+                                    <div style="font-size: 0.875rem;">{{ req.date_requested|date:"d M Y" }}</div>
+                                    {% if req.date_requested != req.updated_at %}
+                                    <small class="text-muted">Updated: {{ req.updated_at|date:"d M" }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="pe-4 py-3 text-center" onclick="event.stopPropagation()">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <a href="{% url 'laboratory:request_detail' req.pk %}" class="btn btn-sm btn-outline-primary rounded-circle" title="View Details" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-eye" style="font-size: 0.875rem;"></i>
+                                    </a>
+                                    {% if req.result %}
+                                    <button type="button" class="btn btn-sm btn-outline-success rounded-circle" title="View Results" onclick="viewResults({{ req.result.id }}); event.stopPropagation();" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-clipboard-data" style="font-size: 0.875rem;"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button type="button" class="btn btn-sm btn-outline-info rounded-circle" title="Print" onclick="printRequest({{ req.id }}); event.stopPropagation();" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-printer" style="font-size: 0.875rem;"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination Footer -->
+            <div class="card-footer bg-light py-2">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <small class="text-muted">
+                        Showing <span id="showingStart">1</span>-<span id="showingEnd">10</span> of <span id="totalRows">{{ requests|length }}</span>
+                    </small>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-inbox" style="font-size: 2rem; color: #95a5a6;"></i>
+                </div>
+                <h5 class="fw-bold mb-2" style="color: #2c3e50;">No Requests Found</h5>
+                <p class="text-muted mb-4">No test requests match your current filters.</p>
+                <button type="button" class="btn btn-primary px-4" data-bs-toggle="modal" data-bs-target="#testRequestModal">
+                    <i class="bi bi-plus-circle me-1"></i> Create First Request
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+        </div>
+
+
+
+    <!-- Left Column: Enhanced Stats and Filters -->
+    <div class="col-lg-3 mb-4">
+        <!-- Quick Actions Card -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="filterByStatus('pending')">
+                        <i class="bi bi-clock me-1"></i> View Pending
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="filterByStatus('completed')">
+                        <i class="bi bi-check-circle me-1"></i> View Completed
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="filterByPriority('urgent')">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Urgent Tests
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="filterToday()">
+                        <i class="bi bi-calendar-day me-1"></i> Today's Tests
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats Card -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-speedometer2 me-2"></i>Quick Stats</h6>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex flex-column gap-3">
+                    <div class="text-center p-2 bg-light rounded">
+                        <div class="h4 mb-0 text-primary">{{ total_all }}</div>
+                        <small class="text-muted">Total Requests</small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#e67e22;"></span>
+                            <small class="text-muted fw-semibold">Pending</small>
+                        </div>
+                        <span class="badge bg-warning text-dark">{{ pending }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#3498db;"></span>
+                            <small class="text-muted fw-semibold">In Progress</small>
+                        </div>
+                        <span class="badge bg-info">{{ in_progress }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#27ae60;"></span>
+                            <small class="text-muted fw-semibold">Completed</small>
+                        </div>
+                        <span class="badge bg-success">{{ completed }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#e74c3c;"></span>
+                            <small class="text-muted fw-semibold">Cancelled</small>
+                        </div>
+                        <span class="badge bg-danger">{{ cancelled }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Priority Breakdown Card -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-exclamation-triangle me-2"></i>Priority Breakdown</h6>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex flex-column gap-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-danger">STAT</span>
+                        <span class="text-muted small">{{ stat_count|default:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-warning text-dark">Urgent</span>
+                        <span class="text-muted small">{{ urgent_count|default:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-info">High</span>
+                        <span class="text-muted small">{{ high_count|default:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-secondary">Normal</span>
+                        <span class="text-muted small">{{ normal_count|default:0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity Card -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-activity me-2"></i>Recent Activity</h6>
+            </div>
+            <div class="card-body p-3">
+                <div class="small text-muted">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Today</span>
+                        <span class="badge bg-primary">{{ today_count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>This Week</span>
+                        <span class="badge bg-info">{{ week_count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>This Month</span>
+                        <span class="badge bg-warning">{{ month_count }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    </div>
+</div>
+
+<script>
+// Enhanced Laboratory Requests Page Script
+(function() {
+    var currentPage = 1;
+    var rowsPerPage = 10;
+    var allRows = [];
+    var totalRows = 0;
+
+    function init() {
+        var tbody = document.getElementById('requestsTableBody');
+        if (!tbody) return;
+        
+        allRows = Array.from(tbody.querySelectorAll('.request-row'));
+        totalRows = allRows.length;
+        
+        var rowsSelect = document.getElementById('rowsPerPage');
+        if (rowsSelect) {
+            rowsSelect.addEventListener('change', function() {
+                rowsPerPage = parseInt(this.value);
+                currentPage = 1;
+                renderTable();
+            });
+        }
+        
+        // Initialize date range visibility
+        var dateRange = document.querySelector('select[name="date_range"]');
+        if (dateRange && dateRange.value === 'custom') {
+            document.getElementById('customDateRange').style.display = 'block';
+        }
+        
+        renderTable();
+    }
+
+    function renderTable() {
+        var start = (currentPage - 1) * rowsPerPage;
+        var end = start + rowsPerPage;
+        
+        allRows.forEach(function(row, index) {
+            if (index >= start && index < end) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        updatePaginationInfo();
+        renderPagination();
+    }
+
+    function updatePaginationInfo() {
+        var start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+        var end = Math.min(currentPage * rowsPerPage, totalRows);
+        
+        document.getElementById('showingStart').textContent = start;
+        document.getElementById('showingEnd').textContent = end;
+        document.getElementById('totalRows').textContent = totalRows;
+    }
+
+    function renderPagination() {
+        var totalPages = Math.ceil(totalRows / rowsPerPage);
+        var paginationEl = document.getElementById('pagination');
+        if (!paginationEl) return;
+        
+        paginationEl.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+        
+        // Previous button
+        var prevLi = document.createElement('li');
+        prevLi.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+        prevLi.innerHTML = '<a class="page-link" href="#" tabindex="-1">Previous</a>';
+        if (currentPage > 1) {
+            prevLi.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                currentPage--;
+                renderTable();
+            });
+        }
+        paginationEl.appendChild(prevLi);
+        
+        // Page numbers (show max 5 pages)
+        var startPage = Math.max(1, currentPage - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for (var i = startPage; i <= endPage; i++) {
+            var li = document.createElement('li');
+            li.className = 'page-item' + (i === currentPage ? ' active' : '');
+            li.innerHTML = '<a class="page-link" href="#">' + i + '</a>';
+            
+            (function(pageNum) {
+                li.querySelector('a').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = pageNum;
+                    renderTable();
+                });
+            })(i);
+            
+            paginationEl.appendChild(li);
+        }
+        
+        // Next button
+        var nextLi = document.createElement('li');
+        nextLi.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
+        nextLi.innerHTML = '<a class="page-link" href="#">Next</a>';
+        if (currentPage < totalPages) {
+            nextLi.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                currentPage++;
+                renderTable();
+            });
+        }
+        paginationEl.appendChild(nextLi);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+
+// Filter and Search Functions
+function toggleFilters() {
+    var section = document.getElementById('filtersSection');
+    var icon = document.getElementById('filterToggleIcon');
+    
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        icon.className = 'bi bi-chevron-up';
+    } else {
+        section.style.display = 'none';
+        icon.className = 'bi bi-chevron-down';
+    }
+}
+
+function toggleDateInputs(value) {
+    var customRange = document.getElementById('customDateRange');
+    if (value === 'custom') {
+        customRange.style.display = 'block';
+    } else {
+        customRange.style.display = 'none';
+        // Clear custom date inputs
+        customRange.querySelectorAll('input[type="date"]').forEach(function(input) {
+            input.value = '';
+        });
+    }
+}
+
+function clearSearch() {
+    document.querySelector('input[name="search"]').value = '';
+    document.getElementById('filterForm').submit();
+}
+
+function quickFilter(type) {
+    var form = document.getElementById('filterForm');
+    
+    // Reset all filters first
+    form.querySelectorAll('select').forEach(function(select) {
+        select.value = '';
+    });
+    form.querySelectorAll('input[type="date"]').forEach(function(input) {
+        input.value = '';
+    });
+    
+    switch(type) {
+        case 'urgent':
+            document.querySelector('select[name="priority"]').value = 'urgent';
+            break;
+        case 'pending':
+            document.querySelector('select[name="status"]').value = 'requested';
+            break;
+        case 'completed':
+            document.querySelector('select[name="status"]').value = 'completed';
+            document.querySelector('select[name="date_range"]').value = 'today';
+            break;
+        case 'my':
+            // Add current user filter if needed
+            break;
+    }
+    
+    form.submit();
+}
+
+function filterByStatus(status) {
+    document.querySelector('select[name="status"]').value = status;
+    document.getElementById('filterForm').submit();
+}
+
+function filterByPriority(priority) {
+    document.querySelector('select[name="priority"]').value = priority;
+    document.getElementById('filterForm').submit();
+}
+
+function filterToday() {
+    document.querySelector('select[name="date_range"]').value = 'today';
+    document.getElementById('filterForm').submit();
+}
+
+function viewResults(resultId) {
+    window.open('/laboratory/results/' + resultId + '/', '_blank');
+}
+
+function printRequest(requestId) {
+    window.open('/laboratory/requests/' + requestId + '/print/', '_blank');
+}
+
+function exportRequests() {
+    var form = document.getElementById('filterForm');
+    var params = new URLSearchParams(new FormData(form)).toString();
+    window.open('/laboratory/requests/export/?' + params, '_blank');
+}
+
+// Add hover effect to table rows
+document.addEventListener('DOMContentLoaded', function() {
+    var rows = document.querySelectorAll('.hover-row');
+    rows.forEach(function(row) {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+});
+</script>
+
+<!-- Include Test Request Modal -->
+{% include 'laboratory/modals/test_request_modal.html' %}
+{% endblock %}

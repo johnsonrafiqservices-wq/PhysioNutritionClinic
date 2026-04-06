@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Laboratory Dashboard - {{ role_display }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">Laboratory Dashboard</h2>
+                <p class="text-muted mb-0">Welcome, {{ user.get_full_name }} ({{ role_display }})</p>
+            </div>
+            <div>
+                <span class="fw-semibold text-info">Laboratory Module</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Pending Tests</div>
+                        <div class="h3 mb-0">{{ pending_tests|default:0 }}</div>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-flask" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Completed Today</div>
+                        <div class="h3 mb-0">{{ completed_today|default:0 }}</div>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Urgent (STAT) Tests</div>
+                        <div class="h3 mb-0">{{ urgent_tests|default:0 }}</div>
+                    </div>
+                    <div class="text-danger">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-lightning-charge"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'laboratory:request_list' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-list-ul"></i> View Test Requests
+                        </a>
+                        <a href="{% url 'laboratory:labtest_results' %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-clipboard-data"></i> View Results
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Note</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-0">
+                        This dashboard focuses on laboratory workload and priorities. Patient lists and detailed clinical data
+                        remain restricted according to your role.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+
+{% block title %}Billing Dashboard - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-cash-stack me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Billing Dashboard</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Invoice
+    </a>
+    <a href="{% url 'billing:payment_create' %}" class="btn btn-success">
+        <i class="bi bi-credit-card"></i> Record Payment
+    </a>
+    <a href="{% url 'billing:insurance_claim_create' %}" class="btn btn-info">
+        <i class="bi bi-shield-check"></i> New Claim
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Revenue (This Month)
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ total_revenue|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-cash-register fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Outstanding Invoices
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ outstanding_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-file-invoice fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Pending Claims
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_claims_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Overdue Amount
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ overdue_amount|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Revenue Chart -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Revenue Overview</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods Chart -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Methods</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="paymentMethodsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity and Quick Actions -->
+<div class="row">
+    <!-- Recent Invoices -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Invoices</h6>
+                <a href="{% url 'billing:invoice_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Patient</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in recent_invoices %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'billing:invoice_detail' invoice.id %}" class="text-decoration-none">
+                                        {{ invoice.invoice_number }}
+                                    </a>
+                                </td>
+                                <td>{{ invoice.patient.get_full_name }}</td>
+                                <td>UGX {{ invoice.total_amount|floatformat:0 }}</td>
+                                <td>
+                                    {% if invoice.status == 'draft' %}
+                                        <span class="fw-semibold text-secondary">Draft</span>
+                                    {% elif invoice.status == 'sent' %}
+                                        <span class="fw-semibold text-primary">Sent</span>
+                                    {% elif invoice.status == 'paid' %}
+                                        <span class="fw-semibold text-success">Paid</span>
+                                    {% elif invoice.status == 'overdue' %}
+                                        <span class="fw-semibold text-danger">Overdue</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ invoice.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% for ginv in recent_group_invoices %}
+                            <tr style="background: rgba(27,94,150,0.04);">
+                                <td>
+                                    <a href="{% url 'billing:group_invoice_detail' ginv.id %}" class="text-decoration-none">
+                                        {{ ginv.invoice_number }}
+                                    </a>
+                                    <span class="badge bg-info ms-1" style="font-size:.65rem;">Group</span>
+                                </td>
+                                <td>{{ ginv.patient_group.name }}</td>
+                                <td>UGX {{ ginv.total_amount|floatformat:0 }}</td>
+                                <td>
+                                    {% if ginv.status == 'draft' %}
+                                        <span class="fw-semibold text-secondary">Draft</span>
+                                    {% elif ginv.status == 'sent' %}
+                                        <span class="fw-semibold text-primary">Sent</span>
+                                    {% elif ginv.status == 'paid' %}
+                                        <span class="fw-semibold text-success">Paid</span>
+                                    {% elif ginv.status == 'partial' %}
+                                        <span class="fw-semibold text-warning">Partial</span>
+                                    {% elif ginv.status == 'overdue' %}
+                                        <span class="fw-semibold text-danger">Overdue</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ ginv.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% if not recent_invoices and not recent_group_invoices %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No recent invoices</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Payments -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Payments</h6>
+                <a href="{% url 'billing:payment_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Payment #</th>
+                                <th>Patient</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in recent_payments %}
+                            <tr>
+                                <td>{{ payment.id }}</td>
+                                <td>{{ payment.invoice.patient.get_full_name }}</td>
+                                <td>UGX {{ payment.amount|floatformat:0 }}</td>
+                                <td>
+                                    <span class="fw-semibold text-info">{{ payment.get_payment_method_display }}</span>
+                                </td>
+                                <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No recent payments</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'billing:invoice_aging_report' %}" class="btn btn-outline-warning btn-block">
+                            <i class="bi bi-clock-history"></i><br>
+                            Invoice Aging Report
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'billing:payment_plan_list' %}" class="btn btn-outline-info btn-block">
+                            <i class="bi bi-calendar-check"></i><br>
+                            Payment Plans
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'billing:insurance_claim_list' %}" class="btn btn-outline-success btn-block">
+                            <i class="bi bi-shield-check"></i><br>
+                            Insurance Claims
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-primary btn-block" onclick="exportBillingData()">
+                            <i class="bi bi-download"></i><br>
+                            Export Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const revenueChart = new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: {{ revenue_labels|safe }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ revenue_data|safe }},
+            borderColor: 'rgb(78, 115, 223)',
+            backgroundColor: 'rgba(78, 115, 223, 0.1)',
+            borderWidth: 2,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Payment Methods Chart
+const paymentMethodsCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+const paymentMethodsChart = new Chart(paymentMethodsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ payment_method_labels|safe }},
+        datasets: [{
+            data: {{ payment_method_data|safe }},
+            backgroundColor: [
+                '#4e73df',
+                '#1cc88a',
+                '#36b9cc',
+                '#f6c23e',
+                '#e74a3b'
+            ],
+            hoverBackgroundColor: [
+                '#2e59d9',
+                '#17a673',
+                '#2c9faf',
+                '#f4b619',
+                '#e02d1b'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+function exportBillingData() {
+    // Placeholder for export functionality
+    alert('Export functionality will be implemented based on your requirements.');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-person-badge me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Staff Directory</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+{% if request.user.role == 'admin' %}
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createStaffModal">
+    <i class="bi bi-person-plus"></i> Add Staff
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+    <!-- Filters Card -->
+    <div class="card border-0 shadow-sm mb-4 modern-card">
+        <div class="card-header bg-gradient-primary text-white py-3">
+            <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filter Staff</h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search by name or employee ID" 
+                           value="{{ search_query|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Department</label>
+                    <select name="department" class="form-select">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if selected_department == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'staff_management:staff_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo me-1"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Staff List -->
+    <div class="card border-0 shadow-sm modern-card">
+        <div class="card-header bg-white border-0 py-3">
+            <h5 class="mb-0"><i class="bi bi-people me-2"></i>Staff Members</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if staff %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Employee ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Position</th>
+                                <th>Employment Status</th>
+                                <th>Joined</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in staff %}
+                            <tr>
+                                <td><strong>{{ member.employee_id }}</strong></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                            <i class="fas fa-user text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ member.user.get_full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ member.user.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if member.department %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary">
+                                            {{ member.department.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">Not assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ member.position }}</td>
+                                <td>
+                                    <span class="badge bg-{% if member.employment_status == 'full_time' %}success{% elif member.employment_status == 'part_time' %}info{% else %}secondary{% endif %}">
+                                        {{ member.get_employment_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ member.joining_date|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if member.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'staff_management:staff_detail' member.pk %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if staff.has_other_pages %}
+                <nav aria-label="Staff pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if staff.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ staff.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                                Previous
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in staff.paginator.page_range %}
+                        {% if staff.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > staff.number|add:'-3' and num < staff.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if staff.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ staff.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                                Next
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
+                    <h4 class="text-muted">No Staff Members Found</h4>
+                    <p class="text-muted">
+                        {% if search_query or selected_department %}
+                            Try adjusting your filters or search terms.
+                        {% else %}
+                            Get started by adding your first staff member.
+                        {% endif %}
+                    </p>
+                    {% if request.user.role == 'admin' and not search_query and not selected_department %}
+                    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#createStaffModal">
+                        <i class="bi bi-person-plus me-2"></i>Add First Staff Member
+                    </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Staff Modal -->
+<div class="modal fade" id="createStaffModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Add Staff Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form data-modal-form method="post" action="{% url 'staff_management:staff_create' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note:</strong> For now, please create staff members through the Django Admin panel at <a href="/admin/accounts/user/add/" target="_blank">/admin/accounts/user/add/</a>
+                    </div>
+                    
+                    <p class="text-muted">Staff creation via modal is coming soon. You can:</p>
+                    <ul>
+                        <li>Go to Django Admin → Users → Add User</li>
+                        <li>Create the user account with appropriate role</li>
+                        <li>Staff profile will be created automatically</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="/admin/accounts/user/add/" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right me-2"></i>Go to Admin
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

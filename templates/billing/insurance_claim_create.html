@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create Insurance Claim - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-shield-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Create Insurance Claim</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Insurance Claim Form</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Patient and Invoice Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Patient & Invoice Information</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.patient|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.invoice|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Insurance Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Insurance Information</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.insurance_provider|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.policy_number|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.group_number|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.claim_amount|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Additional Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'billing:billing_dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-shield-check"></i> Submit Claim
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Common Diagnosis Codes -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Common Diagnosis Codes</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="diagnosis" data-code="M25.50">
+                        <strong>M25.50</strong> - Pain in joint, unspecified
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="diagnosis" data-code="M79.3">
+                        <strong>M79.3</strong> - Panniculitis, unspecified
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="diagnosis" data-code="M62.81">
+                        <strong>M62.81</strong> - Muscle weakness
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="diagnosis" data-code="S93.40">
+                        <strong>S93.40</strong> - Sprain of ankle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Common Procedure Codes -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Common Procedure Codes</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="procedure" data-code="97110">
+                        <strong>97110</strong> - Therapeutic exercise
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="procedure" data-code="97112">
+                        <strong>97112</strong> - Neuromuscular reeducation
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="procedure" data-code="97140">
+                        <strong>97140</strong> - Manual therapy
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action quick-code" data-field="procedure" data-code="97161">
+                        <strong>97161</strong> - PT evaluation
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claim Guidelines -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Claim Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Verify patient insurance information
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Use correct ICD-10 diagnosis codes
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Include appropriate CPT procedure codes
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Submit within required timeframe
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Include detailed service description
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default service date to today
+    const serviceDate = document.getElementById('id_service_date');
+    if (serviceDate && !serviceDate.value) {
+        const today = new Date();
+        serviceDate.value = today.toISOString().split('T')[0];
+    }
+
+    // Generate claim number
+    const claimNumber = document.getElementById('id_claim_number');
+    if (claimNumber && !claimNumber.value) {
+        const timestamp = Date.now();
+        claimNumber.value = `CLM-${timestamp}`;
+    }
+
+    // Quick code selection
+    document.querySelectorAll('.quick-code').forEach(button => {
+        button.addEventListener('click', function() {
+            const field = this.dataset.field;
+            const code = this.dataset.code;
+            
+            if (field === 'diagnosis') {
+                document.getElementById('id_diagnosis_code').value = code;
+            } else if (field === 'procedure') {
+                document.getElementById('id_procedure_code').value = code;
+            }
+        });
+    });
+
+    // Patient selection handler to populate insurance info
+    const patientSelect = document.getElementById('id_patient');
+    if (patientSelect) {
+        patientSelect.addEventListener('change', function() {
+            if (this.value) {
+                // Mock insurance data population
+                document.getElementById('id_insurance_provider').value = 'Blue Cross Blue Shield';
+                document.getElementById('id_policy_number').value = 'BC123456789';
+                document.getElementById('id_group_number').value = 'GRP001';
+            }
+        });
+    }
+
+    // Calculate expected reimbursement based on billed amount
+    const billedAmount = document.getElementById('id_billed_amount');
+    const expectedReimbursement = document.getElementById('id_expected_reimbursement');
+    
+    if (billedAmount && expectedReimbursement) {
+        billedAmount.addEventListener('input', function() {
+            const amount = parseFloat(this.value) || 0;
+            // Assume 80% reimbursement rate
+            const expected = amount * 0.8;
+            expectedReimbursement.value = expected.toFixed(2);
+        });
+    }
+
+    // Pre-populate patient if passed in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const patientId = urlParams.get('patient');
+    if (patientId && patientSelect) {
+        patientSelect.value = patientId;
+        patientSelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %}

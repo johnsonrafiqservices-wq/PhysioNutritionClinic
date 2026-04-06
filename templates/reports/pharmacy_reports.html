@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Pharmacy Reports{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-capsule me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Pharmacy Reports</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center">
+    <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+    <a href="{% url 'pharmacy:inventory' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-capsule me-1"></i>Pharmacy</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Period Filter -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small fw-bold me-1"><i class="bi bi-funnel me-1"></i>Period:</span>
+            <select name="period" class="form-select form-select-sm" style="width:auto;" onchange="toggleCustom(this)">
+                <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This Month</option>
+                <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last Month</option>
+                <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 Days</option>
+                <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 Days</option>
+                <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This Year</option>
+                <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+            <div id="customDates" class="d-flex gap-2 align-items-center" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %} !important;">
+                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ start_date|date:'Y-m-d' }}" style="width:auto;">
+                <span class="text-muted small">to</span>
+                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ end_date|date:'Y-m-d' }}" style="width:auto;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter me-1"></i>Apply</button>
+            <span class="ms-auto text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ start_date|date:"M d, Y" }} — {{ end_date|date:"M d, Y" }}</span>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid var(--alafia-primary) !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:var(--alafia-primary);">{{ total_medications }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Medications</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #198754 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#198754;">{{ total_batches }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Batches</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid {% if low_stock_count > 0 %}#dc3545{% else %}#198754{% endif %} !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:{% if low_stock_count > 0 %}#dc3545{% else %}#198754{% endif %};">{{ low_stock_count }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Low Stock</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #e67e22 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#e67e22;">{{ inventory_value|floatformat:0|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Inventory (UGX)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #6f42c1 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#6f42c1;">{{ total_sales }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Sales (Period)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #0d6efd !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#0d6efd;">{{ total_revenue|floatformat:0|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Revenue (UGX)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up text-primary me-1"></i>Sales Revenue Trend (Last 7 Days)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="salesTrendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart text-success me-1"></i>Medications by Category</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tables Row -->
+<div class="row g-3 mb-3">
+    <!-- Top Selling -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-trophy text-warning me-1"></i>Top Selling Medications</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if top_selling %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">#</th>
+                                <th class="border-0">Medication</th>
+                                <th class="border-0 text-center">Qty Sold</th>
+                                <th class="border-0 text-end pe-3">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in top_selling %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+                                <td class="fw-medium">{{ item.batch__medication__name }}</td>
+                                <td class="text-center"><span class="badge bg-primary">{{ item.total_qty }}</span></td>
+                                <td class="text-end pe-3">{{ item.total_rev|floatformat:0|intcomma }} <small class="text-muted">UGX</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No sales data for this period</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock / Expiring -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-exclamation-triangle text-danger me-1"></i>Low Stock Items</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if low_stock_items %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Medication</th>
+                                <th class="border-0 text-center">Stock</th>
+                                <th class="border-0 text-center">Reorder Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                            <tr>
+                                <td class="ps-3 fw-medium">{{ item.name }}</td>
+                                <td class="text-center"><span class="badge bg-danger">{{ item.total_stock|default:0 }}</span></td>
+                                <td class="text-center text-muted">{{ item.reorder_level }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-check-circle text-success" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">All stock levels healthy</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prescriptions Summary -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-prescription2 text-primary" style="font-size:1.5rem;"></i>
+                <div class="fw-bold fs-4 mt-1">{{ prescriptions_total }}</div>
+                <div class="text-muted small">Total Prescriptions (Period)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-hourglass-split text-warning" style="font-size:1.5rem;"></i>
+                <div class="fw-bold fs-4 mt-1 text-warning">{{ prescriptions_pending }}</div>
+                <div class="text-muted small">Pending Prescriptions</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-check-circle text-success" style="font-size:1.5rem;"></i>
+                <div class="fw-bold fs-4 mt-1 text-success">{{ prescriptions_dispensed }}</div>
+                <div class="text-muted small">Dispensed (Period)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const salesCtx = document.getElementById('salesTrendChart').getContext('2d');
+new Chart(salesCtx, {
+    type: 'line',
+    data: {
+        labels: {{ sales_trend_labels|safe }},
+        datasets: [{
+            label: 'Revenue (UGX)',
+            data: {{ sales_trend_data|safe }},
+            borderColor: '#1B5E96',
+            backgroundColor: 'rgba(27,94,150,0.1)',
+            borderWidth: 2, fill: true, tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } },
+        plugins: { legend: { display: false } }
+    }
+});
+
+const catCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(catCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ cat_labels|safe }},
+        datasets: [{ data: {{ cat_counts|safe }}, backgroundColor: ['#1B5E96','#198754','#e67e22','#6f42c1','#dc3545','#0d6efd','#20c997','#fd7e14','#6610f2','#d63384'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+});
+
+function toggleCustom(sel) {
+    document.getElementById('customDates').style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+</script>
+{% endblock %}

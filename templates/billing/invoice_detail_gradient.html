@@ -1,0 +1,803 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f5f7fa;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .invoice-page {
+        max-width: 1200px;
+        margin: 30px auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Header Section */
+    .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 40px;
+        padding: 30px;
+        background: var(--alafia-gradient-light);
+        border-radius: 16px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .invoice-header::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(27, 94, 150, 0.03) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .invoice-header:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px var(--alafia-shadow-hover);
+    }
+
+    .invoice-info-left {
+        flex: 1;
+        z-index: 2;
+        position: relative;
+    }
+
+    .invoice-number-badge {
+        background: var(--alafia-gradient-primary);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-weight: 700;
+        display: inline-block;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 16px rgba(27, 94, 150, 0.3);
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 14px;
+    }
+
+    .invoice-number-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(27, 94, 150, 0.4);
+    }
+
+    .invoice-patient-name {
+        font-size: 28px;
+        font-weight: 700;
+        background: var(--alafia-gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+
+    .invoice-details {
+        color: #64748b;
+        font-size: 14px;
+        line-height: 1.6;
+        font-weight: 500;
+    }
+
+    .invoice-title {
+        text-align: right;
+        flex: 1;
+        z-index: 2;
+        position: relative;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .status-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .status-badge:hover::before {
+        left: 100%;
+    }
+
+    .status-paid { 
+        background: var(--alafia-gradient-success); 
+        color: var(--alafia-success-dark);
+        border: 1px solid var(--alafia-success);
+    }
+    .status-sent { 
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); 
+        color: #1e40af;
+        border: 1px solid #3b82f6;
+    }
+    .status-overdue { 
+        background: var(--alafia-gradient-danger); 
+        color: var(--alafia-danger);
+        border: 1px solid var(--alafia-danger);
+        animation: pulse-danger 2s infinite;
+    }
+    .status-cancelled { 
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); 
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+    .status-draft { 
+        background: var(--alafia-gradient-warning); 
+        color: #92400e;
+        border: 1px solid var(--alafia-warning);
+    }
+
+    @keyframes pulse-danger {
+        0%, 100% { box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2); }
+        50% { box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4); }
+    }
+
+    /* Info Cards */
+    .info-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+
+    .info-card {
+        padding: 28px;
+        background: white;
+        border-radius: 16px;
+        border: 1px solid var(--alafia-border);
+        box-shadow: 0 4px 20px var(--alafia-shadow);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .info-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--alafia-gradient-primary);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px var(--alafia-shadow-hover);
+        border-color: var(--alafia-primary-light);
+    }
+
+    .info-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .info-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--alafia-primary);
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--alafia-primary-light);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+    }
+
+    .info-title::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 40px;
+        height: 2px;
+        background: var(--alafia-primary);
+        transition: width 0.3s ease;
+    }
+
+    .info-card:hover .info-title::after {
+        width: 80px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        align-items: flex-start;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-row:hover {
+        background: var(--alafia-light);
+        margin: 0 -12px 12px -12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #475569;
+        font-size: 13px;
+        flex: 0 0 40%;
+    }
+
+    .info-value {
+        color: #1e293b;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: right;
+        flex: 1;
+    }
+
+    /* Section Styling */
+    .invoice-section {
+        margin-bottom: 40px;
+        animation: fadeInUp 0.6s ease forwards;
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    .invoice-section:nth-child(1) { animation-delay: 0.1s; }
+    .invoice-section:nth-child(2) { animation-delay: 0.2s; }
+    .invoice-section:nth-child(3) { animation-delay: 0.3s; }
+    .invoice-section:nth-child(4) { animation-delay: 0.4s; }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--alafia-primary);
+        margin-bottom: 24px;
+        padding: 16px 0;
+        border-bottom: 3px solid var(--alafia-primary);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background: var(--alafia-primary);
+        border-radius: 50%;
+        margin-right: 12px;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 60px;
+        height: 3px;
+        background: var(--alafia-gradient-primary);
+        transition: width 0.3s ease;
+    }
+
+    .invoice-section:hover .section-title::after {
+        width: 120px;
+    }
+
+    /* Tables */
+    .invoice-table {
+        width: 100%;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px var(--alafia-shadow);
+    }
+
+    .invoice-table thead {
+        background: var(--alafia-gradient-primary);
+        color: white;
+    }
+
+    .invoice-table th {
+        padding: 16px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 12px;
+    }
+
+    .invoice-table td {
+        padding: 16px;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.2s ease;
+    }
+
+    .invoice-table tbody tr:hover td {
+        background: var(--alafia-light);
+    }
+
+    .invoice-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .invoice-table tfoot {
+        background: var(--alafia-light);
+        font-weight: 600;
+    }
+
+    .invoice-table tfoot td {
+        padding: 12px 16px;
+        border-top: 2px solid var(--alafia-border);
+    }
+
+    .total-row {
+        background: var(--alafia-gradient-primary) !important;
+        color: white !important;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .total-row td {
+        border-top: 3px solid var(--alafia-primary-dark) !important;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 30px;
+    }
+
+    .btn-custom {
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 13px;
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary-custom {
+        background: var(--alafia-gradient-primary);
+        color: white;
+    }
+
+    .btn-success-custom {
+        background: var(--alafia-gradient-success);
+        color: var(--alafia-success-dark);
+    }
+
+    .btn-outline-custom {
+        background: white;
+        color: var(--alafia-primary);
+        border: 2px solid var(--alafia-primary);
+    }
+
+    .btn-outline-custom:hover {
+        background: var(--alafia-primary);
+        color: white;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+
+    .empty-state i {
+        font-size: 64px;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="invoice-container">
+    <!-- Invoice Header -->
+    <div class="invoice-header">
+        <div class="invoice-info-left">
+            <div class="invoice-number-badge">
+                <i class="bi bi-receipt me-2"></i>{{ invoice.invoice_number }}
+            </div>
+            <div class="invoice-patient-name">{{ invoice.patient.get_full_name }}</div>
+            <div class="invoice-details">
+                <div><i class="bi bi-person-badge me-2"></i>{{ invoice.patient.patient_id }}</div>
+                <div><i class="bi bi-calendar3 me-2"></i>Issue Date: {{ invoice.issue_date|date:"F d, Y" }}</div>
+                <div><i class="bi bi-calendar-check me-2"></i>Due Date: {{ invoice.due_date|date:"F d, Y" }}</div>
+            </div>
+        </div>
+        <div class="invoice-title">
+            <span class="status-badge status-{{ invoice.status }}">
+                {% if invoice.status == 'paid' %}<i class="bi bi-check-circle me-1"></i>{% endif %}
+                {% if invoice.status == 'overdue' %}<i class="bi bi-exclamation-triangle me-1"></i>{% endif %}
+                {{ invoice.get_status_display }}
+            </span>
+            <div class="invoice-details mt-3">
+                <div>Created by: {{ invoice.created_by.get_full_name }}</div>
+                <div>{{ invoice.created_at|date:"M d, Y H:i" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{% url 'billing:invoice_pdf' invoice.pk %}" class="btn-custom btn-primary-custom" target="_blank">
+            <i class="bi bi-download me-2"></i>Download PDF
+        </a>
+        {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
+        <button type="button" class="btn-custom btn-success-custom" data-bs-toggle="modal" data-bs-target="#quickPaymentModal">
+            <i class="bi bi-credit-card me-2"></i>Quick Payment
+        </button>
+        {% endif %}
+        <button type="button" class="btn-custom btn-outline-custom"
+                onclick="openPaymentModal({{ invoice.pk }}, '{{ invoice.invoice_number }}', {{ invoice.get_balance_due|floatformat:0 }}, {{ invoice.patient.pk }})">
+            <i class="bi bi-cash-stack me-2"></i>Record Payment
+        </button>
+        {% if invoice.status == 'draft' %}
+        <a href="{% url 'billing:invoice_edit' invoice.pk %}" class="btn-custom btn-outline-custom">
+            <i class="bi bi-pencil-square me-2"></i>Edit Invoice
+        </a>
+        {% endif %}
+        <a href="{% url 'patients:patient_detail' invoice.patient.patient_id %}" class="btn-custom btn-outline-custom">
+            <i class="bi bi-person-circle me-2"></i>View Patient
+        </a>
+        <a href="{% url 'billing:invoice_list' %}" class="btn-custom btn-outline-custom">
+            <i class="bi bi-arrow-left me-2"></i>All Invoices
+        </a>
+    </div>
+
+    <!-- Financial Summary Cards -->
+    <div class="info-section">
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-receipt me-2"></i>Invoice Summary</div>
+            <div class="info-row">
+                <span class="info-label">Total Amount</span>
+                <span class="info-value" style="color: var(--alafia-primary); font-weight: 700;">UGX {{ invoice.total_amount|floatformat:0 }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Total Paid</span>
+                <span class="info-value" style="color: var(--alafia-success); font-weight: 700;">UGX {{ invoice.get_total_paid|floatformat:0 }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Balance Due</span>
+                <span class="info-value" style="color: {% if invoice.status == 'paid' %}var(--alafia-success){% else %}var(--alafia-danger){% endif %}; font-weight: 700;">UGX {{ invoice.get_balance_due|floatformat:0 }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Line Items</span>
+                <span class="info-value">{{ line_items.count }}</span>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-person-circle me-2"></i>Patient Information</div>
+            <div class="info-row">
+                <span class="info-label">Name</span>
+                <span class="info-value">{{ invoice.patient.get_full_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Patient ID</span>
+                <span class="info-value">{{ invoice.patient.patient_id }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Phone</span>
+                <span class="info-value">{{ invoice.patient.phone|default:"N/A" }}</span>
+            </div>
+            {% if invoice.patient.email %}
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ invoice.patient.email }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-clock-history me-2"></i>Timeline</div>
+            <div class="info-row">
+                <span class="info-label">Created</span>
+                <span class="info-value">{{ invoice.created_at|date:"M d, Y H:i" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Last Updated</span>
+                <span class="info-value">{{ invoice.updated_at|date:"M d, Y H:i" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Invoice Age</span>
+                <span class="info-value">{{ invoice.issue_date|timesince }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Payments</span>
+                <span class="info-value">{{ payments.count }} transaction{{ payments.count|pluralize }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Items -->
+    <div class="invoice-section">
+        <div class="section-title">
+            <i class="bi bi-list-check me-2"></i>Invoice Items
+        </div>
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="text-align: center;">Quantity</th>
+                    <th style="text-align: right;">Unit Price</th>
+                    <th style="text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in line_items %}
+                <tr>
+                    <td>
+                        <strong>{{ item.description }}</strong>
+                        {% if item.service %}
+                            <br><small class="text-muted"><i class="bi bi-tag me-1"></i>{{ item.service.name }}</small>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">{{ item.quantity }}</td>
+                    <td style="text-align: right;">UGX {{ item.unit_price|floatformat:0 }}</td>
+                    <td style="text-align: right;"><strong>UGX {{ item.total_amount|floatformat:0 }}</strong></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>No items found</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align: right;"><strong>Subtotal:</strong></td>
+                    <td style="text-align: right;"><strong>UGX {{ invoice.subtotal|floatformat:0 }}</strong></td>
+                </tr>
+                {% if invoice.discount_amount > 0 %}
+                <tr>
+                    <td colspan="3" style="text-align: right; color: var(--alafia-success);"><strong>Discount:</strong></td>
+                    <td style="text-align: right; color: var(--alafia-success);"><strong>-UGX {{ invoice.discount_amount|floatformat:0 }}</strong></td>
+                </tr>
+                {% endif %}
+                {% if invoice.tax_rate > 0 %}
+                <tr>
+                    <td colspan="3" style="text-align: right;"><strong>Tax ({{ invoice.tax_rate }}%):</strong></td>
+                    <td style="text-align: right;"><strong>UGX {{ invoice.tax_amount|floatformat:0 }}</strong></td>
+                </tr>
+                {% endif %}
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: right;"><strong>TOTAL AMOUNT:</strong></td>
+                    <td style="text-align: right;"><strong>UGX {{ invoice.total_amount|floatformat:0 }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Payment History -->
+    <div class="invoice-section">
+        <div class="section-title">
+            <i class="bi bi-credit-card me-2"></i>Payment History
+        </div>
+        {% if payments %}
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Payment ID</th>
+                    <th>Date</th>
+                    <th>Method</th>
+                    <th style="text-align: right;">Amount</th>
+                    <th>Status</th>
+                    <th>Processed By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>
+                        <a href="{% url 'billing:payment_detail' payment.pk %}" style="color: var(--alafia-primary); text-decoration: none; font-weight: 600;">
+                            <i class="bi bi-receipt me-1"></i>{{ payment.payment_id }}
+                        </a>
+                    </td>
+                    <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                    <td>{{ payment.get_payment_method_display }}</td>
+                    <td style="text-align: right; font-weight: 600;">UGX {{ payment.amount|floatformat:0 }}</td>
+                    <td>
+                        <span class="status-badge {% if payment.status == 'completed' %}status-paid{% elif payment.status == 'pending' %}status-draft{% else %}status-cancelled{% endif %}">
+                            {{ payment.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ payment.processed_by.get_full_name }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-wallet2"></i>
+            <p>No payments recorded yet</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if invoice.notes %}
+    <!-- Notes Section -->
+    <div class="invoice-section">
+        <div class="section-title">
+            <i class="bi bi-sticky me-2"></i>Notes
+        </div>
+        <div class="info-card">
+            <p style="margin: 0; line-height: 1.6;">{{ invoice.notes|linebreaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Quick Payment Modal -->
+{% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
+<div class="modal fade" id="quickPaymentModal" tabindex="-1" aria-labelledby="quickPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickPaymentModalLabel">
+                    <i class="bi bi-credit-card me-2"></i>Quick Payment - {{ invoice.invoice_number }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickPaymentForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="alert alert-info">
+                        <strong>Invoice Total:</strong> UGX {{ invoice.total_amount|floatformat:0 }}<br>
+                        <strong>Balance Due:</strong> UGX {{ invoice.get_balance_due|floatformat:0 }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paymentAmount" class="form-label">Payment Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">UGX</span>
+                            <input type="number" class="form-control" id="paymentAmount" name="amount" 
+                                   value="{{ invoice.get_balance_due|floatformat:0 }}" step="1" min="1" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paymentMethod" class="form-label">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" name="payment_method" required>
+                            <option value="">Select payment method</option>
+                            <option value="cash">Cash</option>
+                            <option value="mobile_money">Mobile Money</option>
+                            <option value="credit_card">Credit Card</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="insurance">Insurance</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="referenceNumber" class="form-label">Transaction Number (Optional)</label>
+                        <input type="text" class="form-control" id="referenceNumber" name="reference_number">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paymentNotes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="paymentNotes" name="notes" rows="2"></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="patient" value="{{ invoice.patient.pk }}">
+                    <input type="hidden" name="invoice" value="{{ invoice.pk }}">
+                    <input type="hidden" name="status" value="completed">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-credit-card me-1"></i>Record Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quickPaymentForm = document.getElementById('quickPaymentForm');
+    
+    if (quickPaymentForm) {
+        quickPaymentForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Processing...';
+            
+            fetch('{% url "billing:payment_create" %}?invoice={{ invoice.pk }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('quickPaymentModal'));
+                    modal.hide();
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    alert('Error: ' + (data.message || 'Payment failed'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing the payment.');
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

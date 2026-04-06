@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insurance Claim {{ claim.claim_number }} - Physio & Nutrition Clinic</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.4;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .medical-document-header {
+            background: linear-gradient(135deg, #1B5E96 0%, #2563eb 100%);
+            color: white;
+            padding: 12px 15px 0 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .clinic-header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .clinic-info-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .clinic-logo {
+            width: 90px !important;
+            height: 90px !important;
+            object-fit: contain !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            -moz-border-radius: 50% !important;
+            background: #fff;
+            padding: 4px;
+            border: 3px solid #8B0000;
+        }
+        
+        .clinic-name-print {
+            font-size: 15pt;
+            font-weight: 700;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+        
+        .clinic-address-print {
+            font-size: 8.5pt;
+            opacity: 0.9;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+        
+        .document-info-right {
+            text-align: right;
+        }
+        
+        .document-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            letter-spacing: 1px;
+        }
+        
+        .document-id, .document-date {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-bottom: 3px;
+        }
+
+        .heartbeat-line {
+            width: 100%;
+            height: 24px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .heartbeat-line svg {
+            width: 100%;
+            height: 24px;
+            display: block;
+        }
+        
+        .claim-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .info-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2c5aa0;
+        }
+        
+        .info-section h3 {
+            margin: 0 0 15px 0;
+            color: #2c5aa0;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ddd;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .info-value {
+            color: #333;
+            text-align: right;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-approved { background-color: #28a745; }
+        .status-denied { background-color: #dc3545; }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-submitted { background-color: #17a2b8; }
+
+        /* Patient & Claim Details Header Styles */
+        .patient-claim-details-header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            margin: 30px -30px 0 -30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .patient-info-header, .claim-info-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .header-section {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .header-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .header-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+        }
+
+        @media print {
+            .patient-claim-details-header {
+                background: rgba(27, 94, 150, 0.1) !important;
+                color: #1B5E96 !important;
+            }
+            
+            .header-value {
+                color: #1B5E96 !important;
+            }
+        }
+
+        .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .services-table th,
+        .services-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .services-table th {
+            background: #2c5aa0;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+        
+        .services-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .amount {
+            font-weight: bold;
+            color: #2c5aa0;
+        }
+        
+        .total-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 2px solid #2c5aa0;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .total-row.final {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c5aa0;
+            border-top: 2px solid #2c5aa0;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        
+        .notes-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #2c5aa0;
+        }
+        
+        .notes-section h3 {
+            margin: 0 0 15px 0;
+            color: #2c5aa0;
+            font-size: 16px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #2c5aa0;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2c5aa0;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        
+        .print-button:hover {
+            background: #1e3d6f;
+        }
+        
+        @media (max-width: 768px) {
+            .claim-info {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">
+        <i class="bi bi-printer"></i> Print Claim
+    </button>
+
+    <div class="medical-document-header">
+        <div class="clinic-header-section">
+            <div class="clinic-info-left">
+                <img src="{% if clinic_settings.logo %}{{ clinic_settings.logo.url }}{% else %}{% load static %}{% static 'images/logo.png' %}{% endif %}" 
+                     alt="Clinic Logo" class="clinic-logo">
+                <div class="clinic-details">
+                    <div class="clinic-name-print">Physio & Nutrition Clinic</div>
+                    <div class="clinic-address-print">
+                        Professional Healthcare Services<br>
+                        Phone: (555) 123-4567 | Email: info@physionutrition.com<br>
+                        123 Health Street, Medical District, City, State 12345
+                    </div>
+                </div>
+            </div>
+            <div class="document-info-right">
+                <div class="document-title" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">INSURANCE CLAIM FORM</div>
+                <div class="document-id" style="font-size: 18px;">Claim #: {{ claim.claim_number }}</div>
+                <div class="document-date" style="font-size: 18px;">Generated: {{ "now"|date:"M d, Y \a\\t g:i A" }}</div>
+                <div class="document-date" style="font-size: 18px;">Status: 
+                    <span class="status-badge status-{{ claim.status }}">{{ claim.get_status_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="heartbeat-line">
+            <svg viewBox="0 0 680 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="0" y1="12" x2="290" y2="12" stroke="#8B0000" stroke-width="2"/>
+                <polyline points="290,12 300,12 308,2 316,22 324,6 332,18 340,12 350,12" fill="none" stroke="#8B0000" stroke-width="2"/>
+                <line x1="350" y1="12" x2="668" y2="12" stroke="#8B0000" stroke-width="2"/>
+                <circle cx="672" cy="12" r="6" fill="#8B0000"/>
+            </svg>
+        </div>
+        
+        <!-- Patient & Claim Details Header -->
+        <div class="patient-claim-details-header">
+            <div class="patient-info-header">
+                <div class="header-section">
+                    <div class="header-label">Patient</div>
+                    <div class="header-value">{{ patient.get_full_name }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Patient ID</div>
+                    <div class="header-value">{{ patient.patient_id }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">DOB</div>
+                    <div class="header-value">{{ patient.date_of_birth|date:"M d, Y" }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Insurance</div>
+                    <div class="header-value">{{ claim.insurance_provider }}</div>
+                </div>
+            </div>
+            <div class="claim-info-header">
+                <div class="header-section">
+                    <div class="header-label">Submission Date</div>
+                    <div class="header-value">{{ claim.submission_date|date:"M d, Y" }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Response Date</div>
+                    <div class="header-value">{{ claim.response_date|date:"M d, Y"|default:"Pending" }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Policy Number</div>
+                    <div class="header-value">{{ claim.policy_number|default:"Not specified" }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Group Number</div>
+                    <div class="header-value">{{ claim.group_number|default:"Not specified" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="claim-info">
+        <div class="info-section">
+            <h3>Claim Information</h3>
+            <div class="info-row">
+                <span class="info-label">Claim Number:</span>
+                <span class="info-value">{{ claim.claim_number }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Submission Date:</span>
+                <span class="info-value">{{ claim.submission_date|date:"F d, Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="info-value">
+                    <span class="status-badge status-{{ claim.status }}">{{ claim.get_status_display }}</span>
+                </span>
+            </div>
+            {% if claim.response_date %}
+            <div class="info-row">
+                <span class="info-label">Response Date:</span>
+                <span class="info-value">{{ claim.response_date|date:"F d, Y" }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="info-section">
+            <h3>Patient Information</h3>
+            <div class="info-row">
+                <span class="info-label">Patient Name:</span>
+                <span class="info-value">{{ patient.get_full_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Patient ID:</span>
+                <span class="info-value">{{ patient.patient_id }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date of Birth:</span>
+                <span class="info-value">{{ patient.date_of_birth|date:"F d, Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Phone:</span>
+                <span class="info-value">{{ patient.phone }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="claim-info">
+        <div class="info-section">
+            <h3>Insurance Information</h3>
+            <div class="info-row">
+                <span class="info-label">Insurance Provider:</span>
+                <span class="info-value">{{ claim.insurance_provider }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Policy Number:</span>
+                <span class="info-value">{{ claim.policy_number }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Group Number:</span>
+                <span class="info-value">{{ claim.group_number }}</span>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3>Invoice Information</h3>
+            {% if invoice %}
+            <div class="info-row">
+                <span class="info-label">Invoice Number:</span>
+                <span class="info-value">{{ invoice.invoice_number }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Invoice Date:</span>
+                <span class="info-value">{{ invoice.issue_date|date:"F d, Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Service Date:</span>
+                <span class="info-value">{{ invoice.service_date|date:"F d, Y" }}</span>
+            </div>
+            {% else %}
+            <div class="info-row">
+                <span class="info-label">Invoice:</span>
+                <span class="info-value">No associated invoice</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if invoice and invoice.line_items.all %}
+    <h3 style="color: #2c5aa0; margin-top: 30px;">Services Provided</h3>
+    <table class="services-table">
+        <thead>
+            <tr>
+                <th>Service Description</th>
+                <th>Date</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.line_items.all %}
+            <tr>
+                <td>{{ item.service.name }}</td>
+                <td>{{ invoice.service_date|date:"M d, Y" }}</td>
+                <td>{{ item.quantity }}</td>
+                <td class="amount">UGX {{ item.unit_price|floatformat:0 }}</td>
+                <td class="amount">UGX {{ item.total_amount|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <div class="total-section">
+        <div class="total-row">
+            <span>Claim Amount:</span>
+            <span class="amount">UGX {{ claim.claim_amount|floatformat:0 }}</span>
+        </div>
+        {% if claim.approved_amount %}
+        <div class="total-row">
+            <span>Approved Amount:</span>
+            <span class="amount">UGX {{ claim.approved_amount|floatformat:0 }}</span>
+        </div>
+        {% endif %}
+        <div class="total-row final">
+            <span>Total Claim:</span>
+            <span>UGX {{ claim.claim_amount|floatformat:0 }}</span>
+        </div>
+    </div>
+
+    {% if claim.notes %}
+    <div class="notes-section">
+        <h3>Additional Notes</h3>
+        <p>{{ claim.notes }}</p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p><strong>Physio & Nutrition Clinic</strong></p>
+        <p>This claim form was generated on {{ "now"|date:"F d, Y \a\\t g:i A" }}</p>
+        <p>For questions regarding this claim, please contact our billing department at (555) 123-4567</p>
+        <p style="margin-top: 20px; font-size: 10px; color: #999;">
+            This document contains confidential patient information protected by HIPAA regulations.
+        </p>
+    </div>
+</body>
+</html>

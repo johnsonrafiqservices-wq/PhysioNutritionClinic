@@ -1,0 +1,26 @@
+# Additional requirements for the Reports app
+# Add these to your main requirements.txt file
+
+# PDF Generation
+reportlab==4.0.4
+
+# Excel Generation
+openpyxl==3.1.2
+
+# Email with HTML templates
+django-extensions==3.2.3
+
+# Performance monitoring (optional)
+django-debug-toolbar==4.2.0
+
+# Caching (if not already included)
+redis==5.0.1
+django-redis==5.4.0
+
+# Background task processing (for scheduled reports)
+celery==5.3.4
+django-celery-beat==2.5.0
+
+# Additional utilities
+python-dateutil==2.8.2
+Pillow==10.1.0  # For image processing in reports

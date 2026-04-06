@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-capsule me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Pharmacy Dashboard</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center">
+    <span class="badge bg-light text-dark border px-2 py-1" style="font-size:.75rem;">
+        <i class="bi bi-calendar3 me-1"></i>{% now "D, M d" %}
+    </span>
+    <button type="button" class="btn btn-sm btn-light px-2 py-1" style="font-size:.75rem;" data-bs-toggle="modal" data-bs-target="#medicationCreateModal">
+        <i class="bi bi-plus-circle me-1"></i>Add Medication
+    </button>
+    <button type="button" class="btn btn-sm btn-light px-2 py-1" style="font-size:.75rem;" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+        <i class="bi bi-box-seam me-1"></i>Receive Batch
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+.kpi{border-left:3px solid transparent;transition:border-color .2s;min-height:68px;}
+.kpi:hover{border-left-color:var(--accent,#0d6efd);}
+.kpi .kpi-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.kpi .kpi-val{font-size:1.35rem;font-weight:700;line-height:1.2;}
+.kpi .kpi-lbl{font-size:.72rem;color:#6c757d;margin:0;}
+.kpi .kpi-sub{font-size:.65rem;}
+.qa-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid #dee2e6;color:#495057;background:#fff;transition:all .15s;}
+.qa-btn:hover{background:var(--alafia-primary);color:#fff;border-color:var(--alafia-primary);}
+.qa-btn i{font-size:.9rem;}
+.mod-pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;text-decoration:none;color:#333;background:#fff;border:1px solid #e9ecef;transition:all .2s;font-size:.8rem;font-weight:500;}
+.mod-pill:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);color:var(--alafia-primary);border-color:var(--alafia-primary);}
+.mod-pill .mod-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;}
+.sched-item{padding:6px 0;border-bottom:1px solid #f0f0f0;}
+.sched-item:last-child{border-bottom:0;}
+</style>
+
+<!-- Welcome strip -->
+<div class="d-flex align-items-center justify-content-between rounded-3 px-3 py-2 mb-3" style="background:var(--alafia-gradient);color:#fff;">
+    <div>
+        <span class="fw-semibold" style="font-size:.95rem;">Pharmacy Inventory Overview</span>
+        <span class="opacity-75 ms-2" style="font-size:.8rem;">{{ total_medications }} medications &middot; {{ total_batches }} batches</span>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-sm btn-light px-2 py-1" style="font-size:.75rem;"><i class="bi bi-cash-coin me-1"></i>Sales</a>
+        <a href="{% url 'pharmacy:sales_report' %}" class="btn btn-sm btn-light px-2 py-1" style="font-size:.75rem;"><i class="bi bi-bar-chart me-1"></i>Reports</a>
+    </div>
+</div>
+
+<!-- KPI Row -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:var(--alafia-primary);">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:var(--alafia-primary-light);color:var(--alafia-primary);"><i class="bi bi-capsule"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:var(--alafia-primary);">{{ total_medications|intcomma }}</div>
+                    <p class="kpi-lbl">Medications</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:{% if low_stock_count > 0 %}#dc3545{% else %}#198754{% endif %};">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:{% if low_stock_count > 0 %}#fde2e4{% else %}#d1f5e0{% endif %};color:{% if low_stock_count > 0 %}#dc3545{% else %}#198754{% endif %};"><i class="bi bi-exclamation-triangle"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:{% if low_stock_count > 0 %}#dc3545{% else %}#198754{% endif %};">{{ low_stock_count }}</div>
+                    <p class="kpi-lbl">Low Stock</p>
+                    {% if low_stock_count > 0 %}<span class="badge bg-danger-subtle text-danger kpi-sub">Attention</span>{% else %}<span class="badge bg-success-subtle text-success kpi-sub">All OK</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1f5e0;color:#198754;"><i class="bi bi-boxes"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#198754;">{{ total_batches|intcomma }}</div>
+                    <p class="kpi-lbl">Batches</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:#e67e22;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-cash-stack"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#e67e22;">{{ total_value|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">Inventory (UGX)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:#6f42c1;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#e8daef;color:#6f42c1;"><i class="bi bi-prescription2"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#6f42c1;">{{ pending_prescriptions }}</div>
+                    <p class="kpi-lbl">Pending Rx</p>
+                    {% if pending_prescriptions > 0 %}<span class="badge bg-warning-subtle text-warning kpi-sub">Awaiting</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<style>
+.pharm-qa .alafia-action-btn{padding:8px 6px;min-height:0;flex:1;min-width:80px;}
+.pharm-qa .alafia-action-btn i{font-size:1.15rem;margin-bottom:4px;}
+.pharm-qa .alafia-action-btn span{font-size:.73rem;}
+</style>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Actions
+            </div>
+            <div class="card-body py-2 pharm-qa">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#medicationCreateModal">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Add Medication</span>
+                    </button>
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Receive Batch</span>
+                    </button>
+                    <a href="{% url 'pharmacy:medication_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Medications</span>
+                    </a>
+                    <a href="{% url 'pharmacy:batch_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-boxes"></i>
+                        <span>Batches</span>
+                    </a>
+                    <a href="{% url 'pharmacy:prescription_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-prescription2"></i>
+                        <span>Prescriptions</span>
+                    </a>
+                    <a href="{% url 'pharmacy:supplier_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-truck"></i>
+                        <span>Suppliers</span>
+                    </a>
+                    <a href="{% url 'pharmacy:sales_dashboard' %}" class="alafia-action-btn">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>Sales</span>
+                    </a>
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#importMedicationsModal">
+                        <i class="bi bi-file-earmark-excel"></i>
+                        <span>Import</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content: Low Stock + Expiring Soon -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-exclamation-triangle text-danger me-1"></i>Low Stock Alert</h6>
+                <a href="{% url 'pharmacy:medication_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body p-0">
+                {% if low_stock_items %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Medication</th>
+                                <th class="border-0">Strength</th>
+                                <th class="border-0 text-center">Current Stock</th>
+                                <th class="border-0 text-center">Reorder Level</th>
+                                <th class="border-0 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items|slice:":10" %}
+                            <tr>
+                                <td class="ps-3 fw-medium">{{ item.name }}</td>
+                                <td class="text-muted">{{ item.strength }}</td>
+                                <td class="text-center">
+                                    <span class="badge {% if item.total_stock == 0 or item.total_stock == None %}bg-dark{% else %}bg-danger{% endif %}">{{ item.total_stock|default:0 }}</span>
+                                </td>
+                                <td class="text-center text-muted">{{ item.reorder_level }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'pharmacy:medication_detail' item.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size:.72rem;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-1 mb-0 small">All stock levels are healthy</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-clock-history text-warning me-1"></i>Expiring Soon</h6>
+                <a href="{% url 'pharmacy:batch_list' %}" class="text-warning text-decoration-none" style="font-size:.75rem;">All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body py-2 px-3">
+                {% if expiring_soon %}
+                {% for batch in expiring_soon|slice:":6" %}
+                <div class="sched-item d-flex justify-content-between align-items-center">
+                    <div style="min-width:0;">
+                        <div class="fw-medium text-truncate" style="font-size:.82rem;">{{ batch.medication.name }}</div>
+                        <div class="text-muted" style="font-size:.7rem;"><i class="bi bi-hash me-1"></i>{{ batch.batch_number }} &middot; {{ batch.expiry_date|date:"M d, Y" }}</div>
+                    </div>
+                    <span class="badge {% if batch.get_remaining_shelf_life_days <= 30 %}bg-danger{% else %}bg-warning text-dark{% endif %}" style="font-size:.65rem;">
+                        {{ batch.get_remaining_shelf_life_days }}d
+                    </span>
+                </div>
+                {% endfor %}
+                {% if expiring_soon.count > 6 %}
+                <div class="text-center pt-1"><a href="{% url 'pharmacy:batch_list' %}" class="text-muted small">+{{ expiring_soon.count|add:"-6" }} more</a></div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-check-circle text-success" style="font-size: 1.8rem;"></i>
+                    <p class="text-muted mt-1 mb-0" style="font-size:.8rem;">No items expiring soon</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Prescriptions + Navigation -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-prescription2 text-primary me-1"></i>Recent Prescriptions</h6>
+                <a href="{% url 'pharmacy:prescription_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_prescriptions %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Patient</th>
+                                <th class="border-0">Prescribed By</th>
+                                <th class="border-0">Date</th>
+                                <th class="border-0 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rx in recent_prescriptions %}
+                            <tr>
+                                <td class="ps-3 fw-medium">{{ rx.patient.get_full_name|default:"Unknown" }}</td>
+                                <td class="text-muted">{{ rx.prescribed_by.get_full_name|default:rx.prescribed_by }}</td>
+                                <td class="text-muted">{{ rx.prescribed_date|date:"d M Y" }}</td>
+                                <td class="text-center">
+                                    <span class="badge {% if rx.status == 'dispensed' %}bg-success{% elif rx.status == 'cancelled' %}bg-danger{% else %}bg-warning text-dark{% endif %}" style="font-size:.65rem;">
+                                        {{ rx.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-prescription2 text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-1 mb-0 small">No prescriptions yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-info-circle text-primary me-1"></i>Quick Stats</h6>
+            </div>
+            <div class="card-body py-2 px-3">
+                <div class="sched-item d-flex justify-content-between align-items-center">
+                    <div style="font-size:.82rem;"><i class="bi bi-truck text-muted me-1"></i> Suppliers</div>
+                    <span class="fw-bold" style="font-size:.85rem;">{{ total_suppliers }}</span>
+                </div>
+                <div class="sched-item d-flex justify-content-between align-items-center">
+                    <div style="font-size:.82rem;"><i class="bi bi-cart-check text-muted me-1"></i> Sales Today</div>
+                    <span class="fw-bold" style="font-size:.85rem;">{{ today_sales }}</span>
+                </div>
+                <div class="sched-item d-flex justify-content-between align-items-center">
+                    <div style="font-size:.82rem;"><i class="bi bi-cash text-muted me-1"></i> Revenue Today</div>
+                    <span class="fw-bold" style="font-size:.85rem;">{{ today_revenue|floatformat:0|intcomma }} <small class="text-muted">UGX</small></span>
+                </div>
+                <div class="sched-item d-flex justify-content-between align-items-center">
+                    <div style="font-size:.82rem;"><i class="bi bi-prescription2 text-muted me-1"></i> Pending Rx</div>
+                    <span class="fw-bold {% if pending_prescriptions > 0 %}text-warning{% endif %}" style="font-size:.85rem;">{{ pending_prescriptions }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modules Grid -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-2 border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-grid-3x3-gap-fill text-primary me-1"></i>Pharmacy Modules</h6>
+    </div>
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'pharmacy:medication_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:var(--alafia-primary-light);color:var(--alafia-primary);"><i class="bi bi-capsule"></i></div>
+                Medications
+            </a>
+            <a href="{% url 'pharmacy:batch_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#d1f5e0;color:#198754;"><i class="bi bi-boxes"></i></div>
+                Batches
+            </a>
+            <a href="{% url 'pharmacy:prescription_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#e8daef;color:#6f42c1;"><i class="bi bi-prescription2"></i></div>
+                Prescriptions
+            </a>
+            <a href="{% url 'pharmacy:supplier_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-truck"></i></div>
+                Suppliers
+            </a>
+            <a href="{% url 'pharmacy:sales_dashboard' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-cash-coin"></i></div>
+                Sales
+            </a>
+            <a href="{% url 'pharmacy:sales_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#cfe2ff;color:#0d6efd;"><i class="bi bi-receipt"></i></div>
+                Sales History
+            </a>
+            <a href="{% url 'pharmacy:stock_movement_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#fde2e4;color:#dc3545;"><i class="bi bi-arrow-left-right"></i></div>
+                Stock Movements
+            </a>
+            <a href="{% url 'pharmacy:sales_report' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#ebf5fb;color:#2e86c1;"><i class="bi bi-bar-chart-fill"></i></div>
+                Reports
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.submitBatchForm = function(formId, url) {
+    const form = document.getElementById(formId);
+    if (!form) { alert('Form not found'); return; }
+    const formData = new FormData(form);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    fetch(url, {
+        method: 'POST', body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('batchCreateModal'));
+            if (modal) modal.hide();
+            setTimeout(() => window.location.href = data.redirect_url || window.location.href, 300);
+        } else {
+            if (data.errors) {
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    const input = form.querySelector(`[name="${field}"]`);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback d-block';
+                        errorDiv.textContent = Array.isArray(errors) ? errors.join(', ') : errors;
+                        input.parentNode.appendChild(errorDiv);
+                    }
+                }
+            }
+            alert(data.message || 'Please correct errors');
+        }
+    })
+    .catch(error => console.error('Error:', error.message));
+};
+window.submitMedicationForm = window.submitBatchForm;
+window.submitPrescriptionForm = window.submitBatchForm;
+window.submitSupplierForm = window.submitBatchForm;
+</script>
+
+<!-- Include Pharmacy Modals -->
+{% include 'pharmacy/modals/all_pharmacy_modals.html' %}
+{% endblock %}

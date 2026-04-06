@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cancel Appointment - PhysioNutrition Clinic{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Cancel Appointment</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> Are you sure you want to cancel this appointment?
+                    </div>
+
+                    <div class="appointment-details">
+                        <h5>Appointment Details</h5>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="30%">Patient:</th>
+                                <td>{{ appointment.patient.get_full_name }} ({{ appointment.patient.patient_id }})</td>
+                            </tr>
+                            <tr>
+                                <th>Service:</th>
+                                <td>{{ appointment.service.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Provider:</th>
+                                <td>{{ appointment.provider.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date & Time:</th>
+                                <td>{{ appointment.appointment_date|date:"F d, Y" }} at {{ appointment.appointment_time|time:"g:i A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Duration:</th>
+                                <td>{{ appointment.duration_minutes }} minutes</td>
+                            </tr>
+                            <tr>
+                                <th>Current Status:</th>
+                                <td><span class="fw-semibold text-{{ appointment.status|lower }}">{{ appointment.get_status_display }}</span></td>
+                            </tr>
+                            {% if appointment.notes %}
+                            <tr>
+                                <th>Notes:</th>
+                                <td>{{ appointment.notes }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.GET.next }}">
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'appointments:appointment_list' %}{% endif %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> No, Go Back
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times-circle"></i> Yes, Cancel Appointment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

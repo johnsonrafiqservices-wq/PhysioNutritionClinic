@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+
+{% block title %}Generate Group Invoice - Excellence Medical Care{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-file-earmark-plus me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Generate Group Invoice</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.wizard-container { max-width: 900px; margin: 0 auto; }
+.wizard-step {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-left: 4px solid #e9ecef;
+    transition: all 0.2s;
+}
+.wizard-step.active { border-left-color: #0d6efd; box-shadow: 0 2px 8px rgba(13,110,253,0.12); }
+.step-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    margin-right: 12px;
+    font-size: 15px;
+}
+.wizard-step.active .step-num { background: #0d6efd; color: white; }
+.step-title { font-size: 15px; font-weight: 600; color: #212529; margin: 0; }
+.step-desc { font-size: 12px; color: #6c757d; margin: 0; }
+.form-label-sm { font-size: 13px; font-weight: 600; color: #495057; margin-bottom: 6px; }
+.form-control-sm, .form-select-sm { font-size: 13px; padding: 7px 11px; }
+.info-tip {
+    background: #e7f3ff;
+    border-left: 3px solid #0d6efd;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #004085;
+}
+.btn-action { padding: 9px 18px; font-size: 14px; font-weight: 500; border-radius: 6px; }
+.collapsible-section { display: none; }
+.collapsible-section.show { display: block; }
+</style>
+
+<div class="wizard-container">
+    <form method="post" id="generateInvoiceForm">
+        {% csrf_token %}
+        
+        <!-- Step 1: Select Group & Type -->
+        <div class="wizard-step active">
+            <div class="step-header">
+                <div class="step-num">1</div>
+                <div>
+                    <h6 class="step-title">Select Patient Group & Invoice Type</h6>
+                    <p class="step-desc">Choose the group and generation method</p>
+                </div>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="form-label-sm">Patient Group <span class="text-danger">*</span></label>
+                    <select name="patient_group" id="patientGroup" class="form-select form-select-sm" required>
+                        <option value="">— Select Patient Group —</option>
+                        {% for group in patient_groups %}
+                        <option value="{{ group.id }}">{{ group.name }} ({{ group.patients.count }} patients)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-5">
+                    <label class="form-label-sm">Invoice Type <span class="text-danger">*</span></label>
+                    <select name="invoice_type" id="invoiceType" class="form-select form-select-sm" required>
+                        <option value="auto">📊 Auto-Generate from Period</option>
+                        <option value="custom">✏️ Create Custom Invoice</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 2: Period & Dates -->
+        <div class="wizard-step active" id="periodStep">
+            <div class="step-header">
+                <div class="step-num">2</div>
+                <div>
+                    <h6 class="step-title">Set Period & Payment Terms</h6>
+                    <p class="step-desc">Define billing period and payment deadline</p>
+                </div>
+            </div>
+            
+            <div id="periodFields" class="collapsible-section show">
+                <div class="info-tip mb-3">
+                    <i class="bi bi-lightbulb me-1"></i> Auto-generation will collect all completed appointments and lab tests from the selected period
+                </div>
+                
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label-sm">Period Start Date</label>
+                        <input type="date" name="period_start" class="form-control form-control-sm" value="{{ default_period_start|date:'Y-m-d' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label-sm">Period End Date</label>
+                        <input type="date" name="period_end" class="form-control form-control-sm" value="{{ default_period_end|date:'Y-m-d' }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label-sm">Payment Due Date <span class="text-danger">*</span></label>
+                    <input type="date" name="due_date" class="form-control form-control-sm" value="{{ default_due_date|date:'Y-m-d' }}" required>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label-sm">Tax Rate (%)</label>
+                    <input type="number" name="tax_rate" class="form-control form-control-sm" value="0" step="0.01" min="0" max="100" placeholder="0.00">
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label-sm">Discount Amount (UGX)</label>
+                    <input type="number" name="discount_amount" class="form-control form-control-sm" value="0" step="0.01" min="0" placeholder="0.00">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 3: Add Items/Services (For Custom Invoices) -->
+        <div class="wizard-step" id="itemsStep" style="display: none;">
+            <div class="step-header">
+                <div class="step-num">3</div>
+                <div>
+                    <h6 class="step-title">Add Items/Services</h6>
+                    <p class="step-desc">Manually add line items to the invoice</p>
+                </div>
+            </div>
+            
+            <div class="info-tip mb-3">
+                <i class="bi bi-plus-circle me-1"></i> Add services, consultations, lab tests, or any billable items
+            </div>
+            
+            <div id="invoiceItemsContainer">
+                <!-- Items will be added here dynamically -->
+            </div>
+            
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addInvoiceItem()">
+                <i class="bi bi-plus-lg me-1"></i> Add Item
+            </button>
+        </div>
+        
+        <!-- Step 4: Billing Contact (Optional) -->
+        <div class="wizard-step">
+            <div class="step-header">
+                <div class="step-num">4</div>
+                <div>
+                    <h6 class="step-title">Billing Contact Information <span class="badge bg-secondary" style="font-size: 10px;">Optional</span></h6>
+                    <p class="step-desc">Add contact details for billing correspondence</p>
+                </div>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label-sm">Contact Name</label>
+                    <input type="text" name="billing_contact_name" class="form-control form-control-sm" placeholder="e.g., John Doe">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label-sm">Contact Email</label>
+                    <input type="email" name="billing_contact_email" class="form-control form-control-sm" placeholder="email@example.com">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label-sm">Contact Phone</label>
+                    <input type="text" name="billing_contact_phone" class="form-control form-control-sm" placeholder="+256 XXX XXXXXX">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label-sm">Billing Address</label>
+                    <textarea name="billing_address" class="form-control form-control-sm" rows="2" placeholder="Street address, City, Country"></textarea>
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label-sm">Additional Notes</label>
+                    <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Payment terms, special instructions, etc."></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'billing:group_invoice_list' %}" class="btn btn-outline-secondary btn-action">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+            <button type="submit" class="btn btn-primary btn-action">
+                <i class="bi bi-check-circle me-1"></i> Generate Invoice
+            </button>
+        </div>
+    </form>
+    
+    <!-- Quick Help -->
+    <div class="wizard-step mt-3" style="background: #f8f9fa; border-left-color: #17a2b8;">
+        <h6 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">
+            <i class="bi bi-info-circle text-info me-2"></i>Quick Guide
+        </h6>
+        <div style="font-size: 12px; line-height: 1.6;">
+            <p class="mb-2"><strong>📊 Auto-Generate:</strong> Automatically pulls all completed services (appointments & lab tests) from the selected period. Group-specific pricing is applied automatically.</p>
+            <p class="mb-0"><strong>✏️ Custom Invoice:</strong> Creates a blank invoice where you can manually add line items. Perfect for special billing scenarios.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let itemCounter = 0;
+
+// Toggle period fields and items section based on invoice type
+document.getElementById('invoiceType').addEventListener('change', function() {
+    const periodFields = document.getElementById('periodFields');
+    const itemsStep = document.getElementById('itemsStep');
+    
+    if (this.value === 'custom') {
+        periodFields.classList.remove('show');
+        periodFields.querySelectorAll('input').forEach(input => input.removeAttribute('required'));
+        itemsStep.style.display = 'block';
+        itemsStep.classList.add('active');
+        // Add at least one item row
+        if (itemCounter === 0) {
+            addInvoiceItem();
+        }
+    } else {
+        periodFields.classList.add('show');
+        itemsStep.style.display = 'none';
+        itemsStep.classList.remove('active');
+    }
+});
+
+// Add invoice item row
+function addInvoiceItem() {
+    itemCounter++;
+    const container = document.getElementById('invoiceItemsContainer');
+    
+    const itemRow = document.createElement('div');
+    itemRow.className = 'border rounded p-3 mb-3 position-relative';
+    itemRow.id = `item-${itemCounter}`;
+    itemRow.style.background = '#f8f9fa';
+    
+    itemRow.innerHTML = `
+        <button type="button" class="btn btn-sm btn-danger position-absolute" 
+                style="top: 8px; right: 8px; padding: 2px 8px;" 
+                onclick="removeInvoiceItem(${itemCounter})">
+            <i class="bi bi-trash"></i>
+        </button>
+        
+        <div class="row g-2">
+            <div class="col-md-12">
+                <label class="form-label-sm">Description <span class="text-danger">*</span></label>
+                <input type="text" name="items[${itemCounter}][description]" 
+                       class="form-control form-control-sm" 
+                       placeholder="e.g., Consultation, Lab Test, Medication" required>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label-sm">Service Date</label>
+                <input type="date" name="items[${itemCounter}][service_date]" 
+                       class="form-control form-control-sm" 
+                       value="${new Date().toISOString().split('T')[0]}">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label-sm">Quantity <span class="text-danger">*</span></label>
+                <input type="number" name="items[${itemCounter}][quantity]" 
+                       class="form-control form-control-sm item-quantity" 
+                       value="1" min="1" step="1" required 
+                       onchange="calculateItemTotal(${itemCounter})">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label-sm">Unit Price (UGX) <span class="text-danger">*</span></label>
+                <input type="number" name="items[${itemCounter}][unit_price]" 
+                       class="form-control form-control-sm item-unit-price" 
+                       value="0" min="0" step="0.01" required 
+                       onchange="calculateItemTotal(${itemCounter})">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label-sm">Total (UGX)</label>
+                <input type="text" id="item-total-${itemCounter}" 
+                       class="form-control form-control-sm" 
+                       value="0.00" readonly style="background: #e9ecef; font-weight: 600;">
+            </div>
+            
+            <div class="col-md-12">
+                <label class="form-label-sm">Patient (Optional)</label>
+                <select name="items[${itemCounter}][patient_id]" class="form-select form-select-sm">
+                    <option value="">— Select Patient (if specific) —</option>
+                    <!-- Patients will be loaded dynamically based on selected group -->
+                </select>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(itemRow);
+}
+
+// Remove invoice item row
+function removeInvoiceItem(id) {
+    const item = document.getElementById(`item-${id}`);
+    if (item) {
+        item.remove();
+    }
+}
+
+// Calculate item total
+function calculateItemTotal(id) {
+    const itemRow = document.getElementById(`item-${id}`);
+    const quantity = parseFloat(itemRow.querySelector('.item-quantity').value) || 0;
+    const unitPrice = parseFloat(itemRow.querySelector('.item-unit-price').value) || 0;
+    const total = quantity * unitPrice;
+    
+    document.getElementById(`item-total-${id}`).value = total.toFixed(2);
+}
+
+// Load patients when group is selected
+document.getElementById('patientGroup').addEventListener('change', function() {
+    const groupId = this.value;
+    if (!groupId) return;
+    
+    // Fetch patients in this group
+    fetch(`/patients/groups/${groupId}/patients/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.patients) {
+                // Update all patient dropdowns
+                document.querySelectorAll('select[name*="[patient_id]"]').forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">— Select Patient (if specific) —</option>';
+                    
+                    data.patients.forEach(patient => {
+                        const option = document.createElement('option');
+                        option.value = patient.id;
+                        option.textContent = `${patient.full_name} (${patient.patient_id})`;
+                        select.appendChild(option);
+                    });
+                    
+                    select.value = currentValue;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading patients:', error);
+        });
+});
+
+// Form validation and submission
+document.getElementById('generateInvoiceForm').addEventListener('submit', function(e) {
+    const patientGroup = document.getElementById('patientGroup').value;
+    const invoiceType = document.getElementById('invoiceType').value;
+    
+    if (!patientGroup) {
+        e.preventDefault();
+        alert('Please select a patient group');
+        return false;
+    }
+    
+    // Validate custom invoice has at least one item
+    if (invoiceType === 'custom') {
+        const items = document.querySelectorAll('#invoiceItemsContainer > div');
+        if (items.length === 0) {
+            e.preventDefault();
+            alert('Please add at least one item to the invoice');
+            return false;
+        }
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+});
+</script>
+{% endblock %}

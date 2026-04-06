@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Reception Dashboard - {{ role_display }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">Reception Dashboard</h2>
+                    <p class="text-muted mb-0">Welcome, {{ user.get_full_name }} ({{ role_display }})</p>
+                </div>
+                <div class="text-end">
+                    <span class="fw-semibold text-info">Front Desk Access</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">New Patients Today</h6>
+                            <h3 class="mb-0">{{ new_patients_today }}</h3>
+                        </div>
+                        <div class="text-primary">
+                            <i class="bi bi-person-plus-fill" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Appointments Today</h6>
+                            <h3 class="mb-0">{{ appointments_today }}</h3>
+                        </div>
+                        <div class="text-info">
+                            <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Walk-ins Today</h6>
+                            <h3 class="mb-0">{{ walk_ins_today }}</h3>
+                        </div>
+                        <div class="text-warning">
+                            <i class="bi bi-door-open" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'patients:patient_register' %}" class="btn btn-primary w-100">
+                                <i class="bi bi-person-plus"></i> Register New Patient
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'patients:visiting_patient_register' %}" class="btn btn-info w-100">
+                                <i class="bi bi-person-badge"></i> Register Walk-in
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'appointments:appointment_create' %}" class="btn btn-success w-100">
+                                <i class="bi bi-calendar-plus"></i> Schedule Appointment
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'patients:patient_list' %}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-search"></i> Find Patient
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Modules -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Your Access</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-people text-primary"></i> Patient Management</span>
+                            <span class="fw-semibold text-success">Full Access</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-calendar text-info"></i> Appointment Scheduling</span>
+                            <span class="fw-semibold text-success">Full Access</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-receipt text-warning"></i> Billing</span>
+                            <span class="fw-semibold text-info">Limited Access</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-folder text-secondary"></i> Medical Records</span>
+                            <span class="fw-semibold text-warning">View Only</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Restricted Modules</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Access Restricted:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Laboratory System</li>
+                            <li>Pharmacy Management</li>
+                            <li>Clinical Assessments</li>
+                            <li>Financial Reports</li>
+                        </ul>
+                        <small class="d-block mt-2">Contact your supervisor if you need access to these modules.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

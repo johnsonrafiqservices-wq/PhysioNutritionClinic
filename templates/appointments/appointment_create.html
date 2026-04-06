@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Schedule Appointment - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar-plus-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Schedule New Appointment</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Appointment Scheduling Form</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" id="appointment-form">
+                    {% csrf_token %}
+                    
+                    <!-- Patient Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Patient Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.patient|as_crispy_field }}
+                            <div id="patient-info" class="mt-2" style="display: none;">
+                                <div class="alert alert-info">
+                                    <strong>Patient Details:</strong>
+                                    <div id="patient-details"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service and Provider -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Service Details</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.service|as_crispy_field }}
+                            <div id="service-info" class="mt-2" style="display: none;">
+                                <small class="text-muted">
+                                    <strong>Duration:</strong> <span id="service-duration"></span> minutes<br>
+                                    <strong>Price:</strong> $<span id="service-price"></span>
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.provider|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Date and Time -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Schedule</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.appointment_date|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.appointment_time|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Additional Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'appointments:appointment_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-calendar-plus"></i> Schedule Appointment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Provider Availability -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Provider Availability</h6>
+            </div>
+            <div class="card-body">
+                <div id="availability-info">
+                    <p class="text-muted">Select a provider and date to check availability.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointment Guidelines -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Scheduling Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Appointments can be scheduled up to 3 months in advance
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Allow buffer time between appointments
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Confirm patient contact information
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Note any special requirements or equipment needed
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'patients:patient_register' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-person-plus"></i> Register New Patient
+                    </a>
+                    <a href="{% url 'appointments:appointment_list' %}" class="btn btn-outline-info">
+                        <i class="bi bi-calendar"></i> View Appointments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const patientSelect = document.getElementById('id_patient');
+    const serviceSelect = document.getElementById('id_service');
+    const providerSelect = document.getElementById('id_provider');
+    const dateInput = document.getElementById('id_appointment_date');
+    
+    const patientInfo = document.getElementById('patient-info');
+    const patientDetails = document.getElementById('patient-details');
+    const serviceInfo = document.getElementById('service-info');
+    const serviceDuration = document.getElementById('service-duration');
+    const servicePrice = document.getElementById('service-price');
+    const availabilityInfo = document.getElementById('availability-info');
+
+    // Patient selection handler
+    if (patientSelect) {
+        patientSelect.addEventListener('change', function() {
+            if (this.value) {
+                // In a real implementation, this would fetch patient details via AJAX
+                patientInfo.style.display = 'block';
+                patientDetails.innerHTML = 'Patient selected: ' + this.options[this.selectedIndex].text;
+            } else {
+                patientInfo.style.display = 'none';
+            }
+        });
+    }
+
+    // Service selection handler
+    if (serviceSelect) {
+        serviceSelect.addEventListener('change', function() {
+            if (this.value) {
+                // In a real implementation, this would fetch service details via AJAX
+                serviceInfo.style.display = 'block';
+                // Mock data - in real app, fetch from server
+                serviceDuration.textContent = '60';
+                servicePrice.textContent = '150.00';
+            } else {
+                serviceInfo.style.display = 'none';
+            }
+        });
+    }
+
+    // Provider and date change handler for availability
+    function checkAvailability() {
+        if (providerSelect && providerSelect.value && dateInput && dateInput.value) {
+            availabilityInfo.innerHTML = `
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="ms-2">Checking availability...</span>
+            `;
+            
+            // Mock availability check - in real app, make AJAX call
+            setTimeout(() => {
+                availabilityInfo.innerHTML = `
+                    <div class="alert alert-success alert-sm">
+                        <i class="bi bi-check-circle"></i>
+                        Provider available on selected date
+                    </div>
+                    <small class="text-muted">
+                        <strong>Available slots:</strong><br>
+                        9:00 AM, 10:30 AM, 2:00 PM, 3:30 PM
+                    </small>
+                `;
+            }, 1000);
+        }
+    }
+
+    if (providerSelect) {
+        providerSelect.addEventListener('change', checkAvailability);
+    }
+    if (dateInput) {
+        dateInput.addEventListener('change', checkAvailability);
+    }
+
+    // Set minimum date to today
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
+    }
+
+    // Pre-populate patient if passed in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const patientId = urlParams.get('patient');
+    if (patientId && patientSelect) {
+        patientSelect.value = patientId;
+        patientSelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %}

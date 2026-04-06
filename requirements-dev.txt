@@ -1,0 +1,24 @@
+# Development & Testing Requirements
+# Install with: pip install -r requirements-dev.txt
+
+# Include base requirements
+-r requirements.txt
+
+# Testing Framework
+pytest==8.4.1
+pytest-django==4.11.1
+coverage==7.10.2
+factory_boy==3.3.3
+Faker==37.5.3
+
+# Code Quality & Linting
+Pygments==2.19.2
+
+# Enhanced Debugging
+django-debug-toolbar==6.0.0
+
+# Database Tools
+psycopg2-binary==2.9.10
+
+# Additional Development Tools
+django-extensions==3.2.3

@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ patient.get_full_name }} - Medical Records{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-file-medical-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ patient.get_full_name }} - Medical Records</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Profile
+    </a>
+    <a href="{% url 'patients:patient_details_print' patient.patient_id %}" class="btn btn-info" target="_blank">
+        <i class="bi bi-printer"></i> Print Records
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Patient Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Name:</strong> {{ patient.get_full_name }}</p>
+                            <p class="mb-1"><strong>ID:</strong> {{ patient.patient_id }}</p>
+                            <p class="mb-1"><strong>Date of Birth:</strong> {{ patient.date_of_birth|date:"F j, Y" }}</p>
+                            <p class="mb-1"><strong>Gender:</strong> {{ patient.get_gender_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Blood Type:</strong> {{ patient.blood_type|default:"Not specified" }}</p>
+                            <p class="mb-1"><strong>Allergies:</strong> {{ patient.allergies|default:"None recorded" }}</p>
+                            <p class="mb-1"><strong>Medical History:</strong> {{ patient.medical_history|default:"None recorded"|truncatewords:20 }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Vital Signs History -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Vital Signs History</h5>
+                    <a href="{% url 'patients:record_vitals' patient.patient_id %}" class="btn btn-sm btn-light">
+                        <i class="bi bi-plus-circle"></i> Add Vitals
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>BP</th>
+                                    <th>HR</th>
+                                    <th>Temp</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vital in vital_signs %}
+                                <tr>
+                                    <td>{{ vital.recorded_date|date:"M d, Y H:i" }}</td>
+                                    <td>{{ vital.blood_pressure_systolic }}/{{ vital.blood_pressure_diastolic }}</td>
+                                    <td>{{ vital.heart_rate }} bpm</td>
+                                    <td>{{ vital.temperature }}°C</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">No vital signs recorded yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Triage Assessments -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Triage Assessments</h5>
+                    <a href="{% url 'patients:triage_assessment' patient.patient_id %}" class="btn btn-sm btn-light">
+                        <i class="bi bi-plus-circle"></i> New Assessment
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Complaint</th>
+                                    <th>Priority</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assessment in triage_assessments %}
+                                <tr>
+                                    <td>{{ assessment.assessment_date|date:"M d, Y H:i" }}</td>
+                                    <td>{{ assessment.chief_complaint|truncatewords:5 }}</td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if assessment.get_priority_level_display == 'Critical' %}danger{% elif assessment.get_priority_level_display == 'High' %}warning{% elif assessment.get_priority_level_display == 'Medium' %}info{% else %}secondary{% endif %}">
+                                            {{ assessment.get_priority_level_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No triage assessments recorded yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medical History Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Medical History & Notes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6>Medical History</h6>
+                        <p>{{ patient.medical_history|default:"No medical history recorded."|linebreaks }}</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6>Allergies</h6>
+                        <p>{{ patient.allergies|default:"No known allergies."|linebreaks }}</p>
+                    </div>
+                    <div>
+                        <h6>Current Medications</h6>
+                        <p>{{ patient.current_medications|default:"No current medications recorded."|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .card-header {
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+        padding: 1rem 1.25rem;
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    h5, h6 {
+        font-weight: 600;
+    }
+    
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table > :not(:first-child) {
+        border-top: none;
+    }
+</style>
+{% endblock %}

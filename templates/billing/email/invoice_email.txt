@@ -1,0 +1,21 @@
+{{ clinic_name }}
+
+Invoice Notification
+
+Dear {{ invoice.patient.get_full_name }},
+
+Please find your invoice details below:
+
+- Invoice Number: {{ invoice.invoice_number }}
+- Issue Date: {{ invoice.issue_date }}
+- Due Date: {{ invoice.due_date }}
+- Amount Due: UGX {{ invoice.total_amount|floatformat:0 }}
+- Status: {{ invoice.get_status_display }}
+
+You can view or download your invoice at the link below:
+{{ pdf_link }}
+
+If you have any questions, please reply to this email.
+
+Thank you,
+{{ clinic_name }} Billing Team

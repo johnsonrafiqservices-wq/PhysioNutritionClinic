@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports Dashboard - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-bar-chart-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Reports & Analytics Dashboard</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'reports:patient_reports' %}" class="btn btn-primary">
+        <i class="bi bi-people"></i> Patient Reports
+    </a>
+    <a href="{% url 'reports:financial_reports' %}" class="btn btn-success">
+        <i class="bi bi-graph-up"></i> Financial Reports
+    </a>
+    <a href="{% url 'reports:appointment_report' %}" class="btn btn-info">
+        <i class="bi bi-calendar-check"></i> Appointments
+    </a>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportReport('dashboard', 'pdf')">
+                <i class="bi bi-file-pdf"></i> Export as PDF
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportReport('dashboard', 'excel')">
+                <i class="bi bi-file-excel"></i> Export as Excel
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportReport('dashboard', 'csv')">
+                <i class="bi bi-file-csv"></i> Export as CSV
+            </a></li>
+        </ul>
+    </div>
+    <a href="{% url 'reports:audit_log' %}" class="btn btn-outline-warning">
+        <i class="bi bi-shield-check"></i> Audit Log
+    </a>
+    <a href="{% url 'reports:report_performance' %}" class="btn btn-outline-info">
+        <i class="bi bi-speedometer2"></i> Performance
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Key Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Patients
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_patients }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Monthly Revenue
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ monthly_revenue|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cash fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Appointments This Month
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ monthly_appointments }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Patient Satisfaction
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ patient_satisfaction }}%</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-star fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Revenue Trend Chart -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Revenue Trend (Last 12 Months)</h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="exportChart('revenue', 'png')">PNG Image</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportChart('revenue', 'pdf')">PDF Report</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportChart('revenue', 'csv')">CSV Data</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="revenueChart" width="100%" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Demographics -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Demographics</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="demographicsChart" width="100%" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Appointment Statistics -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Appointment Statistics</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="appointmentChart" width="100%" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Popularity -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Most Popular Services</h6>
+            </div>
+            <div class="card-body">
+                {% if popular_services %}
+                    {% for service in popular_services %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-0">{{ service.name }}</h6>
+                            <small class="text-muted">{{ service.appointment_count }} appointments</small>
+                        </div>
+                        <div class="progress" style="width: 100px; height: 10px;">
+                            <div class="progress-bar bg-primary" style="width: {{ service.percentage }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No service data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Patient Registrations</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_patients %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Registration Date</th>
+                                    <th>Age</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in recent_patients %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="text-decoration-none">
+                                            {{ patient.get_full_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ patient.registration_date|date:"M d, Y" }}</td>
+                                    <td>{{ patient.get_age }}</td>
+                                    <td>
+                                        <span class="fw-semibold text-success">Active</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent registrations.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Outstanding Invoices</h6>
+            </div>
+            <div class="card-body">
+                {% if outstanding_invoices %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Amount</th>
+                                    <th>Days Overdue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in outstanding_invoices %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.id %}" class="text-decoration-none">
+                                            {{ invoice.invoice_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ invoice.patient.get_full_name }}</td>
+                                    <td>UGX {{ invoice.balance_due|floatformat:0 }}</td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if invoice.days_overdue > 30 %}danger{% elif invoice.days_overdue > 15 %}warning{% else %}info{% endif %}">
+                                            {{ invoice.days_overdue }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No outstanding invoices.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const revenueChart = new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: {{ revenue_labels|safe }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ revenue_data|safe }},
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--alafia-chart-1').trim() || '#4e73df',
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--alafia-chart-1').trim() + '33' || 'rgba(78, 115, 223, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Demographics Chart
+const demographicsCtx = document.getElementById('demographicsChart').getContext('2d');
+const demographicsChart = new Chart(demographicsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ demographics_labels|safe }},
+        datasets: [{
+            data: {{ demographics_data|safe }},
+            backgroundColor: [
+                getComputedStyle(document.documentElement).getPropertyValue('--alafia-chart-1').trim() || '#4e73df',
+                getComputedStyle(document.documentElement).getPropertyValue('--alafia-chart-2').trim() || '#1cc88a',
+                getComputedStyle(document.documentElement).getPropertyValue('--alafia-chart-3').trim() || '#36b9cc',
+                getComputedStyle(document.documentElement).getPropertyValue('--alafia-chart-4').trim() || '#f6c23e'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Appointment Chart
+const appointmentCtx = document.getElementById('appointmentChart').getContext('2d');
+const appointmentChart = new Chart(appointmentCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ appointment_labels|safe }},
+        datasets: [{
+            label: 'Appointments',
+            data: {{ appointment_data|safe }},
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--alafia-chart-2').trim() || '#1cc88a'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Export functions
+function exportChart(chartType, format) {
+    let chart;
+    switch(chartType) {
+        case 'revenue':
+            chart = revenueChart;
+            break;
+        case 'demographics':
+            chart = demographicsChart;
+            break;
+        case 'appointments':
+            chart = appointmentChart;
+            break;
+    }
+    
+    if (format === 'png') {
+        const url = chart.toBase64Image();
+        const link = document.createElement('a');
+        link.download = `${chartType}_chart.png`;
+        link.href = url;
+        link.click();
+    } else if (format === 'pdf') {
+        // In a real implementation, generate PDF report
+        alert('PDF export functionality would be implemented here');
+    } else if (format === 'csv') {
+        // In a real implementation, export CSV data
+        alert('CSV export functionality would be implemented here');
+    }
+}
+
+// Enhanced export function for full reports
+function exportReport(reportType, format) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "reports:export_report" %}';
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add report type
+    const reportTypeInput = document.createElement('input');
+    reportTypeInput.type = 'hidden';
+    reportTypeInput.name = 'report_type';
+    reportTypeInput.value = reportType;
+    form.appendChild(reportTypeInput);
+    
+    // Add export format
+    const formatInput = document.createElement('input');
+    formatInput.type = 'hidden';
+    formatInput.name = 'export_format';
+    formatInput.value = format;
+    form.appendChild(formatInput);
+    
+    // Add report name
+    const nameInput = document.createElement('input');
+    nameInput.type = 'hidden';
+    nameInput.name = 'report_name';
+    nameInput.value = `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Dashboard Report`;
+    form.appendChild(nameInput);
+    
+    // Add current date filters
+    const startDateInput = document.createElement('input');
+    startDateInput.type = 'hidden';
+    startDateInput.name = 'start_date';
+    startDateInput.value = '{{ start_date|date:"Y-m-d" }}';
+    form.appendChild(startDateInput);
+    
+    const endDateInput = document.createElement('input');
+    endDateInput.type = 'hidden';
+    endDateInput.name = 'end_date';
+    endDateInput.value = '{{ end_date|date:"Y-m-d" }}';
+    form.appendChild(endDateInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+</script>
+
+<!-- Hidden form for CSRF token -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+</style>
+{% endblock %}

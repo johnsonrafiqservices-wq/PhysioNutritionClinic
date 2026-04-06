@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}New Prescription{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-prescription2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">New Prescription</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:prescription_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Prescriptions</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-file-medical text-primary me-1"></i>Prescription Information</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <h6 class="text-primary mb-2 small"><i class="bi bi-person me-1"></i>Patient Information</h6>
+                    <div class="row mb-3">
+                        <div class="col-12 mb-2">
+                            <label for="{{ form.patient.id_for_label }}" class="form-label small">Patient <span class="text-danger">*</span></label>
+                            {{ form.patient }}
+                            {% if form.patient.errors %}<div class="invalid-feedback d-block">{{ form.patient.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label for="{{ form.diagnosis.id_for_label }}" class="form-label small">Diagnosis <span class="text-danger">*</span></label>
+                            {{ form.diagnosis }}
+                            {% if form.diagnosis.errors %}<div class="invalid-feedback d-block">{{ form.diagnosis.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <h6 class="text-primary mb-2 small"><i class="bi bi-capsule me-1"></i>Prescription Details</h6>
+                    <div class="row mb-3">
+                        <div class="col-12 mb-2">
+                            <label for="{{ form.instructions.id_for_label }}" class="form-label small">Instructions <span class="text-danger">*</span></label>
+                            {{ form.instructions }}
+                            {% if form.instructions.errors %}<div class="invalid-feedback d-block">{{ form.instructions.errors.0 }}</div>{% endif %}
+                            <small class="form-text text-muted">Detailed instructions for medication usage</small>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label small">Additional Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        After creating the prescription, you can add specific medications and their dosages.
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'pharmacy:prescription_list' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle me-1"></i>Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle me-1"></i>Create Prescription</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

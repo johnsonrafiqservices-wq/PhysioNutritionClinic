@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Laboratory Reports{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-droplet-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Laboratory Reports</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center">
+    <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+    <a href="{% url 'laboratory:dashboard' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-droplet me-1"></i>Laboratory</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Period Filter -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small fw-bold me-1"><i class="bi bi-funnel me-1"></i>Period:</span>
+            <select name="period" class="form-select form-select-sm" style="width:auto;" onchange="toggleCustom(this)">
+                <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This Month</option>
+                <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last Month</option>
+                <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 Days</option>
+                <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 Days</option>
+                <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This Year</option>
+                <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+            <div id="customDates" class="d-flex gap-2 align-items-center" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %} !important;">
+                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ start_date|date:'Y-m-d' }}" style="width:auto;">
+                <span class="text-muted small">to</span>
+                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ end_date|date:'Y-m-d' }}" style="width:auto;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter me-1"></i>Apply</button>
+            <span class="ms-auto text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ start_date|date:"M d, Y" }} — {{ end_date|date:"M d, Y" }}</span>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid var(--alafia-primary) !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:var(--alafia-primary);">{{ total_tests }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Available Tests</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #e67e22 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#e67e22;">{{ total_requests }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Total Requests</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #198754 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#198754;">{{ completed_requests }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Completed</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid {% if pending_requests > 0 %}#dc3545{% else %}#198754{% endif %} !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:{% if pending_requests > 0 %}#dc3545{% else %}#198754{% endif %};">{{ pending_requests }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Pending</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #0d6efd !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#0d6efd;">{{ lab_revenue|floatformat:0|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Revenue (UGX)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up text-primary me-1"></i>Request Trend (Last 7 Days)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="trendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart text-success me-1"></i>Requests by Status</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category + Priority Charts -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-bar-chart text-info me-1"></i>Requests by Category</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-flag text-warning me-1"></i>Requests by Priority</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="priorityChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tables Row -->
+<div class="row g-3 mb-3">
+    <!-- Most Requested Tests -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-trophy text-warning me-1"></i>Most Requested Tests</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if popular_tests %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">#</th>
+                                <th class="border-0">Test Name</th>
+                                <th class="border-0">Code</th>
+                                <th class="border-0 text-center">Requests</th>
+                                <th class="border-0 text-end pe-3">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test in popular_tests %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+                                <td class="fw-medium">{{ test.test__name }}</td>
+                                <td><code class="text-primary">{{ test.test__code }}</code></td>
+                                <td class="text-center"><span class="badge bg-primary">{{ test.count }}</span></td>
+                                <td class="text-end pe-3">{{ test.revenue|floatformat:0|intcomma }} <small class="text-muted">UGX</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No test data for this period</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Requests -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-clock-history text-primary me-1"></i>Recent Requests</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Patient</th>
+                                <th class="border-0">Test</th>
+                                <th class="border-0">Date</th>
+                                <th class="border-0 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in recent_requests %}
+                            <tr>
+                                <td class="ps-3 fw-medium">{{ req.patient.get_full_name }}</td>
+                                <td class="text-muted">{{ req.test.name }}</td>
+                                <td class="text-muted">{{ req.date_requested|date:"d M Y" }}</td>
+                                <td class="text-center">
+                                    <span class="badge {% if req.status == 'completed' %}bg-success{% elif req.status == 'cancelled' %}bg-danger{% elif req.status == 'in_progress' %}bg-info{% else %}bg-warning text-dark{% endif %}" style="font-size:.65rem;">
+                                        {{ req.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No recent requests</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Trend Chart
+new Chart(document.getElementById('trendChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: {{ trend_labels|safe }},
+        datasets: [{
+            label: 'Requests',
+            data: {{ trend_data|safe }},
+            borderColor: '#1B5E96',
+            backgroundColor: 'rgba(27,94,150,0.1)',
+            borderWidth: 2, fill: true, tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        plugins: { legend: { display: false } }
+    }
+});
+
+// Status Chart
+new Chart(document.getElementById('statusChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ status_labels|safe }},
+        datasets: [{ data: {{ status_counts|safe }}, backgroundColor: ['#198754','#e67e22','#0d6efd','#dc3545','#6c757d'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+});
+
+// Category Chart
+new Chart(document.getElementById('categoryChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: {{ lab_cat_labels|safe }},
+        datasets: [{ label: 'Requests', data: {{ lab_cat_counts|safe }}, backgroundColor: '#1B5E96' }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        plugins: { legend: { display: false } }
+    }
+});
+
+// Priority Chart
+new Chart(document.getElementById('priorityChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ priority_labels|safe }},
+        datasets: [{ data: {{ priority_counts|safe }}, backgroundColor: ['#198754','#e67e22','#dc3545'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+});
+
+function toggleCustom(sel) {
+    document.getElementById('customDates').style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+</script>
+{% endblock %}

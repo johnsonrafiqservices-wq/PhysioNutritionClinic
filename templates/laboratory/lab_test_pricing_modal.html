@@ -1,0 +1,307 @@
+<!-- Lab Test Pricing Modal -->
+<div class="modal fade" id="labTestPricingModal" tabindex="-1" aria-labelledby="labTestPricingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" style="max-width: 900px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="labTestPricingModalLabel">
+                    <i class="bi bi-cash-coin me-2"></i>Lab Test Pricing by Group
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Active Group Indicator -->
+                <div id="activeGroupIndicator" class="alert alert-primary mb-3" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-diagram-3 me-2"></i>
+                            <strong>Setting prices for:</strong> <span id="activeGroupName" class="ms-2"></span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('modalGroupFilter').value=''; filterByGroup();">
+                            <i class="bi bi-x-circle"></i> Show All Groups
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Select Patient Group <span class="text-danger">*</span></label>
+                        <select id="modalGroupFilter" class="form-select form-select-lg">
+                            <option value="">-- Select a Group --</option>
+                            {% for group in patient_groups %}
+                            <option value="{{ group.id }}" data-name="{{ group.name }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Category</label>
+                        <select id="modalCategoryFilter" class="form-select">
+                            <option value="">All Categories</option>
+                            <option value="hematology">Hematology</option>
+                            <option value="biochemistry">Biochemistry</option>
+                            <option value="microbiology">Microbiology</option>
+                            <option value="serology">Serology</option>
+                            <option value="immunology">Immunology</option>
+                            <option value="pathology">Pathology</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Search</label>
+                        <input type="text" id="modalSearchTest" class="form-control" placeholder="Search test name or code...">
+                    </div>
+                </div>
+
+                <!-- Lab Tests Table -->
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 30%;">Lab Test</th>
+                                <th style="width: 15%;">Default Price</th>
+                                {% for group in patient_groups %}
+                                <th class="group-column" data-group-id="{{ group.id }}" style="min-width: 200px;">{{ group.name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody id="modalLabTestsBody">
+                            {% for test in lab_tests %}
+                            <tr class="modal-test-row" 
+                                data-category="{{ test.category }}" 
+                                data-name="{{ test.name|lower }}" 
+                                data-code="{{ test.code|lower }}">
+                                <td>
+                                    <div class="fw-semibold">{{ test.name }}</div>
+                                    <small class="text-muted">{{ test.code }}</small>
+                                    <span class="badge bg-info ms-2">{{ test.get_category_display }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ test.currency }} {{ test.price }}</span>
+                                </td>
+                                {% for group in patient_groups %}
+                                <td class="group-column" data-group-id="{{ group.id }}">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" 
+                                               class="form-control modal-price-input" 
+                                               data-test-id="{{ test.id }}" 
+                                               data-group-id="{{ group.id }}"
+                                               placeholder="{{ test.price }}"
+                                               step="0.01"
+                                               min="0"
+                                               value="{% for price in test.group_prices.all %}{% if price.patient_group_id == group.id %}{{ price.price }}{% endif %}{% endfor %}">
+                                        <button class="btn btn-outline-success btn-sm modal-set-price-btn" 
+                                                data-test-id="{{ test.id }}" 
+                                                data-group-id="{{ group.id }}"
+                                                type="button">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                        {% for price in test.group_prices.all %}
+                                        {% if price.patient_group_id == group.id %}
+                                        <button class="btn btn-outline-danger btn-sm modal-remove-price-btn" 
+                                                data-test-id="{{ test.id }}" 
+                                                data-group-id="{{ group.id }}"
+                                                type="button">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Summary -->
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Tip:</strong> Enter a price and click <i class="bi bi-check"></i> to set group-specific pricing. 
+                    Click <i class="bi bi-x"></i> to remove custom pricing and use default.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter functionality
+    const groupFilter = document.getElementById('modalGroupFilter');
+    const categoryFilter = document.getElementById('modalCategoryFilter');
+    const searchInput = document.getElementById('modalSearchTest');
+    
+    function filterByGroup() {
+        const selectedGroup = groupFilter ? groupFilter.value : '';
+        const selectedOption = groupFilter.options[groupFilter.selectedIndex];
+        const groupName = selectedOption ? selectedOption.dataset.name : '';
+        
+        // Show/hide group indicator
+        const indicator = document.getElementById('activeGroupIndicator');
+        const activeGroupName = document.getElementById('activeGroupName');
+        
+        if (selectedGroup) {
+            indicator.style.display = 'block';
+            activeGroupName.textContent = groupName;
+        } else {
+            indicator.style.display = 'none';
+        }
+        
+        // Show/hide group columns
+        const groupColumns = document.querySelectorAll('.group-column');
+        groupColumns.forEach(col => {
+            const colGroupId = col.dataset.groupId;
+            if (!selectedGroup || colGroupId === selectedGroup) {
+                col.style.display = '';
+            } else {
+                col.style.display = 'none';
+            }
+        });
+        
+        filterTests();
+    }
+    
+    function filterTests() {
+        const selectedCategory = categoryFilter ? categoryFilter.value : '';
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        
+        const rows = document.querySelectorAll('.modal-test-row');
+        rows.forEach(row => {
+            const category = row.dataset.category;
+            const name = row.dataset.name;
+            const code = row.dataset.code;
+            
+            const categoryMatch = !selectedCategory || category === selectedCategory;
+            const searchMatch = !searchTerm || name.includes(searchTerm) || code.includes(searchTerm);
+            
+            if (categoryMatch && searchMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    if (groupFilter) groupFilter.addEventListener('change', filterByGroup);
+    if (categoryFilter) categoryFilter.addEventListener('change', filterTests);
+    if (searchInput) searchInput.addEventListener('input', filterTests);
+    
+    // Set price functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.modal-set-price-btn')) {
+            const btn = e.target.closest('.modal-set-price-btn');
+            const testId = btn.dataset.testId;
+            const groupId = btn.dataset.groupId;
+            const input = document.querySelector(`.modal-price-input[data-test-id="${testId}"][data-group-id="${groupId}"]`);
+            const price = input.value;
+            
+            if (!price || parseFloat(price) < 0) {
+                alert('Please enter a valid price');
+                return;
+            }
+            
+            fetch('{% url "laboratory:lab_test_price_group_set" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `lab_test_id=${testId}&patient_group_id=${groupId}&price=${price}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    input.style.backgroundColor = '#dcfce7';
+                    setTimeout(() => input.style.backgroundColor = '', 2000);
+                    
+                    // Add remove button if not exists
+                    if (!btn.nextElementSibling || !btn.nextElementSibling.classList.contains('modal-remove-price-btn')) {
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'btn btn-outline-danger btn-sm modal-remove-price-btn';
+                        removeBtn.dataset.testId = testId;
+                        removeBtn.dataset.groupId = groupId;
+                        removeBtn.type = 'button';
+                        removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                        btn.parentElement.appendChild(removeBtn);
+                    }
+                } else {
+                    alert(data.message || 'Error setting price');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred');
+            });
+        }
+        
+        // Remove price functionality
+        if (e.target.closest('.modal-remove-price-btn')) {
+            const btn = e.target.closest('.modal-remove-price-btn');
+            const testId = btn.dataset.testId;
+            const groupId = btn.dataset.groupId;
+            
+            if (!confirm('Remove custom pricing for this group?')) return;
+            
+            fetch('{% url "laboratory:lab_test_price_group_delete" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `lab_test_id=${testId}&patient_group_id=${groupId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const input = document.querySelector(`.modal-price-input[data-test-id="${testId}"][data-group-id="${groupId}"]`);
+                    input.value = '';
+                    input.style.backgroundColor = '#fee2e2';
+                    setTimeout(() => input.style.backgroundColor = '', 2000);
+                    btn.remove();
+                } else {
+                    alert(data.message || 'Error removing price');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred');
+            });
+        }
+    });
+});
+</script>
+
+<style>
+.modal-price-input {
+    font-size: 0.875rem;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fa;
+}
+
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>

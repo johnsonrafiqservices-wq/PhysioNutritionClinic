@@ -1,0 +1,492 @@
+{% load static %}
+
+<!-- SVG.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.2.0/dist/svg.min.js"></script>
+
+<div class="body-diagram-container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="diagram-wrapper">
+                <div class="diagram-header d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 text-primary">
+                        <i class="bi bi-person-fill"></i> Anatomical Body Diagram
+                    </h6>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="front-view-btn">
+                            <i class="bi bi-person"></i> Anterior
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="back-view-btn">
+                            <i class="bi bi-person-fill"></i> Posterior
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="diagram-svg-container border rounded p-3 bg-white" id="svg-container">
+                    <!-- Realistic Anatomical Body will be rendered here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Selected Body Parts Panel -->
+            <div class="selected-parts-panel">
+                <h6 class="text-primary mb-3">
+                    <i class="bi bi-check-circle"></i> Selected Body Parts
+                </h6>
+                <div id="selected-parts-list" class="mb-3">
+                    <p class="text-muted small">Click on body parts to select them</p>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions mb-3">
+                    <h6 class="text-secondary mb-2">Quick Select Common Issues:</h6>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectCommonIssue('neck_pain')">
+                            Neck Pain
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectCommonIssue('back_pain')">
+                            Lower Back Pain
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectCommonIssue('shoulder_pain')">
+                            Shoulder Pain
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectCommonIssue('knee_pain')">
+                            Knee Pain
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="clearAllSelections()">
+                    <i class="bi bi-x-circle"></i> Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.body-diagram-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    border: 1px solid #dee2e6;
+}
+
+.diagram-svg-container {
+    text-align: center;
+    min-height: 500px;
+}
+
+.body-svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.body-part {
+    fill: rgba(0, 123, 255, 0.3);
+    stroke: #007bff;
+    stroke-width: 1;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.body-part:hover {
+    fill: rgba(0, 123, 255, 0.6);
+    stroke-width: 2;
+    transform: scale(1.05);
+}
+
+.body-part.selected {
+    fill: rgba(220, 53, 69, 0.7);
+    stroke: #dc3545;
+    stroke-width: 2;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+.selected-parts-panel {
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    border: 1px solid #dee2e6;
+    height: fit-content;
+}
+
+.selected-part-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #dc3545;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    margin: 0.125rem;
+}
+
+.selected-part-badge .remove-btn {
+    background: none;
+    border: none;
+    color: white;
+    margin-left: 0.25rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.anatomy-view {
+    transition: opacity 0.3s ease;
+}
+
+.quick-actions .btn {
+    text-align: left;
+}
+
+.anatomy-region {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.anatomy-region:hover {
+    filter: brightness(1.2);
+    stroke-width: 2;
+}
+
+.anatomy-region.selected {
+    fill: #dc3545 !important;
+    stroke: #c82333 !important;
+    stroke-width: 2;
+    filter: brightness(1.1);
+    animation: pulse 1.5s infinite;
+}
+
+.muscle-definition {
+    stroke: rgba(220, 53, 69, 0.4);
+    stroke-width: 1;
+    fill: none;
+}
+</style>
+
+<script>
+// Professional Anatomical Body Diagram with SVG.js
+let bodyDiagram;
+
+document.addEventListener('DOMContentLoaded', function() {
+    bodyDiagram = new AnatomicalBodyDiagram();
+});
+
+class AnatomicalBodyDiagram {
+    constructor() {
+        this.selectedParts = new Set();
+        this.currentView = 'front';
+        this.svgDraw = null;
+        this.anatomicalRegions = {};
+        this.init();
+    }
+
+    init() {
+        this.setupSVG();
+        this.setupEventListeners();
+        this.createAnatomicalStructure();
+    }
+
+    setupSVG() {
+        const container = document.getElementById('svg-container');
+        this.svgDraw = SVG().addTo(container).size(500, 700);
+        this.svgDraw.viewbox(0, 0, 500, 700);
+    }
+
+    setupEventListeners() {
+        const frontBtn = document.getElementById('front-view-btn');
+        const backBtn = document.getElementById('back-view-btn');
+        
+        frontBtn.addEventListener('click', () => this.switchView('front'));
+        backBtn.addEventListener('click', () => this.switchView('back'));
+    }
+
+    createAnatomicalStructure() {
+        this.createFrontView();
+        this.createBackView();
+        this.switchView('front');
+    }
+
+    createFrontView() {
+        const frontGroup = this.svgDraw.group().addClass('front-view');
+        
+        // Create realistic human body outline with muscle definition
+        this.createRealisticBodyOutline(frontGroup);
+        
+        // Define anatomical regions with precise positioning
+        const regions = [
+            // Head and Face
+            { id: 'head', label: 'Head/Cranium', path: 'M250,30 C280,30 300,50 300,80 C300,110 280,130 250,130 C220,130 200,110 200,80 C200,50 220,30 250,30 Z', color: 'rgba(230,240,255,0.6)' },
+            { id: 'face', label: 'Face', path: 'M235,70 C255,70 265,80 265,100 C265,120 255,130 235,130 C215,130 205,120 205,100 C205,80 215,70 235,70 Z', color: 'rgba(255,240,230,0.6)' },
+            
+            // Neck and Cervical
+            { id: 'neck', label: 'Cervical Spine', path: 'M235,130 L265,130 L260,170 L240,170 Z', color: 'rgba(255,243,224,0.6)' },
+            
+            // Shoulders and Arms
+            { id: 'left_shoulder', label: 'Left Deltoid', path: 'M170,160 C150,150 140,170 150,190 C160,200 180,195 190,180 C185,165 175,155 170,160 Z', color: 'rgba(232,245,232,0.6)' },
+            { id: 'right_shoulder', label: 'Right Deltoid', path: 'M330,160 C350,150 360,170 350,190 C340,200 320,195 310,180 C315,165 325,155 330,160 Z', color: 'rgba(232,245,232,0.6)' },
+            
+            // Chest muscles
+            { id: 'left_pectoral', label: 'Left Pectoralis', path: 'M200,170 C180,180 185,220 210,230 C230,225 240,200 235,180 C225,170 210,165 200,170 Z', color: 'rgba(232,234,246,0.6)' },
+            { id: 'right_pectoral', label: 'Right Pectoralis', path: 'M300,170 C320,180 315,220 290,230 C270,225 260,200 265,180 C275,170 290,165 300,170 Z', color: 'rgba(232,234,246,0.6)' },
+            
+            // Arms
+            { id: 'left_bicep', label: 'Left Bicep', path: 'M155,200 C145,210 150,250 165,260 C175,255 180,230 175,210 C170,200 160,195 155,200 Z', color: 'rgba(255,248,225,0.6)' },
+            { id: 'right_bicep', label: 'Right Bicep', path: 'M345,200 C355,210 350,250 335,260 C325,255 320,230 325,210 C330,200 340,195 345,200 Z', color: 'rgba(255,248,225,0.6)' },
+            
+            // Forearms
+            { id: 'left_forearm', label: 'Left Forearm', path: 'M160,260 C150,270 155,320 170,330 C180,325 185,290 180,270 C175,260 165,255 160,260 Z', color: 'rgba(225,245,254,0.6)' },
+            { id: 'right_forearm', label: 'Right Forearm', path: 'M340,260 C350,270 345,320 330,330 C320,325 315,290 320,270 C325,260 335,255 340,260 Z', color: 'rgba(225,245,254,0.6)' },
+            
+            // Core
+            { id: 'abdomen', label: 'Rectus Abdominis', path: 'M220,240 L280,240 L275,320 L225,320 Z', color: 'rgba(224,242,241,0.6)' },
+            { id: 'left_oblique', label: 'Left External Oblique', path: 'M200,250 C190,260 195,300 215,310 C225,305 230,280 225,260 C220,250 210,245 200,250 Z', color: 'rgba(232,245,232,0.6)' },
+            { id: 'right_oblique', label: 'Right External Oblique', path: 'M300,250 C310,260 305,300 285,310 C275,305 270,280 275,260 C280,250 290,245 300,250 Z', color: 'rgba(232,245,232,0.6)' },
+            
+            // Pelvis and Hips
+            { id: 'pelvis', label: 'Pelvis', path: 'M210,320 L290,320 L285,370 L215,370 Z', color: 'rgba(252,228,236,0.6)' },
+            
+            // Thighs
+            { id: 'left_quadriceps', label: 'Left Quadriceps', path: 'M200,370 C190,380 195,470 215,480 C235,475 240,430 235,390 C230,375 215,365 200,370 Z', color: 'rgba(225,245,254,0.6)' },
+            { id: 'right_quadriceps', label: 'Right Quadriceps', path: 'M300,370 C310,380 305,470 285,480 C265,475 260,430 265,390 C270,375 285,365 300,370 Z', color: 'rgba(225,245,254,0.6)' },
+            
+            // Knees
+            { id: 'left_knee', label: 'Left Knee', path: 'M210,480 C200,485 205,505 220,510 C230,505 235,490 230,485 C225,480 215,475 210,480 Z', color: 'rgba(241,248,233,0.6)' },
+            { id: 'right_knee', label: 'Right Knee', path: 'M290,480 C300,485 295,505 280,510 C270,505 265,490 270,485 C275,480 285,475 290,480 Z', color: 'rgba(241,248,233,0.6)' },
+            
+            // Lower legs
+            { id: 'left_shin', label: 'Left Tibia/Fibula', path: 'M215,510 C205,520 210,590 225,600 C235,595 240,550 235,530 C230,515 220,505 215,510 Z', color: 'rgba(250,250,250,0.6)' },
+            { id: 'right_shin', label: 'Right Tibia/Fibula', path: 'M285,510 C295,520 290,590 275,600 C265,595 260,550 265,530 C270,515 280,505 285,510 Z', color: 'rgba(250,250,250,0.6)' },
+            
+            // Feet
+            { id: 'left_foot', label: 'Left Foot', path: 'M210,600 C200,605 205,635 230,640 C240,635 245,615 240,605 C235,600 220,595 210,600 Z', color: 'rgba(243,229,245,0.6)' },
+            { id: 'right_foot', label: 'Right Foot', path: 'M290,600 C300,605 295,635 270,640 C260,635 255,615 260,605 C265,600 280,595 290,600 Z', color: 'rgba(243,229,245,0.6)' }
+        ];
+
+        regions.forEach(region => this.createAnatomicalRegion(frontGroup, region, 'front'));
+    }
+
+    createBackView() {
+        const backGroup = this.svgDraw.group().addClass('back-view').hide();
+        
+        // Create realistic back body outline
+        this.createRealisticBackOutline(backGroup);
+        
+        const regions = [
+            // Head and Neck (Back)
+            { id: 'occiput', label: 'Occiput', path: 'M250,30 C280,30 300,50 300,80 C300,110 280,130 250,130 C220,130 200,110 200,80 C200,50 220,30 250,30 Z', color: 'rgba(230,240,255,0.6)' },
+            { id: 'cervical_back', label: 'Cervical Vertebrae', path: 'M240,130 L260,130 L255,170 L245,170 Z', color: 'rgba(255,243,224,0.6)' },
+            
+            // Upper Back
+            { id: 'left_trapezius', label: 'Left Trapezius', path: 'M200,150 C180,160 185,200 210,210 C230,205 240,180 235,160 C225,150 210,145 200,150 Z', color: 'rgba(232,245,232,0.6)' },
+            { id: 'right_trapezius', label: 'Right Trapezius', path: 'M300,150 C320,160 315,200 290,210 C270,205 260,180 265,160 C275,150 290,145 300,150 Z', color: 'rgba(232,245,232,0.6)' },
+            
+            // Spine regions
+            { id: 'thoracic_spine', label: 'Thoracic Spine', path: 'M245,170 L255,170 L252,280 L248,280 Z', color: 'rgba(255,248,225,0.6)' },
+            { id: 'lumbar_spine', label: 'Lumbar Spine', path: 'M245,280 L255,280 L252,350 L248,350 Z', color: 'rgba(252,228,236,0.6)' },
+            
+            // Shoulder blades
+            { id: 'left_scapula', label: 'Left Scapula', path: 'M180,180 C160,190 165,230 190,240 C210,235 220,210 215,190 C205,180 190,175 180,180 Z', color: 'rgba(225,245,254,0.6)' },
+            { id: 'right_scapula', label: 'Right Scapula', path: 'M320,180 C340,190 335,230 310,240 C290,235 280,210 285,190 C295,180 310,175 320,180 Z', color: 'rgba(225,245,254,0.6)' },
+            
+            // Lower back muscles
+            { id: 'left_erector_spinae', label: 'Left Erector Spinae', path: 'M230,250 C220,260 225,320 240,330 C250,325 255,290 250,270 C245,260 235,255 230,250 Z', color: 'rgba(241,248,233,0.6)' },
+            { id: 'right_erector_spinae', label: 'Right Erector Spinae', path: 'M270,250 C280,260 275,320 260,330 C250,325 245,290 250,270 C255,260 265,255 270,250 Z', color: 'rgba(241,248,233,0.6)' },
+            
+            // Glutes
+            { id: 'left_gluteus', label: 'Left Gluteus Maximus', path: 'M200,350 C180,360 185,410 220,420 C240,415 250,380 245,360 C235,350 215,345 200,350 Z', color: 'rgba(225,245,254,0.6)' },
+            { id: 'right_gluteus', label: 'Right Gluteus Maximus', path: 'M300,350 C320,360 315,410 280,420 C260,415 250,380 255,360 C265,350 285,345 300,350 Z', color: 'rgba(225,245,254,0.6)' },
+            
+            // Posterior thighs
+            { id: 'left_hamstring', label: 'Left Hamstring', path: 'M210,420 C190,430 195,500 220,510 C240,505 250,470 245,440 C240,425 225,415 210,420 Z', color: 'rgba(241,248,233,0.6)' },
+            { id: 'right_hamstring', label: 'Right Hamstring', path: 'M290,420 C310,430 305,500 280,510 C260,505 250,470 255,440 C260,425 275,415 290,420 Z', color: 'rgba(241,248,233,0.6)' },
+            
+            // Calves
+            { id: 'left_gastrocnemius', label: 'Left Gastrocnemius', path: 'M215,510 C205,520 210,580 225,590 C235,585 240,550 235,530 C230,515 220,505 215,510 Z', color: 'rgba(250,250,250,0.6)' },
+            { id: 'right_gastrocnemius', label: 'Right Gastrocnemius', path: 'M285,510 C295,520 290,580 275,590 C265,585 260,550 265,530 C270,515 280,505 285,510 Z', color: 'rgba(250,250,250,0.6)' },
+            
+            // Achilles and heels
+            { id: 'left_achilles', label: 'Left Achilles Tendon', path: 'M220,590 C215,595 218,615 225,620 C232,615 235,600 230,595 C225,590 220,590 220,590 Z', color: 'rgba(243,229,245,0.6)' },
+            { id: 'right_achilles', label: 'Right Achilles Tendon', path: 'M280,590 C285,595 282,615 275,620 C268,615 265,600 270,595 C275,590 280,590 280,590 Z', color: 'rgba(243,229,245,0.6)' }
+        ];
+
+        regions.forEach(region => this.createAnatomicalRegion(backGroup, region, 'back'));
+    }
+
+    createRealisticBackOutline(group) {
+        // Create realistic back body silhouette
+        const backOutline = group.path(`
+            M250,20 
+            C280,20 310,40 310,80 C310,120 290,140 270,150
+            C290,160 320,170 340,200 C360,230 350,260 330,280
+            C340,300 345,330 340,360 C335,390 320,420 300,450
+            C290,480 285,510 280,540 C275,570 270,600 265,630
+            C260,650 250,660 240,660 C230,660 220,650 215,630
+            C210,600 205,570 200,540 C195,510 190,480 180,450
+            C160,420 145,390 140,360 C135,330 140,300 150,280
+            C130,260 120,230 140,200 C160,170 190,160 210,150
+            C190,140 170,120 170,80 C170,40 200,20 250,20 Z
+        `).fill('rgba(240,240,240,0.3)').stroke({ color: '#dc3545', width: 2 });
+        
+        // Add spine definition
+        group.path('M250,140 L250,360').fill('none').stroke({ color: '#dc3545', width: 2, opacity: 0.6 });
+        
+        // Add shoulder blade definition
+        group.path('M200,180 C190,190 195,220 210,230').fill('none').stroke({ color: '#dc3545', width: 1, opacity: 0.4 });
+        group.path('M300,180 C310,190 305,220 290,230').fill('none').stroke({ color: '#dc3545', width: 1, opacity: 0.4 });
+    }
+
+    createRealisticBodyOutline(group) {
+        // Create realistic human body silhouette with muscle definition
+        const bodyOutline = group.path(`
+            M250,20 
+            C280,20 310,40 310,80 C310,120 290,140 270,150
+            C290,160 320,170 340,200 C360,230 350,260 330,280
+            C340,300 345,330 340,360 C335,390 320,420 300,450
+            C290,480 285,510 280,540 C275,570 270,600 265,630
+            C260,650 250,660 240,660 C230,660 220,650 215,630
+            C210,600 205,570 200,540 C195,510 190,480 180,450
+            C160,420 145,390 140,360 C135,330 140,300 150,280
+            C130,260 120,230 140,200 C160,170 190,160 210,150
+            C190,140 170,120 170,80 C170,40 200,20 250,20 Z
+        `).fill('rgba(240,240,240,0.3)').stroke({ color: '#dc3545', width: 2 });
+        
+        // Add muscle definition lines
+        this.addMuscleDefinition(group);
+    }
+
+    addMuscleDefinition(group) {
+        // Add subtle muscle definition lines
+        const muscleLines = [
+            // Chest separation
+            'M250,170 L250,240',
+            // Abs definition
+            'M220,250 L280,250',
+            'M220,280 L280,280',
+            'M220,310 L280,310',
+            // Arm muscles
+            'M160,200 C170,220 165,240 160,260',
+            'M340,200 C330,220 335,240 340,260',
+            // Leg muscles
+            'M215,380 C220,420 218,460 215,500',
+            'M285,380 C280,420 282,460 285,500'
+        ];
+        
+        muscleLines.forEach(line => {
+            group.path(line).fill('none').stroke({ color: '#dc3545', width: 1, opacity: 0.4 });
+        });
+    }
+
+    createAnatomicalRegion(group, region, view) {
+        const element = group.path(region.path)
+            .fill(region.color)
+            .stroke({ color: '#dc3545', width: 1.5, opacity: 0.7 })
+            .addClass('anatomy-region')
+            .data('region-id', region.id)
+            .data('region-label', region.label);
+
+        this.anatomicalRegions[`${view}_${region.id}`] = { element, region };
+        element.click(() => this.toggleSelection(region.id, view));
+    }
+
+    toggleSelection(regionId, view) {
+        const key = `${view}_${regionId}`;
+        const regionData = this.anatomicalRegions[key];
+        
+        if (this.selectedParts.has(key)) {
+            this.selectedParts.delete(key);
+            regionData.element.fill(regionData.region.color);
+        } else {
+            this.selectedParts.add(key);
+            regionData.element.fill('#dc3545');
+        }
+        
+        this.updateUI();
+    }
+
+    switchView(view) {
+        const frontGroup = this.svgDraw.find('.front-view')[0];
+        const backGroup = this.svgDraw.find('.back-view')[0];
+        
+        if (view === 'front') {
+            frontGroup.show();
+            backGroup.hide();
+            document.getElementById('front-view-btn').classList.add('active');
+            document.getElementById('back-view-btn').classList.remove('active');
+        } else {
+            frontGroup.hide();
+            backGroup.show();
+            document.getElementById('back-view-btn').classList.add('active');
+            document.getElementById('front-view-btn').classList.remove('active');
+        }
+    }
+
+    updateUI() {
+        const list = document.getElementById('selected-parts-list');
+        const field = document.querySelector('input[name="affected_body_parts"], textarea[name="affected_body_parts"]');
+        
+        if (this.selectedParts.size === 0) {
+            list.innerHTML = '<p class="text-muted small">Click on anatomical regions to select them</p>';
+            if (field) field.value = '';
+            return;
+        }
+
+        let html = '';
+        const labels = [];
+        this.selectedParts.forEach(key => {
+            const regionData = this.anatomicalRegions[key];
+            if (regionData) {
+                labels.push(regionData.region.label);
+                html += `<span class="selected-part-badge">${regionData.region.label}<button type="button" class="remove-btn" onclick="bodyDiagram.removeRegion('${key}')">×</button></span>`;
+            }
+        });
+        
+        list.innerHTML = html;
+        if (field) field.value = labels.join(', ');
+    }
+
+    removeRegion(key) {
+        const regionData = this.anatomicalRegions[key];
+        if (regionData) {
+            this.selectedParts.delete(key);
+            regionData.element.fill(regionData.region.color);
+            this.updateUI();
+        }
+    }
+
+    clearAllSelections() {
+        this.selectedParts.forEach(key => {
+            const regionData = this.anatomicalRegions[key];
+            if (regionData) regionData.element.fill(regionData.region.color);
+        });
+        this.selectedParts.clear();
+        this.updateUI();
+    }
+}
+
+// Global functions
+window.clearAllSelections = () => bodyDiagram.clearAllSelections();
+window.selectCommonIssue = (type) => {
+    bodyDiagram.clearAllSelections();
+    const issues = {
+        'neck_pain': ['front_neck', 'back_cervical_back'],
+        'back_pain': ['back_lumbar_spine', 'back_left_erector_spinae', 'back_right_erector_spinae'],
+        'shoulder_pain': ['front_left_shoulder', 'front_right_shoulder', 'back_left_scapula', 'back_right_scapula'],
+        'knee_pain': ['front_left_knee', 'front_right_knee']
+    };
+    (issues[type] || []).forEach(key => {
+        const regionData = bodyDiagram.anatomicalRegions[key];
+        if (regionData) {
+            bodyDiagram.selectedParts.add(key);
+            regionData.element.fill('#dc3545');
+        }
+    });
+    bodyDiagram.updateUI();
+};
+</script>

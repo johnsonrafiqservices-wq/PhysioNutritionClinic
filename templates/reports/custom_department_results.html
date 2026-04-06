@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Custom {{ dept_type|title }} Report{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-clipboard2-pulse me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Custom {{ dept_type|title }} Report</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'reports:download_custom_department_report' %}?{{ query_string }}" class="btn btn-success me-2">
+    <i class="bi bi-file-earmark-excel"></i> Download Excel
+</a>
+<a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Reports
+</a>
+{% endblock %}
+
+{% block content %}
+{% if filters_applied %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body py-3">
+        <h6 class="fw-bold mb-2"><i class="bi bi-funnel me-1"></i> Applied Filters</h6>
+        <div class="d-flex flex-wrap gap-2">
+            {% for key, val in filters_applied.items %}
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2">
+                <strong>{{ key }}:</strong> {{ val }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="display-6 fw-bold text-primary">{{ total|intcomma }}</div>
+            <div class="text-muted small mt-1">Total Assessments</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-success mb-0">{{ first_visits|intcomma }}</div>
+            <div class="text-muted small">First Visits</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-info mb-0">{{ follow_ups|intcomma }}</div>
+            <div class="text-muted small">Follow-ups</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-warning mb-0">{{ follow_up_required|intcomma }}</div>
+            <div class="text-muted small">Follow-up Required</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    {% if by_dept %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-building me-1"></i> By Department</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Department</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for d in by_dept %}
+                    <tr><td>{{ d.department|title }}</td><td class="text-end">{{ d.cnt }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if by_assessor %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-person-badge me-1"></i> By Assessor</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Assessor</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for a in by_assessor %}
+                    <tr><td>{{ a.assessed_by__first_name }} {{ a.assessed_by__last_name }}</td><td class="text-end">{{ a.cnt }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-table me-2"></i>Assessment Details</h5>
+        <span class="badge bg-secondary">{{ total }} total</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Patient</th><th>Department</th><th>Type</th><th>Assessed By</th><th>Date</th><th>Diagnosis</th><th>Follow-up</th></tr>
+                </thead>
+                <tbody>
+                    {% for a in assess_list %}
+                    <tr>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td>
+                            {% if a.patient %}
+                            <a href="{% url 'patients:patient_detail' a.patient.pk %}" class="text-decoration-none fw-semibold">{{ a.patient.get_full_name }}</a>
+                            {% else %}N/A{% endif %}
+                        </td>
+                        <td>{{ a.department|title }}</td>
+                        <td>{{ a.get_assessment_type_display }}</td>
+                        <td>{% if a.assessed_by %}{{ a.assessed_by.get_full_name }}{% else %}N/A{% endif %}</td>
+                        <td>{{ a.assessment_date|date:"Y-m-d" }}</td>
+                        <td class="small">{{ a.diagnosis|default:"—"|truncatewords:10 }}</td>
+                        <td>
+                            {% if a.follow_up_required %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning">Yes</span>
+                            {% else %}
+                            <span class="text-muted">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-search display-4 d-block mb-3"></i>
+                            <h5>No assessments match the selected criteria</h5>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

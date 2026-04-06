@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create Invoice - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-receipt-cutoff me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Create New Invoice</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Invoice Creation Form</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" id="invoice-form">
+                    {% csrf_token %}
+                    
+                    <!-- Patient Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Patient Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.patient|as_crispy_field }}
+                            <div id="patient-info" class="mt-2" style="display: none;">
+                                <div class="alert alert-info">
+                                    <div id="patient-details"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Details -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Invoice Details</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.due_date|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.tax_rate|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Services/Items -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Services & Items</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ formset.management_form }}
+                            {% for form_item in formset %}
+                                <div class="formset-row border p-3 mb-3 rounded">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            {{ form_item.service|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            {{ form_item.description|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            {{ form_item.quantity|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            {{ form_item.unit_price|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            {% if formset.can_delete %}
+                                                {{ form_item.DELETE }}
+                                                <label for="{{ form_item.DELETE.id_for_label }}" class="btn btn-outline-danger btn-sm">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </label>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% for hidden in form_item.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.discount_amount|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'billing:invoice_list' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Invoice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Quick Service Selection -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Service Selection</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% for service in services %}
+                    <div class="service-item mb-2 p-2 border rounded">
+                        <strong>{{ service.name }}</strong><br>
+                        <small class="text-muted">{{ service.description|truncatechars:50 }}</small><br>
+                        <!-- <span class="text-success">UGX {{ service.base_price }}</span> -->
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Invoice Guidelines -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Invoice Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Select patient and due date
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Add at least one service item
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Set appropriate tax rate if applicable
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Review totals before creating
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get patient select element
+    const patientSelect = document.querySelector('select[name="patient"]');
+    
+    // Function to get selected patient ID
+    function getSelectedPatientId() {
+        return patientSelect ? patientSelect.value : null;
+    }
+    
+    // Function to update service fields when service is selected
+    function handleServiceChange(serviceSelect) {
+        const serviceId = serviceSelect.value;
+        const patientId = getSelectedPatientId();
+        
+        if (!serviceId) {
+            return;
+        }
+        
+        // Find the parent formset row
+        const row = serviceSelect.closest('.formset-row');
+        if (!row) return;
+        
+        // Get the description and unit_price fields in this row
+        const descriptionField = row.querySelector('input[name*="description"]');
+        const unitPriceField = row.querySelector('input[name*="unit_price"]');
+        
+        // Fetch service details with patient-specific pricing
+        const url = new URL('{% url "billing:get_service_price_for_patient" %}', window.location.origin);
+        url.searchParams.append('service_id', serviceId);
+        if (patientId) {
+            url.searchParams.append('patient_id', patientId);
+        }
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.service) {
+                    // Auto-fill description if empty
+                    if (descriptionField && !descriptionField.value) {
+                        descriptionField.value = data.service.name;
+                    }
+                    
+                    // Auto-fill price with group-adjusted price
+                    if (unitPriceField) {
+                        unitPriceField.value = data.service.price.toFixed(2);
+                        
+                        // Show visual feedback if group pricing is applied
+                        if (data.service.price_type === 'group') {
+                            unitPriceField.style.backgroundColor = '#dcfce7';
+                            unitPriceField.title = `Group price for ${data.service.group_name} (Base: ${data.service.base_price})`;
+                            
+                            // Add a small badge to show group pricing is active
+                            let badge = row.querySelector('.group-price-badge');
+                            if (!badge) {
+                                badge = document.createElement('small');
+                                badge.className = 'group-price-badge text-success d-block';
+                                badge.innerHTML = '<i class="bi bi-tag-fill"></i> Group pricing applied';
+                                unitPriceField.parentElement.appendChild(badge);
+                            }
+                        } else {
+                            unitPriceField.style.backgroundColor = '';
+                            unitPriceField.title = '';
+                            const badge = row.querySelector('.group-price-badge');
+                            if (badge) badge.remove();
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching service price:', error);
+            });
+    }
+    
+    // Attach change event to all service select fields
+    function attachServiceListeners() {
+        const serviceSelects = document.querySelectorAll('select[name*="service"]');
+        serviceSelects.forEach(select => {
+            // Remove existing listener to avoid duplicates
+            select.removeEventListener('change', handleServiceChangeEvent);
+            // Add listener
+            select.addEventListener('change', handleServiceChangeEvent);
+        });
+    }
+    
+    function handleServiceChangeEvent(event) {
+        handleServiceChange(event.target);
+    }
+    
+    // Initial attachment
+    attachServiceListeners();
+    
+    // Re-attach when patient changes (to update all prices)
+    if (patientSelect) {
+        patientSelect.addEventListener('change', function() {
+            // Re-process all selected services with new patient
+            const serviceSelects = document.querySelectorAll('select[name*="service"]');
+            serviceSelects.forEach(select => {
+                if (select.value) {
+                    handleServiceChange(select);
+                }
+            });
+        });
+    }
+    
+    // Watch for dynamically added formset rows (if using formset add functionality)
+    const observer = new MutationObserver(function(mutations) {
+        attachServiceListeners();
+    });
+    
+    const formsetContainer = document.querySelector('.col-md-12');
+    if (formsetContainer) {
+        observer.observe(formsetContainer, {
+            childList: true,
+            subtree: true
+        });
+    }
+});
+</script>
+{% endblock extra_js %}
+{% endblock content %}

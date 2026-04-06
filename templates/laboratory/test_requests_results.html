@@ -1,0 +1,499 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ test.name }} - Requests & Results{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-file-earmark-medical me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ test.name }} - All Requests & Results</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button type="button" class="btn btn-success btn-sm" id="bulkExportBtn" onclick="bulkExportReports()" style="display:none;">
+        <i class="bi bi-download"></i> Export HTML (<span id="bulkSelectedCount">0</span>)
+    </button>
+    <button type="button" class="btn btn-danger btn-sm" id="bulkExportPdfBtn" onclick="bulkExportReportsPdf()" style="display:none;">
+        <i class="bi bi-file-pdf"></i> Export PDF (<span id="bulkSelectedCountPdf">0</span>)
+    </button>
+    <button id="bulkUploadBtn" class="btn btn-primary btn-sm" style="display: none;" onclick="bulkUploadReports()">
+        <i class="fas fa-cloud-upload-alt"></i> Upload to R2 (<span id="bulkSelectedCountUpload">0</span>)
+    </button>
+    <a href="{% url 'laboratory:labtest_detail' test.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Test Details
+    </a>
+    <a href="{% url 'laboratory:labtest_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list"></i> All Tests
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Test Info Summary -->
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-1 fw-bold">{{ test.name }}</h6>
+                <p class="mb-0 text-muted small">
+                    <code>{{ test.code }}</code> | {{ test.get_category_display }} | 
+                    <span class="badge bg-primary" style="font-size: 0.75rem;">{{ test.price|intcomma }} {{ test.currency }}</span>
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex justify-content-end gap-3">
+                    <div>
+                        <small class="text-muted d-block" style="font-size: 0.7rem;">Total Requests</small>
+                        <h5 class="mb-0 fw-bold text-primary">{{ total_requests }}</h5>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block" style="font-size: 0.7rem;">Completed</small>
+                        <h5 class="mb-0 fw-bold text-success">{{ completed_count }}</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-header py-2">
+        <h6 class="m-0 font-weight-bold" style="color: var(--alafia-primary); font-size: 0.9rem;">
+            <i class="bi bi-funnel me-2"></i>Filters
+        </h6>
+    </div>
+    <div class="card-body py-2">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold mb-1" style="font-size: 0.75rem;">Date From</label>
+                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}" style="font-size: 0.8rem;">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold mb-1" style="font-size: 0.75rem;">Date To</label>
+                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}" style="font-size: 0.8rem;">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold mb-1" style="font-size: 0.75rem;">Status</label>
+                <select name="status" class="form-select form-select-sm" style="font-size: 0.8rem;">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold mb-1" style="font-size: 0.75rem;">Patient Search</label>
+                <input type="text" name="patient" class="form-control form-control-sm" placeholder="Name or ID" value="{{ patient_search }}" style="font-size: 0.8rem;">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i> Apply Filters
+                </button>
+                <a href="{% url 'laboratory:test_requests_results' test.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card shadow-sm border-0">
+    <div class="card-header py-2">
+        <h6 class="m-0 font-weight-bold" style="color: var(--alafia-primary); font-size: 0.9rem;">
+            <i class="bi bi-table me-2"></i>Test Requests & Results
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-sm" style="font-size: 0.85rem;">
+                <thead style="background: #f0f4f8;">
+                    <tr>
+                        <th style="padding: 0.5rem; width: 3%;">
+                            <input type="checkbox" class="form-check-input" id="selectAllTests" onchange="toggleSelectAllTests(this)">
+                        </th>
+                        <th class="ps-3" style="padding: 0.5rem;">Request ID</th>
+                        <th style="padding: 0.5rem;">Patient</th>
+                        <th style="padding: 0.5rem;">Date Requested</th>
+                        <th style="padding: 0.5rem;">Status</th>
+                        <th style="padding: 0.5rem;">Result Status</th>
+                        <th style="padding: 0.5rem;">Verified</th>
+                        <th class="text-center" style="padding: 0.5rem;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in page_obj %}
+                    <tr style="line-height: 1.3;">
+                        <td style="padding: 0.4rem;">
+                            {% if request.result %}
+                            <input type="checkbox" class="form-check-input test-request-checkbox" value="{{ request.pk }}" onchange="updateBulkExportButton()">
+                            {% endif %}
+                        </td>
+                        <td class="ps-3" style="padding: 0.4rem;">
+                            <a href="{% url 'laboratory:request_detail' request.pk %}" class="text-decoration-none fw-semibold" style="font-size: 0.85rem;">
+                                LAB-{{ request.pk|stringformat:"05d" }}
+                            </a>
+                        </td>
+                        <td style="padding: 0.4rem;">
+                            <div class="fw-semibold" style="font-size: 0.85rem;">{{ request.patient.get_full_name }}</div>
+                            <small class="text-muted" style="font-size: 0.7rem;">{{ request.patient.patient_id }}</small>
+                        </td>
+                        <td style="padding: 0.4rem;">
+                            <div style="font-size: 0.8rem;">{{ request.date_requested|date:"d M Y" }}</div>
+                            <small class="text-muted" style="font-size: 0.7rem;">{{ request.date_requested|date:"H:i" }}</small>
+                        </td>
+                        <td style="padding: 0.4rem;">
+                            {% if request.status == 'pending' %}
+                            <span class="badge bg-warning" style="font-size: 0.7rem;">Pending</span>
+                            {% elif request.status == 'in_progress' %}
+                            <span class="badge bg-info" style="font-size: 0.7rem;">In Progress</span>
+                            {% elif request.status == 'completed' %}
+                            <span class="badge bg-success" style="font-size: 0.7rem;">Completed</span>
+                            {% elif request.status == 'cancelled' %}
+                            <span class="badge bg-danger" style="font-size: 0.7rem;">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.4rem;">
+                            {% if request.result %}
+                                {% if request.result.verified %}
+                                <span class="badge bg-success" style="font-size: 0.7rem;"><i class="bi bi-check-circle"></i> Final</span>
+                                {% else %}
+                                <span class="badge bg-warning" style="font-size: 0.7rem;"><i class="bi bi-clock"></i> Preliminary</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.4rem;">
+                            {% if request.result and request.result.verified %}
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 0.9rem;"></i>
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">{{ request.result.verified_at|date:"d M Y" }}</small>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center" style="padding: 0.4rem;">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'laboratory:request_detail' request.pk %}" class="btn btn-outline-primary" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if request.result %}
+                                <a href="{% url 'laboratory:test_report' request.pk %}" class="btn btn-outline-info" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" title="View Report" target="_blank">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-inbox" style="font-size: 2rem; color: #95a5a6;"></i>
+                            </div>
+                            <h6 class="text-muted">No requests found</h6>
+                            <p class="text-muted small mb-0">Try adjusting your filters</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white">
+        <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status }}&patient={{ patient_search }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status }}&patient={{ patient_search }}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status }}&patient={{ patient_search }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Bulk export functionality
+function toggleSelectAllTests(checkbox) {
+    const checkboxes = document.querySelectorAll('.test-request-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateBulkExportButton();
+}
+
+function updateBulkExportButton() {
+    const checkedBoxes = document.querySelectorAll('.test-request-checkbox:checked');
+    const count = checkedBoxes.length;
+    const btn = document.getElementById('bulkExportBtn');
+    const btnPdf = document.getElementById('bulkExportPdfBtn');
+    const btnUpload = document.getElementById('bulkUploadBtn');
+    const countSpan = document.getElementById('bulkSelectedCount');
+    const countSpanPdf = document.getElementById('bulkSelectedCountPdf');
+    const countSpanUpload = document.getElementById('bulkSelectedCountUpload');
+    
+    if (count > 0) {
+        btn.style.display = 'inline-block';
+        btnPdf.style.display = 'inline-block';
+        btnUpload.style.display = 'inline-block';
+        countSpan.textContent = count;
+        countSpanPdf.textContent = count;
+        countSpanUpload.textContent = count;
+    } else {
+        btn.style.display = 'none';
+        btnPdf.style.display = 'none';
+        btnUpload.style.display = 'none';
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.test-request-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllTests');
+    if (selectAllCheckbox && allCheckboxes.length > 0) {
+        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+        selectAllCheckbox.checked = allChecked;
+    }
+}
+
+function bulkExportReports() {
+    const checkedBoxes = document.querySelectorAll('.test-request-checkbox:checked');
+    const testIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+    
+    if (testIds.length === 0) {
+        alert('Please select at least one test to export');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('bulkExportBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Exporting...';
+    
+    // Send request to batch export endpoint
+    fetch('{% url "laboratory:batch_export_reports" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ test_ids: testIds })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Export failed');
+            });
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `{{ test.name|slugify }}_reports_${testIds.length}_tests.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        // Show success message
+        alert(`Successfully exported ${testIds.length} test report(s)`);
+        
+        // Uncheck all boxes
+        document.querySelectorAll('.test-request-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAllTests').checked = false;
+        updateBulkExportButton();
+    })
+    .catch(error => {
+        console.error('Export error:', error);
+        alert('Error exporting reports: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+function bulkExportReportsPdf() {
+    const checkedBoxes = document.querySelectorAll('.test-request-checkbox:checked');
+    const testIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+    
+    if (testIds.length === 0) {
+        alert('Please select at least one test to export');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('bulkExportPdfBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating PDFs...';
+    
+    // Send request to batch export PDF endpoint
+    fetch('{% url "laboratory:batch_export_reports_pdf" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ test_ids: testIds })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Export failed');
+            });
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `{{ test.name|slugify }}_reports_${testIds.length}_tests_pdf.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        // Show success message
+        alert(`Successfully exported ${testIds.length} test report(s) as PDF`);
+        
+        // Uncheck all boxes
+        document.querySelectorAll('.test-request-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAllTests').checked = false;
+        updateBulkExportButton();
+    })
+    .catch(error => {
+        console.error('Export error:', error);
+        let errorMsg = error.message;
+        
+        // Check if it's a Playwright installation issue
+        if (errorMsg.includes('Executable doesn\'t exist') || errorMsg.includes('playwright install')) {
+            errorMsg = 'PDF export requires Playwright browsers to be installed.\n\n' +
+                      'Please use the "Export HTML" button instead, or ask your administrator to run:\n' +
+                      'playwright install\n\n' +
+                      'HTML reports can be opened in any browser and printed as PDFs.';
+        }
+        
+        alert('Error exporting PDFs:\n\n' + errorMsg);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+function bulkUploadReports() {
+    const checkedBoxes = document.querySelectorAll('.test-request-checkbox:checked');
+    const testIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+    
+    if (testIds.length === 0) {
+        alert('Please select at least one test to upload');
+        return;
+    }
+    
+    if (!confirm(`Upload ${testIds.length} report(s) to Cloudflare R2?\n\nThis will generate PDFs and upload them to cloud storage.`)) {
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('bulkUploadBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading...';
+    
+    // Send request to batch upload endpoint
+    fetch('{% url "laboratory:batch_upload_reports" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ 
+            test_ids: testIds,
+            target: 'cloudinary'  // Can be 'cloudinary', 'firebase', or 'all'
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Upload failed');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        // Show success message
+        let message = `Successfully uploaded ${data.uploaded_count} of ${data.total_count} report(s) to Cloudflare R2!`;
+        
+        if (data.failed_count > 0) {
+            message += `\n\n${data.failed_count} upload(s) failed:`;
+            if (data.failed_uploads) {
+                data.failed_uploads.forEach(fail => {
+                    message += `\n- ${fail.patient}: ${fail.error}`;
+                });
+            }
+        }
+        
+        alert(message);
+        
+        // Uncheck all boxes and refresh page to show updated URLs
+        if (data.uploaded_count > 0) {
+            document.querySelectorAll('.test-request-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAllTests').checked = false;
+            updateBulkExportButton();
+            
+            // Optionally reload page to show updated cloud URLs
+            if (confirm('Reload page to see updated cloud links?')) {
+                location.reload();
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        alert('Error uploading reports:\n\n' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+</script>
+{% endblock %}

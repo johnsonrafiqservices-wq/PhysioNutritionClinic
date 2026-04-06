@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-arrow-left-right me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Shift Swap Requests</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createSwapModal">
+    <i class="bi bi-plus-circle"></i> Request Swap
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Shift Swap Requests List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-arrow-left-right"></i> Shift Swap Requests
+            </div>
+            <div class="card-body">
+                {% if shift_swaps %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Requested By</th>
+                                    <th>Swap With</th>
+                                    <th>Original Shift</th>
+                                    <th>Target Shift</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for swap in shift_swaps %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                                <i class="bi bi-person text-primary"></i>
+                                            </div>
+                                            <strong>{{ swap.requested_by.get_full_name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                                                <i class="bi bi-person text-success"></i>
+                                            </div>
+                                            <strong>{{ swap.requested_with.get_full_name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ swap.original_shift.date|date:"M d, Y" }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ swap.original_shift.shift_start|time:"H:i" }} - {{ swap.original_shift.shift_end|time:"H:i" }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ swap.target_shift.date|date:"M d, Y" }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ swap.target_shift.shift_start|time:"H:i" }} - {{ swap.target_shift.shift_end|time:"H:i" }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small>{{ swap.reason|truncatewords:10 }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if swap.status == 'pending' %}warning{% elif swap.status == 'approved_by_staff' %}info{% elif swap.status == 'approved' %}success{% elif swap.status == 'rejected_by_staff' or swap.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+                                            {{ swap.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ swap.created_at|timesince }} ago</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            {% if request.user.role == 'admin' and swap.status in 'pending,approved_by_staff' %}
+                                            <button class="btn btn-outline-success" title="Approve">
+                                                <i class="bi bi-check"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" title="Reject">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-arrow-left-right" style="font-size: 3rem; color: var(--alafia-secondary);"></i>
+                        <h4 class="text-muted mt-3">No Shift Swap Requests</h4>
+                        <p class="text-muted">Submit a shift swap request to get started.</p>
+                        <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#createSwapModal">
+                            <i class="bi bi-plus-circle me-2"></i>Request Shift Swap
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Shift Swap Request Modal -->
+<div class="modal fade" id="createSwapModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-arrow-left-right me-2"></i>Request Shift Swap</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form data-modal-form method="post" action="{% url 'staff_management:shift_swap_create_ajax' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Your Shift (to give away) *</label>
+                            <select name="original_shift" class="form-select" required>
+                                <option value="">Select your shift...</option>
+                                {% for shift in my_shifts %}
+                                <option value="{{ shift.id }}">
+                                    {{ shift.date|date:"M d, Y" }} - {{ shift.get_shift_type_display }} 
+                                    ({{ shift.shift_start|time:"H:i" }} - {{ shift.shift_end|time:"H:i" }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Colleague *</label>
+                            <select name="requested_with" class="form-select" required>
+                                <option value="">Select colleague...</option>
+                                {% for colleague in colleagues %}
+                                <option value="{{ colleague.user.id }}">{{ colleague.user.get_full_name }} - {{ colleague.department }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Their Shift (to take) *</label>
+                            <select name="target_shift" class="form-select" required>
+                                <option value="">Select target shift...</option>
+                                <!-- Will be populated based on selected colleague -->
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reason *</label>
+                            <textarea name="reason" class="form-control" rows="3" required 
+                                      placeholder="Please explain why you need this shift swap"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send me-2"></i>Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Handle modal form submission
+document.querySelector('#createSwapModal form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || 'An error occurred');
+        }
+    } catch (error) {
+        alert('An error occurred. Please try again.');
+    }
+});
+</script>
+{% endblock %}

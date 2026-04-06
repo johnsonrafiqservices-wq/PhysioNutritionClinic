@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-clipboard-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Lab Test Result Details</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
+    <i class="bi bi-printer"></i> Print
+</button>
+<a href="{% url 'laboratory:labtest_results' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Results
+</a>
+{% endblock %}
+
+{% block content %}
+{% include 'laboratory/result_detail_partial.html' %}
+{% endblock %}

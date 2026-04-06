@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-clipboard-data me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ title }}</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:pharmacy_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Pharmacy</a>
+<button class="btn btn-outline-primary btn-sm no-print" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+<button class="btn btn-primary btn-sm no-print" id="exportBtn"><i class="bi bi-download"></i> Export CSV</button>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" id="filterForm" class="row g-2 align-items-end" style="font-size:.85rem;">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Category</label>
+                <select name="category" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="quarantine" {% if filters.status == 'quarantine' %}selected{% endif %}>Quarantine</option>
+                    <option value="expired" {% if filters.status == 'expired' %}selected{% endif %}>Expired</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check mt-3">
+                    <input type="checkbox" class="form-check-input" name="low_stock" id="lowStock" value="true" {% if filters.low_stock %}checked{% endif %}>
+                    <label class="form-check-label small" for="lowStock">Low Stock Only</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check mt-3">
+                    <input type="checkbox" class="form-check-input" name="expiring_soon" id="expiringSoon" value="true" {% if filters.expiring_soon %}checked{% endif %}>
+                    <label class="form-check-label small" for="expiringSoon">Expiring Soon</label>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-2 mb-3">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Total Stock Value</small>
+                <h5 class="mb-0 fw-bold text-success">UGX {{ total_value|intcomma }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Total Items</small>
+                <h5 class="mb-0 fw-bold text-primary">{{ medications|length|intcomma }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Report Generated</small>
+                <h5 class="mb-0 fw-bold">{{ now|date:"d M Y" }}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Medication</th>
+                        <th>Category</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end">Value</th>
+                        <th>Suppliers</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in medications %}
+                    <tr>
+                        <td class="ps-3">
+                            <strong>{{ item.medication.name }}</strong>
+                            {% if item.total_stock <= item.medication.reorder_level %}<span class="badge bg-danger ms-1">Low</span>{% endif %}
+                            <br><small class="text-muted">{{ item.medication.description|truncatechars:40 }}</small>
+                        </td>
+                        <td>{{ item.medication.category }}</td>
+                        <td class="text-end">{{ item.total_stock|intcomma }}</td>
+                        <td class="text-end">UGX {{ item.value|intcomma }}</td>
+                        <td><small>{{ item.suppliers|join:", " }}</small></td>
+                        <td>
+                            {% if item.medication.status == 'active' %}<span class="badge bg-success">Active</span>
+                            {% elif item.medication.status == 'quarantine' %}<span class="badge bg-warning">Quarantine</span>
+                            {% else %}<span class="badge bg-danger">{{ item.medication.status|title }}</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#batchModal{{ item.medication.id }}"><i class="bi bi-eye"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Details Modals -->
+{% for item in medications %}
+<div class="modal fade" id="batchModal{{ item.medication.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title fw-bold"><i class="bi bi-boxes text-primary me-1"></i>Batches - {{ item.medication.name }}</h6>
+                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr><th class="ps-3">Batch Number</th><th>Quantity</th><th>Expiry Date</th><th>Supplier</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for batch in item.batches %}
+                            <tr>
+                                <td class="ps-3">{{ batch.batch_number }}</td>
+                                <td>{{ batch.quantity_remaining|intcomma }}</td>
+                                <td>{{ batch.expiry_date }}{% if batch.is_expiring_soon %} <span class="badge bg-warning">Soon</span>{% endif %}</td>
+                                <td>{{ batch.supplier.name|default:"Unknown" }}</td>
+                                <td>
+                                    {% if batch.status == 'active' %}<span class="badge bg-success">Active</span>
+                                    {% elif batch.status == 'quarantine' %}<span class="badge bg-warning">Quarantine</span>
+                                    {% else %}<span class="badge bg-danger">{{ batch.status|title }}</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print { .no-print { display: none !important; } .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; } }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    filterForm.querySelectorAll('select, input').forEach(input => {
+        input.addEventListener('change', () => filterForm.submit());
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        csvContent += 'Medication,Category,Total Stock,Value,Suppliers,Status\n';
+        document.querySelectorAll('table tbody tr').forEach(row => {
+            const cols = row.querySelectorAll('td');
+            if (cols.length >= 6) {
+                const med = cols[0].querySelector('strong')?.textContent || '';
+                csvContent += `"${med}","${cols[1].textContent.trim()}","${cols[2].textContent.trim()}","${cols[3].textContent.trim()}","${cols[4].textContent.trim()}","${cols[5].textContent.trim()}"\n`;
+            }
+        });
+        const link = document.createElement('a');
+        link.setAttribute('href', encodeURI(csvContent));
+        link.setAttribute('download', 'stock_report.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+});
+</script>
+{% endblock %}

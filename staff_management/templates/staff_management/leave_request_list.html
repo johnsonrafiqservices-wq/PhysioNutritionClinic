@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar-x me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Leave Requests</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createLeaveModal">
+    <i class="bi bi-plus-circle"></i> Request Leave
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Leave Requests List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+        <div class="card-body">
+            {% if leave_requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Staff Member</th>
+                                <th>Leave Type</th>
+                                <th>Period</th>
+                                <th>Days</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in leave_requests %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                            <i class="fas fa-user text-primary"></i>
+                                        </div>
+                                        <strong>{{ leave.staff.get_full_name }}</strong>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info bg-opacity-10 text-info">
+                                        {{ leave.get_leave_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>{{ leave.start_date|date:"M d, Y" }}</strong>
+                                    <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                                    <strong>{{ leave.end_date|date:"M d, Y" }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ leave.number_of_days }} days</span>
+                                </td>
+                                <td>
+                                    <small>{{ leave.reason|truncatewords:10 }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if leave.status == 'pending' %}warning{% elif leave.status == 'approved' %}success{% elif leave.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+                                        {{ leave.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ leave.created_at|timesince }} ago</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" title="View Details" 
+                                                onclick="viewLeaveDetails({{ leave.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if request.user.role == 'admin' and leave.status == 'pending' %}
+                                        <button class="btn btn-outline-success" title="Approve"
+                                                onclick="reviewLeave({{ leave.id }}, 'approved')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" title="Reject"
+                                                onclick="reviewLeave({{ leave.id }}, 'rejected')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-umbrella-beach fa-3x text-muted mb-3 d-block"></i>
+                    <h4 class="text-muted">No Leave Requests</h4>
+                    <p class="text-muted">Submit a leave request to get started.</p>
+                    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#createLeaveModal">
+                        <i class="fas fa-plus me-2"></i>Request Leave
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Leave Request Modal -->
+<div class="modal fade" id="createLeaveModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-umbrella-beach me-2"></i>Request Leave</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createLeaveForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Leave Type *</label>
+                            <select name="leave_type" class="form-select" required>
+                                <option value="">Select leave type...</option>
+                                <option value="annual">Annual Leave</option>
+                                <option value="sick">Sick Leave</option>
+                                <option value="maternity">Maternity Leave</option>
+                                <option value="paternity">Paternity Leave</option>
+                                <option value="compassionate">Compassionate Leave</option>
+                                <option value="unpaid">Unpaid Leave</option>
+                                <option value="study">Study Leave</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Start Date *</label>
+                            <input type="date" name="start_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">End Date *</label>
+                            <input type="date" name="end_date" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reason *</label>
+                            <textarea name="reason" class="form-control" rows="3" required 
+                                      placeholder="Please provide a reason for your leave request"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Supporting Document</label>
+                            <input type="file" name="supporting_document" class="form-control">
+                            <small class="form-text text-muted">Optional: Medical certificate, etc.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Leave Details Modal -->
+<div class="modal fade" id="viewLeaveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Leave Request Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="leaveDetailsContent">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Submit leave request
+document.getElementById('createLeaveForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('{% url "staff_management:leave_request_create_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || 'An error occurred');
+        }
+    } catch (error) {
+        alert('An error occurred. Please try again.');
+    }
+});
+
+// View leave details
+function viewLeaveDetails(leaveId) {
+    document.getElementById('leaveDetailsContent').innerHTML = 'Loading...';
+    const modal = new bootstrap.Modal(document.getElementById('viewLeaveModal'));
+    modal.show();
+}
+
+// Review leave (approve/reject)
+async function reviewLeave(leaveId, status) {
+    if (!confirm(`Are you sure you want to ${status} this leave request?`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('status', status);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    try {
+        const response = await fetch(`/staff/ajax/leave/${leaveId}/review/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || 'An error occurred');
+        }
+    } catch (error) {
+        alert('An error occurred. Please try again.');
+    }
+}
+</script>
+{% endblock %}

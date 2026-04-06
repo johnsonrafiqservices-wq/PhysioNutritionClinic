@@ -1,0 +1,142 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n admin_urls static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    /* Fix delete confirmation page width */
+    #content {
+        max-width: 100% !important;
+        padding: 20px !important;
+    }
+    
+    #content-main {
+        max-width: 900px !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Style the confirmation box */
+    .deleteconfirm {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Style the object list */
+    ul {
+        max-height: 400px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 15px 0;
+    }
+    
+    /* Style the buttons */
+    .submit-row {
+        background: #f8f9fa !important;
+        padding: 15px !important;
+        border-radius: 4px !important;
+        margin-top: 20px !important;
+        display: flex !important;
+        gap: 10px !important;
+        justify-content: flex-start !important;
+    }
+    
+    .submit-row input[type="submit"] {
+        padding: 10px 20px !important;
+        border-radius: 4px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        cursor: pointer !important;
+        border: none !important;
+    }
+    
+    .submit-row input[type="submit"].default {
+        background: var(--alafia-danger, #dc2626) !important;
+        color: white !important;
+    }
+    
+    .submit-row input[type="submit"].default:hover {
+        background: var(--alafia-danger-dark, #b91c1c) !important;
+    }
+    
+    .submit-row .cancel-link {
+        padding: 10px 20px !important;
+        background: #6c757d !important;
+        color: white !important;
+        text-decoration: none !important;
+        border-radius: 4px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        display: inline-block !important;
+    }
+    
+    .submit-row .cancel-link:hover {
+        background: #5a6268 !important;
+    }
+    
+    /* Make the form visible */
+    form {
+        display: block !important;
+    }
+    
+    /* Style the summary */
+    .deleteconfirm h2 {
+        margin-top: 20px;
+        margin-bottom: 10px;
+        color: #333;
+        font-size: 18px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {% translate 'Delete multiple objects' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="deleteconfirm">
+    {% if perms_lacking %}
+        <p>{% blocktranslate %}Deleting the selected {{ objects_name }} would result in deleting related objects, but your account doesn't have permission to delete the following types of objects:{% endblocktranslate %}</p>
+        <ul>
+        {% for obj in perms_lacking %}
+            <li>{{ obj }}</li>
+        {% endfor %}
+        </ul>
+    {% elif protected %}
+        <p>{% blocktranslate %}Deleting the selected {{ objects_name }} would require deleting the following protected related objects:{% endblocktranslate %}</p>
+        <ul>
+        {% for obj in protected %}
+            <li>{{ obj }}</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>{% blocktranslate %}Are you sure you want to delete the selected {{ objects_name }}? All of the following objects and their related items will be deleted:{% endblocktranslate %}</p>
+        {% include "admin/includes/object_delete_summary.html" %}
+        <h2>{% translate "Objects" %}</h2>
+        <ul>{{ deleted_objects|unordered_list }}</ul>
+        <form method="post">{% csrf_token %}
+            <div>
+                {% for obj in queryset %}
+                <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">
+                {% endfor %}
+                <input type="hidden" name="action" value="delete_selected">
+                <input type="hidden" name="post" value="yes">
+                {% if is_popup %}<input type="hidden" name="{{ is_popup_var }}" value="1">{% endif %}
+                {% if to_field %}<input type="hidden" name="{{ to_field_var }}" value="{{ to_field }}">{% endif %}
+            </div>
+            <div class="submit-row">
+                <input type="submit" value="{% translate 'Yes, I am sure' %}" class="default">
+                <a href="#" class="cancel-link" onclick="window.history.back(); return false;">{% translate 'No, take me back' %}</a>
+            </div>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

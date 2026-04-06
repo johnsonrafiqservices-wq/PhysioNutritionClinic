@@ -1,0 +1,624 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Financial Reports & Analytics{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-bar-chart-line me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Financial Reports & Analytics</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#customFinancialModal">
+    <i class="bi bi-funnel"></i> Custom Report
+</button>
+<a href="{% url 'reports:download_financial_report' %}?period={{ period }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+   class="btn btn-success btn-sm">
+    <i class="bi bi-file-earmark-excel"></i> Download Excel Report
+</a>
+{% endblock %}
+
+{% block content %}
+<style>
+/* KPI metric boxes */
+.kpi-box { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem 1.2rem; position: relative; overflow: hidden; transition: box-shadow 0.2s; }
+.kpi-box:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.kpi-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.kpi-box.kpi-revenue::before { background: #1cc88a; }
+.kpi-box.kpi-expense::before { background: #e74a3b; }
+.kpi-box.kpi-profit::before { background: #4e73df; }
+.kpi-box.kpi-net::before { background: #1B5E96; }
+.kpi-box.kpi-due::before { background: #f6c23e; }
+.kpi-box.kpi-pending::before { background: #36b9cc; }
+.kpi-box.kpi-collected::before { background: #2E8B57; }
+.kpi-label { font-size: 0.72rem; font-weight: 600; color: #8898aa; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem; }
+.kpi-value { font-size: 1.55rem; font-weight: 800; color: #1a1a2e; line-height: 1.1; }
+.kpi-sub { font-size: 0.7rem; color: #8898aa; margin-top: 0.2rem; }
+/* Gauge widget */
+.gauge-widget { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.8rem; text-align: center; }
+.gauge-widget .gauge-label { font-size: 0.72rem; font-weight: 600; color: #8898aa; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.3rem; }
+.gauge-widget canvas { max-height: 120px; }
+.gauge-widget .gauge-value { font-size: 1.1rem; font-weight: 800; color: #1a1a2e; margin-top: -0.2rem; }
+/* Section & tab styles */
+.section-title { font-size: 0.8rem; font-weight: 700; color: var(--alafia-primary, #1B5E96); }
+.fin-tabs .nav-link { font-size: 0.82rem; padding: 0.5rem 1rem; color: #6c757d; border: none; border-bottom: 2px solid transparent; background: none; border-radius: 0; }
+.fin-tabs .nav-link.active { color: var(--alafia-primary, #1B5E96); border-bottom-color: var(--alafia-primary, #1B5E96); font-weight: 700; background: none; }
+.fin-tabs .nav-link i { margin-right: 4px; }
+.fin-tabs { border-bottom: 1px solid #dee2e6; }
+/* Period stats table (used in tabs) */
+.period-stats-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.period-stats-table th { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: #6c757d; padding: 0.4rem 0.6rem; border-bottom: 2px solid #dee2e6; text-align: right; }
+.period-stats-table th:first-child { text-align: left; }
+.period-stats-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: 600; }
+.period-stats-table td:first-child { text-align: left; font-weight: 700; color: var(--alafia-primary, #1B5E96); font-size: 0.78rem; }
+.period-stats-table tr:last-child td { border-bottom: none; }
+</style>
+
+<!-- Date Filter -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2 px-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Time Period</label>
+                <select class="form-select form-select-sm" name="period" id="period-select">
+                    <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This Month</option>
+                    <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last Month</option>
+                    <option value="this_quarter" {% if period == 'this_quarter' %}selected{% endif %}>This Quarter</option>
+                    <option value="last_quarter" {% if period == 'last_quarter' %}selected{% endif %}>Last Quarter</option>
+                    <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This Year</option>
+                    <option value="last_year" {% if period == 'last_year' %}selected{% endif %}>Last Year</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            <div class="col-md-2" id="custom-from" style="{% if period != 'custom' %}display:none{% endif %}">
+                <label class="form-label small mb-1">From</label>
+                <input type="date" class="form-control form-control-sm" name="date_from" value="{{ date_from|default:'' }}">
+            </div>
+            <div class="col-md-2" id="custom-to" style="{% if period != 'custom' %}display:none{% endif %}">
+                <label class="form-label small mb-1">To</label>
+                <input type="date" class="form-control form-control-sm" name="date_to" value="{{ date_to|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Apply</button>
+            </div>
+            <div class="col-md-3 text-end">
+                <small class="text-muted">{{ start_date }} &mdash; {{ end_date }}</small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Row 1: KPI Metric Boxes -->
+<div class="row g-2 mb-3">
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="kpi-box kpi-revenue h-100">
+            <div class="kpi-label">Total Revenue</div>
+            <div class="kpi-value">UGX {{ total_revenue|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">{{ start_date|date:"M d" }} &ndash; {{ end_date|date:"M d, Y" }}</div>
+        </div>
+    </div>
+    {% if 'budget' in enabled_modules %}
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="kpi-box kpi-expense h-100">
+            <div class="kpi-label">Expenses</div>
+            <div class="kpi-value">UGX {{ total_expenses|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">Approved &amp; paid</div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="kpi-box kpi-profit h-100">
+            <div class="kpi-label">Gross Profit</div>
+            <div class="kpi-value">UGX {{ gross_profit|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">Revenue &minus; COGS</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="kpi-box kpi-net h-100">
+            <div class="kpi-label">Net Profit</div>
+            <div class="kpi-value {% if net_balance >= 0 %}text-success{% else %}text-danger{% endif %}">UGX {{ net_balance|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">Revenue &minus; Expenses</div>
+        </div>
+    </div>
+    {% if 'billing' in enabled_modules %}
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="kpi-box kpi-due h-100">
+            <div class="kpi-label">Invoices Due</div>
+            <div class="kpi-value">UGX {{ outstanding_amount|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">Outstanding balance</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="kpi-box kpi-pending h-100">
+            <div class="kpi-label">Pending Payments</div>
+            <div class="kpi-value">UGX {{ pending_invoices_amount|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">{{ pending_invoices_count }} invoices</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="kpi-box kpi-collected h-100">
+            <div class="kpi-label">Payments Collected</div>
+            <div class="kpi-value">UGX {{ total_payments_amount|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">{{ total_payments_count }} payments</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Row 2: Main Chart + Gauge Widgets -->
+<div class="row g-2 mb-3">
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-2"><canvas id="overviewTrendChart" height="180"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="row g-2 h-100">
+            {% if 'billing' in enabled_modules %}
+            <div class="col-md-3 col-6">
+                <div class="gauge-widget h-100">
+                    <div class="gauge-label">Collection Rate</div>
+                    <canvas id="gaugeCollection" height="110"></canvas>
+                    <div class="gauge-value">{{ collection_rate }}%</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if 'budget' in enabled_modules %}
+            <div class="col-md-3 col-6">
+                <div class="gauge-widget h-100">
+                    <div class="gauge-label">Budget Execution</div>
+                    <canvas id="gaugeBudget" height="110"></canvas>
+                    <div class="gauge-value">{{ budget_utilization }}%</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if 'pharmacy' in enabled_modules %}
+            <div class="col-md-3 col-6">
+                <div class="gauge-widget h-100">
+                    <div class="gauge-label">Pharmacy Margin</div>
+                    <canvas id="gaugePharmacy" height="110"></canvas>
+                    <div class="gauge-value">{{ pharmacy_margin }}%</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if 'laboratory' in enabled_modules %}
+            <div class="col-md-3 col-6">
+                <div class="gauge-widget h-100">
+                    <div class="gauge-label">Lab Completion</div>
+                    <canvas id="gaugeLab" height="110"></canvas>
+                    <div class="gauge-value">{{ lab_completion }}%</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Two Side-by-Side Charts -->
+<div class="row g-2 mb-3">
+    {% if billing %}
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-0"><span class="section-title">Revenue by Service Category</span></div>
+            <div class="card-body p-2"><canvas id="billingSrvChart" height="200"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-0"><span class="section-title">Monthly Comparison (Yr vs Yr)</span></div>
+            <div class="card-body p-2"><canvas id="billingMonthlyChart" height="200"></canvas></div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- App Tabs Navigation (bottom tabs like image) -->
+{% if app_tabs %}
+<ul class="nav fin-tabs mb-3" id="finReportTabs" role="tablist">
+    {% for tab in app_tabs %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if forloop.first %}active{% endif %}" id="tab-{{ tab.key }}" data-bs-toggle="pill"
+                data-bs-target="#pane-{{ tab.key }}" type="button" role="tab">
+            <i class="bi {{ tab.icon }}"></i> {{ tab.label }}
+        </button>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<div class="tab-content" id="finReportContent">
+
+<!-- ══════════════════ BILLING TAB ══════════════════ -->
+{% if billing %}
+<div class="tab-pane fade show active" id="pane-billing" role="tabpanel">
+    <!-- Billing KPIs -->
+    <div class="card shadow-sm mb-3"><div class="card-body p-0">
+        <table class="period-stats-table">
+            <thead><tr><th>Metric</th><th>Revenue</th><th>Invoices</th><th>Avg Invoice</th><th>Outstanding</th><th>Collection</th><th>Claims</th></tr></thead>
+            <tbody><tr>
+                <td>Selected Period</td>
+                <td class="text-success">UGX {{ billing.services_revenue|floatformat:0|intcomma }} <small class="text-muted">({{ billing.revenue_change_pct }}%)</small></td>
+                <td>{{ billing.total_invoices }}</td>
+                <td>UGX {{ billing.avg_invoice_value|floatformat:0|intcomma }}</td>
+                <td class="text-warning">UGX {{ billing.outstanding_amount|floatformat:0|intcomma }}</td>
+                <td>{{ billing.collection_rate }}%</td>
+                <td>{{ billing.claims_submitted }} <small class="text-muted">({{ billing.claims_approved }} approved)</small></td>
+            </tr></tbody>
+        </table>
+    </div></div>
+    <!-- Charts Row -->
+    <div class="row mb-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Revenue Trend</span></div>
+            <div class="card-body p-2"><canvas id="billingTrendChart" height="200"></canvas></div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Payment Methods</span></div>
+            <div class="card-body p-2"><canvas id="billingPmChart" height="200"></canvas></div></div>
+        </div>
+    </div>
+    <!-- Tables Row -->
+    <div class="row mb-3">
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Top Performing Services</span></div>
+            <div class="card-body p-2">
+                {% if billing.top_services %}
+                <div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+                    <thead class="table-light"><tr><th>Service</th><th class="text-end">Revenue</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>{% for s in billing.top_services %}<tr><td>{{ s.name }}</td><td class="text-end">UGX {{ s.total_revenue|floatformat:0|intcomma }}</td><td class="text-end">{{ s.count }}</td></tr>{% endfor %}</tbody>
+                </table></div>
+                {% else %}<p class="text-muted small mb-0">No data</p>{% endif %}
+            </div></div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Outstanding Invoices by Age</span></div>
+            <div class="card-body p-2">
+                <div class="row text-center mb-2">
+                    <div class="col-3"><strong class="text-info">UGX {{ billing.o30|floatformat:0|intcomma }}</strong><br><small class="text-muted">0-30d</small></div>
+                    <div class="col-3"><strong class="text-warning">UGX {{ billing.o60|floatformat:0|intcomma }}</strong><br><small class="text-muted">31-60d</small></div>
+                    <div class="col-3"><strong class="text-danger">UGX {{ billing.o90|floatformat:0|intcomma }}</strong><br><small class="text-muted">61-90d</small></div>
+                    <div class="col-3"><strong class="text-dark">UGX {{ billing.o90p|floatformat:0|intcomma }}</strong><br><small class="text-muted">90+d</small></div>
+                </div>
+                <div class="progress" style="height:16px">
+                    <div class="progress-bar bg-info" style="width:{{ billing.o30_pct }}%"></div>
+                    <div class="progress-bar bg-warning" style="width:{{ billing.o60_pct }}%"></div>
+                    <div class="progress-bar bg-danger" style="width:{{ billing.o90_pct }}%"></div>
+                    <div class="progress-bar bg-dark" style="width:{{ billing.o90p_pct }}%"></div>
+                </div>
+            </div></div>
+        </div>
+    </div>
+    <!-- Insurance Claims -->
+    <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Insurance Claims Summary</span></div>
+    <div class="card-body p-2">
+        <div class="row text-center">
+            <div class="col-md-2"><h5 class="text-primary mb-0">{{ billing.claims_submitted }}</h5><small class="text-muted">Submitted</small></div>
+            <div class="col-md-2"><h5 class="text-success mb-0">{{ billing.claims_approved }}</h5><small class="text-muted">Approved</small></div>
+            <div class="col-md-2"><h5 class="text-warning mb-0">{{ billing.claims_pending }}</h5><small class="text-muted">Pending</small></div>
+            <div class="col-md-2"><h5 class="text-danger mb-0">{{ billing.claims_denied }}</h5><small class="text-muted">Denied</small></div>
+            <div class="col-md-2"><h6 class="text-info mb-0">UGX {{ billing.claims_total|floatformat:0|intcomma }}</h6><small class="text-muted">Claimed</small></div>
+            <div class="col-md-2"><h6 class="text-success mb-0">UGX {{ billing.claims_reimbursed|floatformat:0|intcomma }}</h6><small class="text-muted">Reimbursed</small></div>
+        </div>
+    </div></div>
+</div>
+{% endif %}
+
+<!-- ══════════════════ PHARMACY FINANCIALS TAB ══════════════════ -->
+{% if pharmacy_fin %}
+<div class="tab-pane fade {% if not billing %}show active{% endif %}" id="pane-pharmacy" role="tabpanel">
+    <!-- Pharmacy Financial KPIs -->
+    <div class="card shadow-sm mb-3"><div class="card-body p-0">
+        <table class="period-stats-table">
+            <thead><tr><th>Metric</th><th>Sales Revenue</th><th>COGS</th><th>Gross Profit</th><th>Margin</th><th>Items Sold</th><th>Procurement</th></tr></thead>
+            <tbody><tr>
+                <td>Selected Period</td>
+                <td class="text-success">UGX {{ pharmacy_fin.sales_revenue|floatformat:0|intcomma }}</td>
+                <td class="text-warning">UGX {{ pharmacy_fin.sales_cogs|floatformat:0|intcomma }}</td>
+                <td class="{% if pharmacy_fin.sales_profit >= 0 %}text-success{% else %}text-danger{% endif %}">UGX {{ pharmacy_fin.sales_profit|floatformat:0|intcomma }}</td>
+                <td>{{ pharmacy_fin.sales_margin }}%</td>
+                <td>{{ pharmacy_fin.total_items_sold }} <small class="text-muted">({{ pharmacy_fin.total_transactions }} txns)</small></td>
+                <td>UGX {{ pharmacy_fin.po_total|floatformat:0|intcomma }} <small class="text-muted">({{ pharmacy_fin.po_count }} POs)</small></td>
+            </tr></tbody>
+        </table>
+    </div></div>
+    <!-- Charts -->
+    <div class="row mb-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Monthly Revenue vs Profit</span></div>
+            <div class="card-body p-2"><canvas id="pharmFinTrendChart" height="200"></canvas></div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Revenue vs COGS</span></div>
+            <div class="card-body p-2">
+                <div class="text-center mb-2">
+                    <h6 class="text-success mb-0">UGX {{ pharmacy_fin.sales_revenue|floatformat:0|intcomma }}</h6><small class="text-muted">Revenue</small>
+                </div>
+                <div class="text-center mb-2">
+                    <h6 class="text-warning mb-0">UGX {{ pharmacy_fin.sales_cogs|floatformat:0|intcomma }}</h6><small class="text-muted">Cost of Goods</small>
+                </div>
+                <div class="text-center">
+                    <h6 class="{% if pharmacy_fin.sales_profit >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">UGX {{ pharmacy_fin.sales_profit|floatformat:0|intcomma }}</h6><small class="text-muted">Gross Profit</small>
+                </div>
+            </div></div>
+        </div>
+    </div>
+    <!-- Top Medications by Revenue -->
+    <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Top Medications by Revenue</span></div>
+    <div class="card-body p-2"><div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+        <thead class="table-light"><tr><th>Medication</th><th class="text-end">Qty Sold</th><th class="text-end">Revenue</th><th class="text-end">Cost</th><th class="text-end">Profit</th></tr></thead>
+        <tbody>{% for m in pharmacy_fin.top_meds %}<tr>
+            <td>{{ m.name }}</td><td class="text-end">{{ m.qty }}</td>
+            <td class="text-end">UGX {{ m.revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end">UGX {{ m.cost|floatformat:0|intcomma }}</td>
+            <td class="text-end {% if m.profit >= 0 %}text-success{% else %}text-danger{% endif %}">UGX {{ m.profit|floatformat:0|intcomma }}</td>
+        </tr>{% empty %}<tr><td colspan="5" class="text-muted text-center">No sales data</td></tr>{% endfor %}</tbody>
+    </table></div></div></div>
+</div>
+{% endif %}
+
+<!-- ══════════════════ LABORATORY REVENUE TAB ══════════════════ -->
+{% if lab_fin %}
+<div class="tab-pane fade {% if not billing and not pharmacy_fin %}show active{% endif %}" id="pane-laboratory" role="tabpanel">
+    <!-- Lab Financial KPIs -->
+    <div class="card shadow-sm mb-3"><div class="card-body p-0">
+        <table class="period-stats-table">
+            <thead><tr><th>Metric</th><th>Revenue</th><th>Total Tests</th><th>Completed</th><th>Avg Test Value</th><th>Categories</th></tr></thead>
+            <tbody><tr>
+                <td>Selected Period</td>
+                <td class="text-success">UGX {{ lab_fin.total_revenue|floatformat:0|intcomma }}</td>
+                <td>{{ lab_fin.total_tests }}</td>
+                <td>{{ lab_fin.completed_tests }}</td>
+                <td>UGX {{ lab_fin.avg_test_value|floatformat:0|intcomma }}</td>
+                <td>{{ lab_fin.cat_labels|length }}</td>
+            </tr></tbody>
+        </table>
+    </div></div>
+    <!-- Charts -->
+    <div class="row mb-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Monthly Lab Revenue</span></div>
+            <div class="card-body p-2"><canvas id="labFinTrendChart" height="200"></canvas></div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Revenue by Category</span></div>
+            <div class="card-body p-2"><canvas id="labFinCatChart" height="200"></canvas></div></div>
+        </div>
+    </div>
+    <!-- Top Tests by Revenue -->
+    <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Top Tests by Revenue</span></div>
+    <div class="card-body p-2"><div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+        <thead class="table-light"><tr><th>Test</th><th class="text-end">Count</th><th class="text-end">Revenue</th></tr></thead>
+        <tbody>{% for t in lab_fin.top_tests %}<tr>
+            <td>{{ t.name }}</td><td class="text-end">{{ t.count }}</td>
+            <td class="text-end">UGX {{ t.revenue|floatformat:0|intcomma }}</td>
+        </tr>{% empty %}<tr><td colspan="3" class="text-muted text-center">No test data</td></tr>{% endfor %}</tbody>
+    </table></div></div></div>
+</div>
+{% endif %}
+
+<!-- ══════════════════ BUDGET TAB ══════════════════ -->
+{% if budget %}
+<div class="tab-pane fade {% if not billing and not pharmacy_fin and not lab_fin %}show active{% endif %}" id="pane-budget" role="tabpanel">
+    <div class="card shadow-sm mb-3"><div class="card-body p-0">
+        <table class="period-stats-table">
+            <thead><tr><th>Metric</th><th>Total Expenses</th><th>Transactions</th><th>Pending</th><th>Rejected</th><th>Categories</th><th>Active Budgets</th></tr></thead>
+            <tbody><tr>
+                <td>Selected Period</td>
+                <td class="text-danger">UGX {{ budget.total_expenses|floatformat:0|intcomma }}</td>
+                <td>{{ budget.total_expense_count }}</td>
+                <td class="text-warning">{{ budget.pending_expenses }}</td>
+                <td>{{ budget.rejected_expenses }}</td>
+                <td>{{ budget.by_category|length }}</td>
+                <td>{{ budget.active_budgets|length }}</td>
+            </tr></tbody>
+        </table>
+    </div></div>
+    <div class="row mb-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Monthly Expense Trend</span></div>
+            <div class="card-body p-2"><canvas id="budgetTrendChart" height="200"></canvas></div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Expenses by Category</span></div>
+            <div class="card-body p-2"><canvas id="budgetCatChart" height="200"></canvas></div></div>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Expense Categories</span></div>
+            <div class="card-body p-2"><div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+                <thead class="table-light"><tr><th>Category</th><th class="text-end">Amount</th><th class="text-end">Count</th></tr></thead>
+                <tbody>{% for c in budget.by_category %}<tr><td><i class="bi {{ c.category__icon }} text-{{ c.category__color }}"></i> {{ c.category__name }}</td><td class="text-end">UGX {{ c.total|floatformat:0|intcomma }}</td><td class="text-end">{{ c.cnt }}</td></tr>{% empty %}<tr><td colspan="3" class="text-muted text-center">No expenses</td></tr>{% endfor %}</tbody>
+            </table></div></div></div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Top Vendors</span></div>
+            <div class="card-body p-2"><div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+                <thead class="table-light"><tr><th>Vendor</th><th class="text-end">Amount</th><th class="text-end">Count</th></tr></thead>
+                <tbody>{% for v in budget.top_vendors %}<tr><td>{{ v.vendor_name }}</td><td class="text-end">UGX {{ v.total|floatformat:0|intcomma }}</td><td class="text-end">{{ v.cnt }}</td></tr>{% empty %}<tr><td colspan="3" class="text-muted text-center">No vendor data</td></tr>{% endfor %}</tbody>
+            </table></div></div></div>
+        </div>
+    </div>
+    {% if budget.active_budgets %}
+    <div class="card shadow-sm mb-3"><div class="card-header py-2"><span class="section-title">Active Budgets</span></div>
+    <div class="card-body p-2"><div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+        <thead class="table-light"><tr><th>Budget</th><th class="text-end">Total</th><th class="text-end">Spent</th><th class="text-end">Remaining</th><th class="text-end">Utilization</th></tr></thead>
+        <tbody>{% for b in budget.active_budgets %}<tr>
+            <td>{{ b.name }}</td><td class="text-end">UGX {{ b.total|floatformat:0|intcomma }}</td>
+            <td class="text-end">UGX {{ b.spent|floatformat:0|intcomma }}</td><td class="text-end">UGX {{ b.remaining|floatformat:0|intcomma }}</td>
+            <td class="text-end">
+                <div class="progress" style="height:14px"><div class="progress-bar {% if b.utilization > 90 %}bg-danger{% elif b.utilization > 70 %}bg-warning{% else %}bg-success{% endif %}" style="width:{{ b.utilization }}%">{{ b.utilization }}%</div></div>
+            </td>
+        </tr>{% endfor %}</tbody>
+    </table></div></div></div>
+    {% endif %}
+</div>
+{% endif %}
+
+
+</div><!-- /tab-content -->
+
+<!-- Charts JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const P = document.getElementById('period-select');
+    const CF = document.getElementById('custom-from');
+    const CT = document.getElementById('custom-to');
+    P.addEventListener('change', function(){ CF.style.display = CT.style.display = this.value==='custom'?'block':'none'; });
+    if(P.value==='custom'){CF.style.display='block';CT.style.display='block';}
+
+    const COLORS = ['#1B5E96','#2E8B57','#FF8C00','#0891b2','#dc2626','#8b5cf6','#f59e0b'];
+    function c(i){ return COLORS[i % COLORS.length]; }
+    function mkLine(id, labels, data, label, color){
+        const el = document.getElementById(id); if(!el) return;
+        new Chart(el, {type:'line', data:{labels:labels, datasets:[{label:label, data:data, borderColor:color||COLORS[0], backgroundColor:(color||COLORS[0])+'33', fill:true, tension:0.3, pointRadius:3}]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true, ticks:{callback:v=>'UGX '+v.toLocaleString()}},x:{grid:{display:false}}}, plugins:{legend:{display:false}}}});
+    }
+    function mkBar(id, labels, datasets){
+        const el = document.getElementById(id); if(!el) return;
+        new Chart(el, {type:'bar', data:{labels:labels, datasets:datasets}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true, ticks:{callback:v=>'UGX '+v.toLocaleString()}}}, plugins:{legend:{position:'bottom'}}}});
+    }
+    function mkDoughnut(id, labels, data){
+        const el = document.getElementById(id); if(!el) return;
+        const bg = labels.map((_,i)=>c(i));
+        new Chart(el, {type:'doughnut', data:{labels:labels, datasets:[{data:data, backgroundColor:bg}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}});
+    }
+    function mkGauge(id, pct, color){
+        const el = document.getElementById(id); if(!el) return;
+        var v = Math.min(Math.max(parseFloat(pct)||0, 0), 100);
+        new Chart(el, {type:'doughnut', data:{datasets:[{data:[v, 100-v], backgroundColor:[color,'#e9ecef'], borderWidth:0}]},
+            options:{responsive:true, maintainAspectRatio:false, cutout:'75%', rotation:-90, circumference:180, plugins:{legend:{display:false}, tooltip:{enabled:false}}}});
+    }
+
+    // ── Overview trend chart (period breakdown) ──
+    var ps = {{ period_stats_json|safe }};
+    mkBar('overviewTrendChart', ps.map(function(p){return p.label}), [
+        {label:'Revenue', data:ps.map(function(p){return parseFloat(p.stats.revenue)||0}), backgroundColor:'#1cc88a'},
+        {label:'Expenses', data:ps.map(function(p){return parseFloat(p.stats.expenses)||0}), backgroundColor:'#e74a3b'}
+    ]);
+
+    // ── Gauge charts ──
+    {% if 'billing' in enabled_modules %}mkGauge('gaugeCollection', {{ collection_rate }}, '#1B5E96');{% endif %}
+    {% if 'budget' in enabled_modules %}mkGauge('gaugeBudget', {{ budget_utilization }}, '#2E8B57');{% endif %}
+    {% if 'pharmacy' in enabled_modules %}mkGauge('gaugePharmacy', {{ pharmacy_margin }}, '#FF8C00');{% endif %}
+    {% if 'laboratory' in enabled_modules %}mkGauge('gaugeLab', {{ lab_completion }}, '#0891b2');{% endif %}
+
+    // ── Billing charts ──
+    {% if billing %}
+    var bd = {{ billing_json|safe }};
+    mkLine('billingTrendChart', bd.trend_labels||[], bd.trend_data||[], 'Revenue', COLORS[1]);
+    mkDoughnut('billingPmChart', bd.pm_labels||[], bd.pm_data||[]);
+    mkBar('billingSrvChart', bd.srv_labels||[], [{label:'Revenue', data:bd.srv_data||[], backgroundColor:COLORS[0]}]);
+    mkBar('billingMonthlyChart', bd.monthly_labels||[], [
+        {label:'Current Year', data:bd.current_year_data||[], backgroundColor:COLORS[1]},
+        {label:'Previous Year', data:bd.previous_year_data||[], backgroundColor:COLORS[3]}
+    ]);
+    {% endif %}
+
+    // ── Pharmacy Financials charts ──
+    {% if pharmacy_fin %}
+    var pfd = {{ pharmacy_fin_json|safe }};
+    mkBar('pharmFinTrendChart', pfd.monthly_labels||[], [
+        {label:'Revenue', data:pfd.monthly_revenue||[], backgroundColor:COLORS[1]},
+        {label:'Profit', data:pfd.monthly_profit||[], backgroundColor:COLORS[0]}
+    ]);
+    {% endif %}
+
+    // ── Laboratory Revenue charts ──
+    {% if lab_fin %}
+    var lfd = {{ lab_fin_json|safe }};
+    mkBar('labFinTrendChart', lfd.monthly_labels||[], [{label:'Revenue', data:lfd.monthly_data||[], backgroundColor:COLORS[0]}]);
+    mkDoughnut('labFinCatChart', lfd.cat_labels||[], lfd.cat_data||[]);
+    {% endif %}
+
+    // ── Budget charts ──
+    {% if budget %}
+    var bgd = {{ budget_json|safe }};
+    mkBar('budgetTrendChart', bgd.monthly_labels||[], [{label:'Expenses', data:bgd.monthly_data||[], backgroundColor:COLORS[4]}]);
+    (function(){
+        var cats = bgd.by_category||[];
+        mkDoughnut('budgetCatChart', cats.map(function(x){return x.category__name}), cats.map(function(x){return parseFloat(x.total)}));
+    })();
+    {% endif %}
+
+});
+</script>
+
+<!-- Custom Financial Report Modal -->
+<div class="modal fade" id="customFinancialModal" tabindex="-1" aria-labelledby="customFinancialModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-lg modal-dialog-scrollable">
+<div class="modal-content">
+    <div class="modal-header" style="background: var(--alafia-gradient);">
+        <h5 class="modal-title text-white" id="customFinancialModalLabel"><i class="bi bi-funnel me-2"></i>Generate Custom Financial Report</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    </div>
+    <form method="get" action="{% url 'reports:custom_financial_report' %}">
+    <div class="modal-body">
+        <p class="text-muted small mb-3">Select your criteria below. Only filled fields are applied as filters.</p>
+
+        <!-- Date Range -->
+        <div class="card mb-3 border">
+            <div class="card-header bg-light py-2"><h6 class="mb-0"><i class="bi bi-calendar3 me-1"></i> Date Range</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small">From</label>
+                        <input type="date" name="date_from" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">To</label>
+                        <input type="date" name="date_to" class="form-control form-control-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if 'billing' in enabled_modules %}
+        <!-- Billing Filters -->
+        <div class="card mb-3 border">
+            <div class="card-header bg-light py-2"><h6 class="mb-0"><i class="bi bi-credit-card me-1"></i> Billing</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small">Invoice Status</label>
+                        <select name="inv_status" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            {% for val, label in invoice_statuses %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Payment Method</label>
+                        <select name="payment_method" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            {% for val, label in payment_methods %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Min Amount</label>
+                        <input type="number" name="amount_min" class="form-control form-control-sm" placeholder="0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Max Amount</label>
+                        <input type="number" name="amount_max" class="form-control form-control-sm" placeholder="999999">
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-bar-chart me-1"></i> Generate Report</button>
+    </div>
+    </form>
+</div>
+</div>
+</div>
+{% endblock %}

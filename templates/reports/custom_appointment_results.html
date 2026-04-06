@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Custom Appointment Report{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-calendar-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Custom Appointment Report</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'reports:download_custom_appointment_report' %}?{{ query_string }}" class="btn btn-success me-2">
+    <i class="bi bi-file-earmark-excel"></i> Download Excel
+</a>
+<a href="{% url 'reports:appointment_report' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Appointment Reports
+</a>
+{% endblock %}
+
+{% block content %}
+{% if filters_applied %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body py-3">
+        <h6 class="fw-bold mb-2"><i class="bi bi-funnel me-1"></i> Applied Filters</h6>
+        <div class="d-flex flex-wrap gap-2">
+            {% for key, val in filters_applied.items %}
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2">
+                <strong>{{ key }}:</strong> {{ val }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-primary mb-0">{{ total|intcomma }}</div>
+            <div class="text-muted small">Total</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-success mb-0">{{ completed|intcomma }}</div>
+            <div class="text-muted small">Completed</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-info mb-0">{{ scheduled|intcomma }}</div>
+            <div class="text-muted small">Scheduled</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-danger mb-0">{{ cancelled|intcomma }}</div>
+            <div class="text-muted small">Cancelled</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold text-warning mb-0">{{ no_show|intcomma }}</div>
+            <div class="text-muted small">No Show</div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="h4 fw-bold mb-0" style="color:#6f42c1;">{{ completion_rate }}%</div>
+            <div class="text-muted small">Completion Rate</div>
+        </div></div>
+    </div>
+</div>
+
+<!-- By Service & By Provider -->
+<div class="row g-3 mb-4">
+    {% if by_service %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-1"></i> By Service</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Service</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for s in by_service %}
+                    <tr><td>{{ s.service__name }}</td><td class="text-end">{{ s.cnt }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if by_provider %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-person-badge me-1"></i> By Provider</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Provider</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for p in by_provider %}
+                    <tr><td>{{ p.provider__first_name }} {{ p.provider__last_name }}</td><td class="text-end">{{ p.cnt }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Appointment Details Table -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-table me-2"></i>Appointment Details</h5>
+        <span class="badge bg-secondary">{{ total }} total</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Patient</th><th>Service</th><th>Category</th><th>Provider</th><th>Date</th><th>Time</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for a in appt_list %}
+                    <tr>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td><a href="{% url 'patients:patient_detail' a.patient.pk %}" class="text-decoration-none fw-semibold">{{ a.patient.get_full_name }}</a></td>
+                        <td>{{ a.service.name }}</td>
+                        <td>{{ a.service.get_category_display }}</td>
+                        <td>{{ a.provider.get_full_name }}</td>
+                        <td>{{ a.appointment_date|date:"Y-m-d" }}</td>
+                        <td>{{ a.appointment_time|time:"H:i" }}</td>
+                        <td><span class="badge bg-{% if a.status == 'completed' %}success{% elif a.status == 'cancelled' %}danger{% elif a.status == 'no_show' %}warning{% else %}primary{% endif %}">{{ a.get_status_display }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-search display-4 d-block mb-3"></i>
+                            <h5>No appointments match the selected criteria</h5>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

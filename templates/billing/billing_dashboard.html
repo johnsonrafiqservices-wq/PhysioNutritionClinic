@@ -1,0 +1,688 @@
+{% extends 'base.html' %}
+
+{% block title %}Billing Dashboard - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-cash-stack me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Billing Dashboard</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <!-- <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary">
+        <i class="bi bi-receipt"></i> Create Invoice
+    </a> -->
+    <button type="button" class="btn btn-info" onclick="openInvoiceForPatientModal()">
+        <i class="bi bi-person-plus"></i> New Invoice for Patient
+    </button>
+    <button type="button" class="btn btn-success" onclick="openPaymentModal(null, '', null, '')">
+        <i class="bi bi-credit-card"></i> Record Payment
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Financial Overview Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Revenue (This Month)
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ monthly_revenue|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cash fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Outstanding Invoices
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ outstanding_amount|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Payments Today
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ daily_payments|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-credit-card fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Overdue Invoices
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ overdue_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full-width Recent & Draft Invoices -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-receipt me-2"></i>Recent & Draft Invoices
+                </h6>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-info btn-sm" onclick="openInvoiceForPatientModal()">
+                        <i class="bi bi-person-plus"></i> New for Patient
+                    </button>
+                    <!-- <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus"></i> Create Invoice
+                    </a> -->
+                    <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-primary btn-sm">View All</a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_invoices %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Created</th>
+                                    <th>Due Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in recent_invoices %}
+                                <tr class="{% if invoice.status == 'draft' %}table-warning{% elif invoice.status == 'overdue' %}table-danger{% endif %}">
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="text-decoration-none fw-bold">
+                                            {{ invoice.invoice_number }}
+                                        </a>
+                                        {% if invoice.status == 'draft' %}
+                                        <br><small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Ready for services</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ invoice.patient.get_full_name }}</strong>
+                                        <br><small class="text-muted">{{ invoice.patient.patient_id }}</small>
+                                    </td>
+                                    <td>{{ invoice.created_at|date:"M d, Y" }}<br><small class="text-muted">{{ invoice.created_at|time:"H:i" }}</small></td>
+                                    <td>
+                                        {{ invoice.due_date|date:"M d, Y" }}
+                                        {% if invoice.status != 'paid' and invoice.due_date < today %}
+                                        <br><small class="text-danger">{{ invoice.due_date|timesince }} overdue</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>UGX {{ invoice.total_amount|floatformat:0 }}</strong>
+                                        {% if invoice.status == 'draft' and invoice.total_amount == 0 %}
+                                        <br><small class="text-muted">No services added</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'draft' %}warning{% elif invoice.status == 'sent' %}info{% elif invoice.status == 'overdue' %}danger{% else %}secondary{% endif %} fs-6">
+                                            {{ invoice.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-primary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if invoice.status == 'draft' %}
+                                                <a href="{% url 'billing:invoice_edit' invoice.pk %}" class="btn btn-outline-warning" title="Add Services">
+                                                    <i class="bi bi-plus-circle"></i>
+                                                </a>
+                                            {% endif %}
+                                            {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
+                                                <button type="button" class="btn btn-outline-success" title="Record Payment" 
+                                                        onclick="openPaymentModal({{ invoice.pk }}, '{{ invoice.invoice_number }}', {{ invoice.get_balance_due|floatformat:0 }}, {{ invoice.patient.pk }})">
+                                                    <i class="bi bi-credit-card"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-receipt text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No invoices created yet.</p>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-info" onclick="openInvoiceForPatientModal()">
+                                <i class="bi bi-person-plus"></i> Create for Patient
+                            </button>
+                            <!-- <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary">
+                                <i class="bi bi-receipt"></i> Create Invoice
+                            </a> -->
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+
+        <!-- Revenue Chart -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Monthly Revenue Trend</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="revenueChart" width="100%" height="90"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-info" onclick="openInvoiceForPatientModal()">
+                        <i class="bi bi-person-plus"></i> New Invoice for Patient
+                    </button>
+                    <a href="{% url 'billing:group_invoice_list' %}" class="btn btn-primary">
+                        <i class="bi bi-receipt-cutoff"></i> Group Invoices
+                    </a>
+                    <button type="button" class="btn btn-success" onclick="openPaymentModal(null, '', null, '')">
+                        <i class="bi bi-credit-card"></i> Record Payment
+                    </button>
+                    <a href="{% url 'billing:billing_reports' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-bar-chart-line"></i> Billing Reports
+                    </a>
+                    <a href="{% url 'billing:invoice_aging_report' %}" class="btn btn-outline-warning">
+                        <i class="bi bi-clock-history"></i> Aging Report
+                    </a>
+                    <a href="{% url 'billing:invoice_export_csv' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-download"></i> Export Invoices CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Methods Doughnut Chart -->
+        <!-- <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Methods (This Month)</h6>
+            </div>
+            <div class="card-body">
+                {% if method_data != '[]' %}
+                    <canvas id="methodDoughnutChart" height="200"></canvas>
+                {% else %}
+                    <p class="text-muted text-center py-3"><i class="bi bi-pie-chart me-2"></i>No payments this month.</p>
+                {% endif %}
+            </div>
+        </div> -->
+    </div>
+</div>
+
+<!-- Aging Buckets + Audit Log Row -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-warning"><i class="bi bi-clock-history me-2"></i>Accounts Receivable Aging</h6>
+                <a href="{% url 'billing:invoice_aging_report' %}" class="btn btn-sm btn-outline-warning">Full Report</a>
+            </div>
+            <div class="card-body">
+                <canvas id="agingChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-secondary"><i class="bi bi-journal-text me-2"></i>Recent Activity</h6>
+                <a href="{% url 'billing:billing_reports' %}" class="btn btn-sm btn-outline-secondary">Full Reports</a>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" style="max-height:260px;overflow-y:auto;">
+                    {% for log in recent_audit %}
+                    <li class="list-group-item py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="badge bg-{% if 'payment' in log.action %}success{% elif 'refund' in log.action %}danger{% else %}primary{% endif %} me-1">
+                                    {{ log.get_action_display }}
+                                </span>
+                                <small class="text-muted">{{ log.details|truncatechars:60 }}</small>
+                            </div>
+                            <small class="text-muted ms-2 text-nowrap">{{ log.timestamp|timesince }} ago</small>
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center text-muted py-4">No activity recorded yet.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SERVICE STATISTICS SECTION ===== -->
+{% if svc_stats %}
+<div class="row mb-2">
+    <div class="col-12">
+        <h5 class="fw-bold mb-3" style="color:var(--alafia-primary);">
+            <i class="bi bi-activity me-2"></i>Service &amp; Billing Performance
+        </h5>
+    </div>
+</div>
+
+<!-- Top-3 Highlight Cards -->
+<div class="row mb-4">
+    {% if top_revenue_svc %}
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card shadow border-left-primary h-100">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            <i class="bi bi-trophy-fill me-1"></i> Highest Revenue Service
+                        </div>
+                        <div class="h6 fw-bold mb-1 text-truncate" style="max-width:220px;" title="{{ top_revenue_svc.name }}">{{ top_revenue_svc.name }}</div>
+                        <div class="text-success fw-bold">UGX {{ top_revenue_svc.total_revenue|floatformat:0 }}</div>
+                        <small class="text-muted">{{ top_revenue_svc.pct }}% of all service revenue · {{ top_revenue_svc.times_billed }}× billed</small>
+                    </div>
+                    <i class="bi bi-graph-up-arrow text-primary" style="font-size:2rem;opacity:.25;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if top_billed_svc %}
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card shadow border-left-info h-100">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            <i class="bi bi-repeat me-1"></i> Most Frequently Billed
+                        </div>
+                        <div class="h6 fw-bold mb-1 text-truncate" style="max-width:220px;" title="{{ top_billed_svc.name }}">{{ top_billed_svc.name }}</div>
+                        <div class="text-info fw-bold">{{ top_billed_svc.times_billed }} invoices</div>
+                        <small class="text-muted">Avg UGX {{ top_billed_svc.avg_price|floatformat:0 }} per item</small>
+                    </div>
+                    <i class="bi bi-clipboard2-pulse text-info" style="font-size:2rem;opacity:.25;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if top_avgval_svc %}
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card shadow border-left-warning h-100">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            <i class="bi bi-gem me-1"></i> Highest Avg Unit Price
+                        </div>
+                        <div class="h6 fw-bold mb-1 text-truncate" style="max-width:220px;" title="{{ top_avgval_svc.name }}">{{ top_avgval_svc.name }}</div>
+                        <div class="text-warning fw-bold">UGX {{ top_avgval_svc.avg_price|floatformat:0 }}</div>
+                        <small class="text-muted">Range: UGX {{ top_avgval_svc.min_price|floatformat:0 }} – {{ top_avgval_svc.max_price|floatformat:0 }}</small>
+                    </div>
+                    <i class="bi bi-stars text-warning" style="font-size:2rem;opacity:.25;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Charts Row: Horizontal Bar + Trend Line -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow h-100">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-bar-chart-horizontal me-2"></i>Top 10 Services by Revenue (All-Time)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="svcBarChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success"><i class="bi bi-graph-up me-2"></i>Top 5 Services – 6-Month Revenue Trend</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="svcTrendChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Service Stats Table + This Month Side-by-Side -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-table me-2"></i>Detailed Service Performance (All-Time)</h6>
+                <span class="badge bg-secondary">Grand Total: UGX {{ svc_grand_total|floatformat:0 }}</span>
+            </div>
+            <div class="card-body p-0" style="max-height:340px;overflow-y:auto;">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th style="width:30px;">#</th>
+                            <th>Service</th>
+                            <th class="text-center" title="Times billed"><i class="bi bi-repeat"></i></th>
+                            <th class="text-end">Total Revenue</th>
+                            <th class="text-end">Avg Price</th>
+                            <th class="text-end">Max</th>
+                            <th style="width:100px;">Share</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in svc_stats %}
+                        <tr>
+                            <td class="text-muted small">{{ forloop.counter }}</td>
+                            <td class="fw-semibold" style="max-width:180px;">
+                                <span class="text-truncate d-block" title="{{ s.name }}">{{ s.name }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info rounded-pill">{{ s.times_billed }}</span>
+                            </td>
+                            <td class="text-end fw-bold text-success small">{{ s.total_revenue|floatformat:0 }}</td>
+                            <td class="text-end text-muted small">{{ s.avg_price|floatformat:0 }}</td>
+                            <td class="text-end text-muted small">{{ s.max_price|floatformat:0 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="progress flex-grow-1" style="height:6px;">
+                                        <div class="progress-bar bg-primary" style="width:{{ s.pct }}%;"></div>
+                                    </div>
+                                    <small class="text-muted" style="min-width:32px;">{{ s.pct }}%</small>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success"><i class="bi bi-calendar-check me-2"></i>This Month's Top Services</h6>
+            </div>
+            <div class="card-body p-0" style="max-height:340px;overflow-y:auto;">
+                {% if svc_thismonth %}
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Service</th>
+                            <th class="text-center">×</th>
+                            <th class="text-end">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in svc_thismonth %}
+                        <tr>
+                            <td class="small fw-semibold text-truncate" style="max-width:130px;" title="{{ s.name }}">{{ s.name }}</td>
+                            <td class="text-center"><span class="badge bg-light text-dark">{{ s.times_billed }}</span></td>
+                            <td class="text-end text-success fw-bold small">{{ s.total_revenue|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size:2rem;"></i>
+                    <p class="mt-2 mb-0">No services billed this month.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+<!-- ===== END SERVICE STATISTICS ===== -->
+
+<!-- Using global New Invoice modal from modals/all_modals.html -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Revenue Chart - Use JSON filter to avoid template syntax issues
+const revenueLabels = {{ revenue_chart_labels|safe }};
+const revenueData = {{ revenue_chart_data|safe }};
+
+const ctx = document.getElementById('revenueChart').getContext('2d');
+const revenueChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: revenueLabels,
+        datasets: [{
+            label: 'Monthly Revenue',
+            data: revenueData,
+            borderColor: '#4e73df',
+            backgroundColor: 'rgba(78, 115, 223, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'UGX ' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Revenue: UGX ' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Aging Buckets Chart
+const agingLabels = {{ aging_labels|safe }};
+const agingData = {{ aging_data|safe }};
+new Chart(document.getElementById('agingChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: agingLabels,
+        datasets: [{
+            label: 'Outstanding (UGX)',
+            data: agingData,
+            backgroundColor: ['#1cc88a','#f6c23e','#fd7e14','#e74a3b','#6f0000'],
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => 'UGX ' + ctx.parsed.y.toLocaleString() } }
+        },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } } }
+    }
+});
+
+// Payment Method Doughnut Chart
+const methodLabels = {{ method_labels|safe }};
+const methodData = {{ method_data|safe }};
+if (methodData.length > 0) {
+    new Chart(document.getElementById('methodDoughnutChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: methodLabels,
+            datasets: [{ data: methodData, backgroundColor: ['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b','#858796'], hoverOffset: 6 }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: ctx => ctx.label + ': UGX ' + ctx.parsed.toLocaleString() } }
+            }
+        }
+    });
+}
+
+// Service Revenue Horizontal Bar Chart
+{% if svc_stats %}
+const svcBarLabels = {{ svc_bar_labels|safe }};
+const svcBarData = {{ svc_bar_data|safe }};
+const svcBarCounts = {{ svc_bar_counts|safe }};
+
+new Chart(document.getElementById('svcBarChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: svcBarLabels,
+        datasets: [{
+            label: 'Revenue (UGX)',
+            data: svcBarData,
+            backgroundColor: [
+                '#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b',
+                '#858796','#5a5c69','#2e59d9','#17a673','#2c9faf'
+            ],
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const count = svcBarCounts[ctx.dataIndex];
+                        return ['UGX ' + ctx.parsed.x.toLocaleString(), 'Billed ' + count + '×'];
+                    }
+                }
+            }
+        },
+        scales: {
+            x: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } }
+        }
+    }
+});
+
+// Service 6-Month Trend Chart
+const svcTrendLabels = {{ svc_trend_labels|safe }};
+const svcTrendDatasets = {{ svc_trend_datasets|safe }};
+
+new Chart(document.getElementById('svcTrendChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: svcTrendLabels, datasets: svcTrendDatasets },
+    options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': UGX ' + ctx.parsed.y.toLocaleString() } }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } }
+        }
+    }
+});
+{% endif %}
+
+// Quick payment function
+// Use global payment modal (from modals/all_modals.html)
+function openQuickPayment(invoiceId, invoiceNumber, totalAmount) {
+    // Backward-compat wrapper: open modal with invoice context
+    openPaymentModal(invoiceId, invoiceNumber, totalAmount, '');
+}
+
+// Patient search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const patientSelect = document.getElementById('patientSelect');
+    if (patientSelect) {
+        // Add search functionality to patient select
+        patientSelect.addEventListener('input', function() {
+            // This could be enhanced with a search API call
+        });
+    }
+});
+</script>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+</style>
+{% endblock %}

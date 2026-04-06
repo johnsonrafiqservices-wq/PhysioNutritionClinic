@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-boxes me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ title }}</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:batch_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Batches</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-boxes text-primary me-1"></i>Batch Information</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.medication.id_for_label }}" class="form-label small">Medication <span class="text-danger">*</span></label>
+                            {{ form.medication }}
+                            {% if form.medication.errors %}<div class="invalid-feedback d-block">{{ form.medication.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.batch_number.id_for_label }}" class="form-label small">Batch Number <span class="text-danger">*</span></label>
+                            {{ form.batch_number }}
+                            {% if form.batch_number.errors %}<div class="invalid-feedback d-block">{{ form.batch_number.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.supplier.id_for_label }}" class="form-label small">Supplier <span class="text-danger">*</span></label>
+                            {{ form.supplier }}
+                            {% if form.supplier.errors %}<div class="invalid-feedback d-block">{{ form.supplier.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.quantity_received.id_for_label }}" class="form-label small">Quantity Received <span class="text-danger">*</span></label>
+                            {{ form.quantity_received }}
+                            {% if form.quantity_received.errors %}<div class="invalid-feedback d-block">{{ form.quantity_received.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.manufacturing_date.id_for_label }}" class="form-label small">Manufacturing Date <span class="text-danger">*</span></label>
+                            {{ form.manufacturing_date }}
+                            {% if form.manufacturing_date.errors %}<div class="invalid-feedback d-block">{{ form.manufacturing_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.expiry_date.id_for_label }}" class="form-label small">Expiry Date <span class="text-danger">*</span></label>
+                            {{ form.expiry_date }}
+                            {% if form.expiry_date.errors %}<div class="invalid-feedback d-block">{{ form.expiry_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.received_date.id_for_label }}" class="form-label small">Received Date <span class="text-danger">*</span></label>
+                            {{ form.received_date }}
+                            {% if form.received_date.errors %}<div class="invalid-feedback d-block">{{ form.received_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.purchase_price.id_for_label }}" class="form-label small">Purchase Price (UGX) <span class="text-danger">*</span></label>
+                            {{ form.purchase_price }}
+                            {% if form.purchase_price.errors %}<div class="invalid-feedback d-block">{{ form.purchase_price.errors.0 }}</div>{% endif %}
+                            <small class="form-text text-muted">Price per unit</small>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label small">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label small" for="{{ form.is_active.id_for_label }}">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'pharmacy:batch_list' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle me-1"></i>Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle me-1"></i>Save Batch</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

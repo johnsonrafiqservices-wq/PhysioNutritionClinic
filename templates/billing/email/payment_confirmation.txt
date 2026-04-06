@@ -1,0 +1,25 @@
+Dear {{ payment.patient.get_full_name }},
+
+Thank you for your payment. We have received your payment and your receipt is ready.
+
+--- PAYMENT CONFIRMATION ---
+Payment ID    : {{ payment.payment_id }}
+Invoice       : {{ payment.invoice.invoice_number|default:"N/A" }}
+Date          : {{ payment.payment_date|date:"d M Y" }}
+Amount Paid   : UGX {{ payment.amount|floatformat:0 }}
+Method        : {{ payment.get_payment_method_display }}
+Status        : {{ payment.get_status_display }}
+{% if payment.reference_number %}Reference     : {{ payment.reference_number }}{% endif %}
+
+You can view and print your receipt at:
+{{ receipt_link }}
+
+If you have any questions about this payment, please contact us:
+{{ clinic_name }}
+{{ clinic_phone|default:"" }}
+{{ clinic_email|default:"" }}
+
+Thank you for choosing {{ clinic_name }}.
+
+---
+This is an automated email. Please do not reply directly to this message.

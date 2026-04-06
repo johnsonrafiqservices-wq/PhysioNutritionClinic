@@ -1,0 +1,485 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-cart-check me-3" style="font-size: 1.5rem; color: var(--alafia-success);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Sales Dashboard</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'inventory:sales_list' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-list-ul"></i> View All Sales
+</a>
+<a href="{% url 'inventory:sales_report' %}" class="btn btn-success btn-sm">
+    <i class="bi bi-file-earmark-bar-graph"></i> Sales Report
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Total Sales</div>
+                        <div class="metric-value">{{ total_sales|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="bi bi-cart-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Today's Sales</div>
+                        <div class="metric-value">{{ today_sales|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">This Week</div>
+                        <div class="metric-value">{{ week_sales|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="bi bi-calendar-week"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">This Month</div>
+                        <div class="metric-value">{{ month_sales|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-calendar-month"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revenue Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Total Revenue</div>
+                        <div class="metric-value" style="font-size: 1.3rem;">UGX {{ total_revenue|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="bi bi-currency-exchange"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Today's Revenue</div>
+                        <div class="metric-value" style="font-size: 1.3rem;">UGX {{ today_revenue|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Week Revenue</div>
+                        <div class="metric-value" style="font-size: 1.3rem;">UGX {{ week_revenue|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Month Revenue</div>
+                        <div class="metric-value" style="font-size: 1.3rem;">UGX {{ month_revenue|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#recordSaleModal">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>Record Sale</span>
+                        </button>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <a href="{% url 'inventory:sales_list' %}" class="alafia-action-btn">
+                            <i class="bi bi-list-ul"></i>
+                            <span>View All Sales</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <a href="{% url 'inventory:sales_report' %}" class="alafia-action-btn">
+                            <i class="bi bi-file-earmark-bar-graph"></i>
+                            <span>Sales Report</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <a href="{% url 'pharmacy:medication_list' %}" class="alafia-action-btn">
+                            <i class="bi bi-capsule"></i>
+                            <span>Medications</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <a href="{% url 'pharmacy:batch_list' %}" class="alafia-action-btn">
+                            <i class="bi bi-boxes"></i>
+                            <span>Batches</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <a href="{% url 'pharmacy:inventory_dashboard' %}" class="alafia-action-btn">
+                            <i class="bi bi-box-seam"></i>
+                            <span>Pharmacy</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top Selling Drugs -->
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-graph-up-arrow"></i> Top Selling Medications
+            </div>
+            <div class="card-body">
+                {% if top_drugs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Medication</th>
+                                <th class="text-center">Quantity Sold</th>
+                                <th class="text-center">Sales Count</th>
+                                <th class="text-end">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for drug in top_drugs %}
+                            <tr>
+                                <td><strong>{{ drug.batch__medication__name }}</strong></td>
+                                <td class="text-center">
+                                    <span class="fw-semibold text-primary">{{ drug.total_quantity }}</span>
+                                </td>
+                                <td class="text-center">{{ drug.sales_count }}</td>
+                                <td class="text-end">
+                                    <strong class="text-success">UGX {{ drug.total_revenue|floatformat:0|intcomma }}</strong>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: var(--alafia-info);"></i>
+                    <p class="text-muted mt-3">No sales data available yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sales -->
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Recent Sales
+            </div>
+            <div class="card-body">
+                {% if recent_sales %}
+                <div class="list-group list-group-flush">
+                    {% for sale in recent_sales %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ sale.batch.medication.name }}</h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-person"></i> {{ sale.reference|default:"Walk-in Sale" }}
+                                    <br>
+                                    <i class="bi bi-calendar"></i> {{ sale.created_at|date:"M d, Y H:i" }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-semibold text-primary mb-1">{{ sale.quantity }} units</span>
+                                <br>
+                                <strong class="text-success">UGX {{ sale.revenue|floatformat:0|intcomma }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{% url 'inventory:sales_list' %}" class="btn btn-sm btn-outline-primary">
+                        View All Sales <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: var(--alafia-info);"></i>
+                    <p class="text-muted mt-3">No recent sales.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Record Sale Modal -->
+<div class="modal fade" id="recordSaleModal" tabindex="-1" aria-labelledby="recordSaleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--alafia-gradient);">
+                <h5 class="modal-title text-white" id="recordSaleModalLabel">
+                    <i class="bi bi-plus-circle me-2"></i>Record Sale
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="recordSaleForm">
+                    {% csrf_token %}
+                    
+                    <!-- Batch Selection -->
+                    <div class="mb-3">
+                        <label for="batch_id" class="form-label">
+                            <i class="bi bi-capsule text-primary"></i> Select Medication/Batch <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="batch_id" name="batch_id" required>
+                            <option value="">-- Select Medication --</option>
+                            {% for batch in available_batches %}
+                            <option value="{{ batch.id }}" 
+                                    data-stock="{{ batch.quantity_remaining }}"
+                                    data-price="{{ batch.selling_price }}"
+                                    data-medication="{{ batch.medication.name }}">
+                                {{ batch.medication.name }} - Batch: {{ batch.batch_number }} 
+                                (Stock: {{ batch.quantity_remaining }}, Price: UGX {{ batch.selling_price|floatformat:0 }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the medication and batch to sell</div>
+                    </div>
+                    
+                    <!-- Quantity -->
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">
+                            <i class="bi bi-123 text-success"></i> Quantity <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="quantity" name="quantity" min="1" required>
+                        <div class="form-text">
+                            Available: <span id="availableStock">-</span> units
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Name -->
+                    <div class="mb-3">
+                        <label for="customer_name" class="form-label">
+                            <i class="bi bi-person text-info"></i> Customer Name
+                        </label>
+                        <input type="text" class="form-control" id="customer_name" name="customer_name" placeholder="Walk-in Customer">
+                        <div class="form-text">Optional - defaults to "Walk-in Customer"</div>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">
+                            <i class="bi bi-sticky text-warning"></i> Notes
+                        </label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Additional notes (optional)"></textarea>
+                    </div>
+                    
+                    <!-- Revenue Preview -->
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-currency-exchange"></i> <strong>Estimated Revenue:</strong> 
+                        <span id="estimatedRevenue">UGX 0</span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-success" id="submitSaleBtn">
+                    <i class="bi bi-check-circle"></i> Record Sale
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const batchSelect = document.getElementById('batch_id');
+    const quantityInput = document.getElementById('quantity');
+    const availableStockSpan = document.getElementById('availableStock');
+    const estimatedRevenueSpan = document.getElementById('estimatedRevenue');
+    const submitBtn = document.getElementById('submitSaleBtn');
+    const recordSaleForm = document.getElementById('recordSaleForm');
+    
+    // Update available stock and calculate revenue
+    function updateCalculations() {
+        const selectedOption = batchSelect.options[batchSelect.selectedIndex];
+        if (selectedOption.value) {
+            const stock = parseInt(selectedOption.dataset.stock);
+            const price = parseFloat(selectedOption.dataset.price);
+            const quantity = parseInt(quantityInput.value) || 0;
+            
+            availableStockSpan.textContent = stock;
+            
+            if (quantity > 0 && price > 0) {
+                const revenue = quantity * price;
+                estimatedRevenueSpan.textContent = 'UGX ' + revenue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+                estimatedRevenueSpan.textContent = 'UGX 0';
+            }
+            
+            // Set max quantity
+            quantityInput.max = stock;
+        } else {
+            availableStockSpan.textContent = '-';
+            estimatedRevenueSpan.textContent = 'UGX 0';
+            quantityInput.max = '';
+        }
+    }
+    
+    batchSelect.addEventListener('change', updateCalculations);
+    quantityInput.addEventListener('input', updateCalculations);
+    
+    // Submit sale via AJAX
+    submitBtn.addEventListener('click', function() {
+        const formData = new FormData(recordSaleForm);
+        
+        // Basic validation
+        if (!formData.get('batch_id')) {
+            alert('Please select a medication/batch');
+            return;
+        }
+        if (!formData.get('quantity') || parseInt(formData.get('quantity')) <= 0) {
+            alert('Please enter a valid quantity');
+            return;
+        }
+        
+        // Disable button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Recording...';
+        
+        // Submit via AJAX
+        fetch('{% url "inventory:record_sale_ajax" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                alert(data.message);
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('recordSaleModal'));
+                modal.hide();
+                
+                // Reset form
+                recordSaleForm.reset();
+                updateCalculations();
+                
+                // Reload page to update dashboard
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error recording sale: ' + error);
+        })
+        .finally(() => {
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Record Sale';
+        });
+    });
+    
+    // Reset form when modal is closed
+    document.getElementById('recordSaleModal').addEventListener('hidden.bs.modal', function() {
+        recordSaleForm.reset();
+        updateCalculations();
+    });
+});
+</script>
+
+{% endblock %}

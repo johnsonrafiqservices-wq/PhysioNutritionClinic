@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage User Permissions{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-shield-lock-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Manage User Permissions</span>
+    </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .perm-hero {
+        background: linear-gradient(135deg, #1B5E96 0%, #2980b9 50%, #1B5E96 100%);
+        border-radius: 14px;
+        padding: 28px 32px;
+        color: #fff;
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+    }
+    .perm-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%; right: -25%;
+        width: 350px; height: 350px;
+        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .perm-hero-content { position: relative; z-index: 1; }
+    .perm-hero h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px 0; }
+    .perm-hero p { font-size: 13px; opacity: 0.85; margin: 0; }
+
+    .perm-search {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e8edf2;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .perm-search i { color: #94a3b8; font-size: 18px; }
+    .perm-search input {
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 14px;
+        color: #1e293b;
+        background: transparent;
+    }
+    .perm-search input::placeholder { color: #94a3b8; }
+
+    .user-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e8edf2;
+        padding: 18px 22px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.15s;
+        text-decoration: none;
+        color: inherit;
+    }
+    .user-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        border-color: #1B5E96;
+        color: inherit;
+        text-decoration: none;
+    }
+    .user-avatar {
+        width: 46px; height: 46px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #1B5E96, #2980b9);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff;
+        font-weight: 800;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 2px 0; }
+    .user-meta { font-size: 12px; color: #64748b; }
+    .user-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge-perm {
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .badge-blocked { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-granted { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .badge-default { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+    .user-edit-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s;
+        flex-shrink: 0;
+    }
+    .user-edit-btn:hover {
+        background: #1B5E96;
+        color: #fff;
+        border-color: #1B5E96;
+    }
+    .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
+    .stat-mini {
+        flex: 1; min-width: 140px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e8edf2;
+        padding: 16px;
+        text-align: center;
+    }
+    .stat-mini-value { font-size: 24px; font-weight: 800; color: #1e293b; }
+    .stat-mini-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+    .empty-state i { font-size: 48px; margin-bottom: 12px; display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="perm-hero">
+    <div class="perm-hero-content d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <h2><i class="bi bi-shield-lock me-2"></i>User Permissions</h2>
+            <p>Assign, grant, or revoke app access for each user. Overrides apply on top of role defaults.</p>
+        </div>
+        <a href="{% url 'clinic_settings:settings' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;">
+            <i class="bi bi-arrow-left me-1"></i> Back to Settings
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" style="border-radius:10px;">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="stat-row">
+    <div class="stat-mini">
+        <div class="stat-mini-value">{{ user_data|length }}</div>
+        <div class="stat-mini-label">Total Users</div>
+    </div>
+    <div class="stat-mini">
+        <div class="stat-mini-value" id="overrideCount">0</div>
+        <div class="stat-mini-label">Users with Overrides</div>
+    </div>
+    <div class="stat-mini">
+        <div class="stat-mini-value">{{ system_apps|length }}</div>
+        <div class="stat-mini-label">System Apps</div>
+    </div>
+</div>
+
+<div class="perm-search">
+    <i class="bi bi-search"></i>
+    <input type="text" id="userSearch" placeholder="Search by name, role, or username..." autocomplete="off">
+</div>
+
+<div id="userList">
+    {% for item in user_data %}
+    <a href="{% url 'accounts:edit_user_permissions' item.user.pk %}" class="user-card" data-search="{{ item.user.get_full_name|lower }} {{ item.user.username|lower }} {{ item.user.get_role_display|lower }}">
+        <div class="user-avatar">
+            {{ item.user.first_name|first|upper }}{{ item.user.last_name|first|upper }}
+        </div>
+        <div class="user-info">
+            <div class="user-name">{{ item.user.get_full_name|default:item.user.username }}</div>
+            <div class="user-meta">
+                <strong>{{ item.user.get_role_display }}</strong> &middot; @{{ item.user.username }}
+            </div>
+        </div>
+        <div class="user-badges">
+            {% if item.has_overrides %}
+                {% if item.blocked_count > 0 %}
+                <span class="badge-perm badge-blocked"><i class="bi bi-x-circle me-1"></i>{{ item.blocked_count }} blocked</span>
+                {% endif %}
+                {% if item.granted_count > 0 %}
+                <span class="badge-perm badge-granted"><i class="bi bi-check-circle me-1"></i>{{ item.granted_count }} granted</span>
+                {% endif %}
+            {% else %}
+                <span class="badge-perm badge-default">Role defaults</span>
+            {% endif %}
+        </div>
+        <span class="user-edit-btn">
+            <i class="bi bi-pencil-square"></i> Edit
+        </span>
+    </a>
+    {% empty %}
+    <div class="empty-state">
+        <i class="bi bi-people"></i>
+        <p>No active users found.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Count users with overrides
+    let overrideCount = 0;
+    document.querySelectorAll('.badge-blocked, .badge-granted').forEach(function(el) {
+        const card = el.closest('.user-card');
+        if (card && !card.dataset.counted) {
+            card.dataset.counted = '1';
+            overrideCount++;
+        }
+    });
+    document.getElementById('overrideCount').textContent = overrideCount;
+
+    // Search
+    const searchInput = document.getElementById('userSearch');
+    const cards = document.querySelectorAll('.user-card');
+    searchInput.addEventListener('input', function() {
+        const q = this.value.toLowerCase().trim();
+        cards.forEach(function(card) {
+            const text = card.getAttribute('data-search') || '';
+            card.style.display = text.includes(q) ? '' : 'none';
+        });
+    });
+});
+</script>
+{% endblock %}

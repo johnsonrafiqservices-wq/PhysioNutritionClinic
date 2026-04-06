@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ patient.get_full_name }} - Print</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .print-header {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .header-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding-bottom: 10px;
+            margin-bottom: -40px;
+            position: relative;
+            z-index: 10;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-circle {
+            width: 90px;
+            height: 90px;
+            border: 3px solid #8B0000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 15;
+            margin-top: 9px;
+            overflow: hidden;
+        }
+        .logo-icon {
+            font-size: 34pt;
+            line-height: 1;
+        }
+        .clinic-name-block h1 {
+            font-size: 15pt;
+            font-weight: bold;
+            color: #0099CC;
+            margin: 0;
+            line-height: 1.2;
+            font-family: Arial, Helvetica, sans-serif;
+            white-space: nowrap;
+        }
+        .clinic-tagline {
+            font-size: 8.5pt;
+            color: #8B0000;
+            font-style: italic;
+            margin-top: 2px;
+            font-family: Arial, sans-serif;
+            white-space: nowrap;
+        }
+        .header-right {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 3px 5px;
+            font-size: 7.5pt;
+            line-height: 1.3;
+            color: #333;
+            font-family: Arial, sans-serif;
+            flex-shrink: 0;
+            align-items: center;
+        }
+        .contact-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            background: #444;
+            border-radius: 50%;
+            color: white;
+            font-size: 6pt;
+            flex-shrink: 0;
+        }
+        .contact-text {
+            text-align: left;
+        }
+        .heartbeat-line {
+            width: 100%;
+            height: 24px;
+            position: relative;
+            z-index: 5;
+        }
+        .heartbeat-line svg {
+            width: 100%;
+            height: 24px;
+            display: block;
+        }
+        .patient-info {
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-header">
+        <div class="header-top">
+            <div class="header-left">
+                <div class="logo-circle">
+                    {% if clinic_settings and clinic_settings.logo %}
+                        <img src="{{ clinic_settings.logo.url }}" alt="Clinic Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    {% else %}
+                        <div class="logo-icon">🏥</div>
+                    {% endif %}
+                </div>
+                <div class="clinic-name-block">
+                    <h1>{% if clinic_settings and clinic_settings.clinic_name %}{{ clinic_settings.clinic_name }}{% else %}Medical Centre{% endif %}</h1>
+                    <div class="clinic-tagline">"Your Partner in Preventive health &amp; Wellness."</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <span class="contact-icon">@</span>
+                <div class="contact-text">{% if clinic_settings and clinic_settings.address %}{{ clinic_settings.address|linebreaksbr }}{% else %}Kampala - Uganda{% endif %}</div>
+
+                <span class="contact-icon">☎</span>
+                <div class="contact-text">{% if clinic_settings and clinic_settings.phone %}{{ clinic_settings.phone }}{% else %}—{% endif %}</div>
+
+                <span class="contact-icon">✉</span>
+                <div class="contact-text">{% if clinic_settings and clinic_settings.email %}{{ clinic_settings.email }}{% else %}—{% endif %}</div>
+            </div>
+        </div>
+
+        <div class="heartbeat-line">
+            <svg viewBox="0 0 680 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="0" y1="12" x2="290" y2="12" stroke="#8B0000" stroke-width="2"/>
+                <polyline points="290,12 300,12 308,2 316,22 324,6 332,18 340,12 350,12" fill="none" stroke="#8B0000" stroke-width="2"/>
+                <line x1="350" y1="12" x2="668" y2="12" stroke="#8B0000" stroke-width="2"/>
+                <circle cx="672" cy="12" r="6" fill="#8B0000"/>
+            </svg>
+        </div>
+    </div>
+
+    <div class="patient-info">
+        <h2>{{ patient.get_full_name }}</h2>
+        <p><strong>Patient ID:</strong> {{ patient.patient_id }}</p>
+        <p><strong>Date of Birth:</strong> {{ patient.date_of_birth|date:"F j, Y" }} ({{ patient.age }} years)</p>
+        <p><strong>Gender:</strong> {{ patient.get_gender_display }}</p>
+    </div>
+
+    <div class="section">
+        <h3>Contact Information</h3>
+        <p><strong>Phone:</strong> {{ patient.phone_number|default:"Not provided" }}</p>
+        <p><strong>Email:</strong> {{ patient.email|default:"Not provided" }}</p>
+        <p><strong>Address:</strong> {{ patient.address|default:"Not provided" }}</p>
+    </div>
+
+    <div class="section">
+        <h3>Medical Information</h3>
+        <p><strong>Blood Type:</strong> {% if patient.blood_type %}{{ patient.get_blood_type_display }}{% else %}Not specified{% endif %}</p>
+        <p><strong>Allergies:</strong> {{ patient.allergies|default:"No known allergies" }}</p>
+    </div>
+
+    <div class="no-print" style="margin-top: 30px; text-align: center;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #1B5E96; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Print this page
+        </button>
+        <button onclick="window.close()" style="padding: 10px 20px; margin-left: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Close window
+        </button>
+    </div>
+
+    <script>
+        // Auto-print when the page loads
+        window.onload = function() {
+            if (window.location.search.includes('autoprint=1')) {
+                window.print();
+            }
+        };
+    </script>
+</body>
+</html>

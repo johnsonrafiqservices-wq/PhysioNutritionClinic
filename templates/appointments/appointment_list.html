@@ -1,0 +1,1373 @@
+{% extends 'base.html' %}
+
+{% block title %}Appointments - Alafia Point Wellness Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar-check-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Appointment Management</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#appointmentCreateModal">
+        <i class="bi bi-calendar-plus"></i> Schedule New Appointment
+    </button>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportAppointmentsToExcel()"><i class="bi bi-file-earmark-excel"></i> Export to Excel</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportAppointmentsToPDF()"><i class="bi bi-file-earmark-pdf"></i> Export to PDF</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Compact Calendar Styles */
+    .compact-calendar-container {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .compact-calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .calendar-day-header {
+        background: var(--alafia-primary);
+        color: white;
+        padding: 0.5rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .calendar-day-compact {
+        background: white;
+        min-height: 60px;
+        padding: 0.25rem;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .calendar-day-compact:hover {
+        background: var(--alafia-primary-light);
+        border-color: var(--alafia-primary);
+    }
+
+    .calendar-day-compact.other-month {
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+
+    .calendar-day-compact.today {
+        background: var(--alafia-success-light);
+        border-color: var(--alafia-success);
+        font-weight: bold;
+    }
+
+    .calendar-day-compact.has-appointments {
+        border-left: 3px solid var(--alafia-success);
+    }
+
+    .day-number-compact {
+        font-weight: 600;
+        font-size: 0.875rem;
+        margin-bottom: 0.125rem;
+    }
+
+    .appointment-dot {
+        width: 6px;
+        height: 6px;
+        background: var(--alafia-success);
+        border-radius: 50%;
+        margin: 1px;
+    }
+
+    .appointment-dots {
+        display: flex;
+        justify-content: center;
+        margin: 2px 0;
+    }
+
+    .view-appointments-link {
+        font-size: 0.55rem;
+        background: var(--alafia-primary);
+        color: white;
+        padding: 1px 4px;
+        border-radius: 3px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 2px;
+    }
+
+    .view-appointments-link:hover {
+        background: var(--alafia-success);
+        transform: scale(1.05);
+    }
+
+    .appointment-count-compact {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: var(--alafia-primary);
+        color: white;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.625rem;
+        font-weight: 600;
+    }
+
+    .calendar-nav-header h5 {
+        color: var(--alafia-primary);
+        font-weight: 700;
+    }
+
+    .calendar-stats-compact {
+        padding: 0.5rem;
+        background: var(--alafia-primary-light);
+        border-radius: 6px;
+    }
+
+    /* View Toggle Styles */
+    .btn-check:checked + .btn-outline-primary {
+        background-color: var(--alafia-primary);
+        border-color: var(--alafia-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Appointment Filters -->
+<div class="card mb-3" style="border: 1px solid #e3e6f0;">
+    <div class="card-body py-2">
+        <form method="GET" id="appointmentFilterForm">
+            <div class="row align-items-center g-2">
+                <div class="col-md-3">
+                    <input type="text" class="form-control form-control-sm" name="search" value="{{ search_query }}" placeholder="Search appointments..." style="border: 1px solid var(--alafia-primary);">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" class="form-control form-control-sm" name="date_from" value="{{ date_from }}" placeholder="From">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" class="form-control form-control-sm" name="date_to" value="{{ date_to }}" placeholder="To">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="status">
+                        <option value="">All Status</option>
+                        <option value="scheduled" {% if status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                        <option value="confirmed" {% if status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" name="provider" placeholder="Provider" value="{{ provider_query }}">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="clearFilters()">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Appointments Calendar View Toggle -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Appointments 
+            {% if date_from or date_to or status or search_query %}
+                - Filtered Results
+            {% endif %}
+        </h6>
+        <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="view" id="list-view" checked>
+            <label class="btn btn-outline-primary" for="list-view">
+                <i class="bi bi-list"></i> List
+            </label>
+            <input type="radio" class="btn-check" name="view" id="calendar-view">
+            <label class="btn btn-outline-primary" for="calendar-view">
+                <i class="bi bi-calendar"></i> Calendar
+            </label>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Column Filters (Hidden by default) -->
+        <div id="appointmentColumnFilters" class="card mb-3" style="display: none; border: 2px solid var(--alafia-success); border-radius: 10px;">
+            <div class="card-header" style="background: var(--alafia-success-gradient); color: white;">
+                <h6 class="mb-0"><i class="bi bi-funnel-fill me-2"></i>Column-Specific Filters</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Date..." onkeyup="filterAppointmentColumn(0, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Patient..." onkeyup="filterAppointmentColumn(1, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Service..." onkeyup="filterAppointmentColumn(2, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Provider..." onkeyup="filterAppointmentColumn(3, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Status..." onkeyup="filterAppointmentColumn(4, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Duration..." onkeyup="filterAppointmentColumn(5, this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- List View -->
+        <div id="list-view-content">
+            {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm" id="appointmentsTable" style="border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <thead style="background: var(--alafia-gradient); color: white;">
+                            <tr>
+                                <th onclick="sortAppointmentTable(0)" style="cursor: pointer; user-select: none;">
+                                    Date & Time <i class="bi bi-arrow-down-up text-light"></i>
+                                </th>
+                                <th onclick="sortAppointmentTable(1)" style="cursor: pointer; user-select: none;">
+                                    Patient <i class="bi bi-arrow-down-up text-light"></i>
+                                </th>
+                                <th onclick="sortAppointmentTable(2)" style="cursor: pointer; user-select: none;">
+                                    Service <i class="bi bi-arrow-down-up text-light"></i>
+                                </th>
+                                <th onclick="sortAppointmentTable(3)" style="cursor: pointer; user-select: none;">
+                                    Provider <i class="bi bi-arrow-down-up text-light"></i>
+                                </th>
+                                <th onclick="sortAppointmentTable(4)" style="cursor: pointer; user-select: none;">
+                                    Status <i class="bi bi-arrow-down-up text-light"></i>
+                                </th>
+                                <th onclick="sortAppointmentTable(5)" style="cursor: pointer; user-select: none;">
+                                    Duration <i class="bi bi-arrow-down-up text-light"></i>
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appointment in appointments %}
+                            <tr>
+                                <td>
+                                    <strong>{{ appointment.appointment_date|date:"M d, Y" }}</strong><br>
+                                    <small class="text-muted">{{ appointment.appointment_time|time:"g:i A" }}</small>
+                                </td>
+                                <td>
+                                    <a href="{% url 'patients:patient_detail' appointment.patient.patient_id %}" class="text-decoration-none">
+                                        {{ appointment.patient.get_full_name }}
+                                    </a><br>
+                                    <small class="text-muted">{{ appointment.patient.patient_id }}</small>
+                                </td>
+                                <td>
+                                    {{ appointment.service.name }}<br>
+                                    <small class="text-muted">UGX {{ appointment.service.base_price|floatformat:0 }}</small>
+                                </td>
+                                <td>
+                                    {{ appointment.provider.get_full_name }}<br>
+                                    <small class="text-muted">{% if appointment.provider.role %}{{ appointment.provider.get_role_display }}{% else %}Staff{% endif %}</small>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-{% if appointment.status == 'scheduled' %}secondary{% elif appointment.status == 'confirmed' %}primary{% elif appointment.status == 'in_progress' %}warning{% elif appointment.status == 'completed' %}success{% elif appointment.status == 'cancelled' %}danger{% else %}dark{% endif %}">
+                                        {{ appointment.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ appointment.duration_minutes }} min</td>
+                                <td class="text-center" style="width: 120px; padding: 0.25rem;">
+                                    <a href="{% url 'appointments:appointment_detail' appointment.id %}" class="btn btn-sm btn-link text-muted p-1" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if appointment.status == 'confirmed' %}
+                                    <a href="{% url 'appointments:treatment_session_create' appointment.id %}" class="btn btn-sm btn-link text-success p-1" title="Start">
+                                        <i class="bi bi-play"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if appointment.status == 'scheduled' or appointment.status == 'confirmed' %}
+                                    <button class="btn btn-sm btn-link text-danger p-1" onclick="cancelAppointment({{ appointment.id }})" title="Cancel">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination with Page Size Selector -->
+                {% include 'includes/pagination_with_size.html' %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="text-muted mt-3">No Appointments Found</h4>
+                    {% if date_from or date_to or status or search_query %}
+                        <p class="text-muted">No appointments match your filter criteria.</p>
+                        <a href="{% url 'appointments:appointment_list' %}" class="btn btn-outline-primary">Clear Filters</a>
+                    {% else %}
+                        <p class="text-muted">Start by scheduling your first appointment.</p>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#appointmentCreateModal">
+                            <i class="bi bi-calendar-plus"></i> Schedule First Appointment
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Compact Calendar View -->
+        <div id="calendar-view-content" style="display: none;">
+            <div class="compact-calendar-container">
+                <!-- Compact Calendar Navigation -->
+                <div class="calendar-nav-header mb-2">
+                    <div class="row align-items-center g-2">
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="monthSelector" onchange="changeCalendarMonth()">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select form-select-sm" id="yearSelector" onchange="changeCalendarYear()">
+                                <!-- Years will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="btn-group btn-group-sm w-100" role="group">
+                                <button class="btn btn-outline-primary" onclick="navigateMonth(-1)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="goToToday()">Today</button>
+                                <button class="btn btn-outline-primary" onclick="navigateMonth(1)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compact Calendar Grid -->
+                <div class="compact-calendar-grid">
+                    <!-- Day Headers -->
+                    <div class="calendar-day-header">Mon</div>
+                    <div class="calendar-day-header">Tue</div>
+                    <div class="calendar-day-header">Wed</div>
+                    <div class="calendar-day-header">Thu</div>
+                    <div class="calendar-day-header">Fri</div>
+                    <div class="calendar-day-header">Sat</div>
+                    <div class="calendar-day-header">Sun</div>
+                    
+                    <!-- Calendar Days will be populated by JavaScript -->
+                    <div id="calendarDays" style="display: contents;"></div>
+                </div>
+
+                <!-- Calendar Stats -->
+                <div class="calendar-stats-compact mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted" id="monthStats">Loading...</small>
+                        <div>
+                            <button class="btn btn-sm btn-primary" onclick="refreshCalendar()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Detail Modal -->
+<div class="modal fade" id="appointmentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--alafia-gradient); color: white;">
+                <h5 class="modal-title" id="appointmentModalTitle">Appointment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="appointmentModalBody">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewFullAppointmentBtn" class="btn btn-primary">
+                    <i class="bi bi-eye"></i> View Full Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Appointments Summary -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Today's Appointments</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ today_appointments_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-day fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Completed Today</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ completed_today_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_appointments_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Cancelled</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cancelled_today_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-x-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Advanced Table Features -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// View toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const listViewRadio = document.getElementById('list-view');
+    const calendarViewRadio = document.getElementById('calendar-view');
+    const listViewContent = document.getElementById('list-view-content');
+    const calendarViewContent = document.getElementById('calendar-view-content');
+
+    listViewRadio.addEventListener('change', function() {
+        if (this.checked) {
+            listViewContent.style.display = 'block';
+            calendarViewContent.style.display = 'none';
+        }
+    });
+
+    calendarViewRadio.addEventListener('change', function() {
+        if (this.checked) {
+            listViewContent.style.display = 'none';
+            calendarViewContent.style.display = 'block';
+        }
+    });
+});
+
+// Toggle column filters
+function toggleAppointmentColumnFilters() {
+    const filters = document.getElementById('appointmentColumnFilters');
+    filters.style.display = filters.style.display === 'none' ? 'block' : 'none';
+}
+
+// Toggle column visibility
+function toggleAppointmentColumnVisibility() {
+    // Implementation for column visibility toggle
+    alert('Column visibility toggle - to be implemented');
+}
+
+// Filter table columns
+function filterAppointmentColumn(columnIndex, filterValue) {
+    const table = document.getElementById('appointmentsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const cell = rows[i].getElementsByTagName('td')[columnIndex];
+        if (cell) {
+            const cellText = cell.textContent || cell.innerText;
+            if (cellText.toLowerCase().indexOf(filterValue.toLowerCase()) > -1) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    }
+}
+
+// Sort table
+let appointmentSortDirection = {};
+function sortAppointmentTable(columnIndex) {
+    const table = document.getElementById('appointmentsTable');
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = Array.from(tbody.getElementsByTagName('tr'));
+    
+    const isAscending = appointmentSortDirection[columnIndex] !== 'asc';
+    appointmentSortDirection[columnIndex] = isAscending ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        const aText = a.getElementsByTagName('td')[columnIndex].textContent.trim();
+        const bText = b.getElementsByTagName('td')[columnIndex].textContent.trim();
+        
+        if (isAscending) {
+            return aText.localeCompare(bText, undefined, {numeric: true});
+        } else {
+            return bText.localeCompare(aText, undefined, {numeric: true});
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort indicators
+    const headers = table.getElementsByTagName('th');
+    for (let i = 0; i < headers.length; i++) {
+        const icon = headers[i].querySelector('i');
+        if (icon) {
+            if (i === columnIndex) {
+                icon.className = isAscending ? 'bi bi-arrow-up text-light' : 'bi bi-arrow-down text-light';
+            } else {
+                icon.className = 'bi bi-arrow-down-up text-light';
+            }
+        }
+    }
+}
+
+// Calendar View Variables - Initialize to current date
+const today = new Date();
+let currentCalendarYear = today.getFullYear();
+let currentCalendarMonth = today.getMonth() + 1;
+let calendarAppointments = {};
+
+// Initialize calendar and view toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize calendar if calendar view exists
+    if (document.getElementById('calendarView')) {
+        initializeYearSelector();
+        updateCalendarSelectors();
+        loadCalendarData();
+    }
+    
+    // View toggle functionality
+    const listViewRadio = document.getElementById('list-view');
+    const calendarViewRadio = document.getElementById('calendar-view');
+    const listViewContent = document.getElementById('list-view-content');
+    const calendarViewContent = document.getElementById('calendar-view-content');
+    
+    if (listViewRadio && calendarViewRadio && listViewContent && calendarViewContent) {
+        listViewRadio.addEventListener('change', function() {
+            if (this.checked) {
+                listViewContent.style.display = 'block';
+                calendarViewContent.style.display = 'none';
+            }
+        });
+
+        calendarViewRadio.addEventListener('change', function() {
+            if (this.checked) {
+                listViewContent.style.display = 'none';
+                calendarViewContent.style.display = 'block';
+                initializeYearSelector();
+                updateCalendarSelectors();
+                loadCalendarData();
+            }
+        });
+    }
+});
+
+// Calendar Functions
+function navigateMonth(direction) {
+    currentCalendarMonth += direction;
+    if (currentCalendarMonth < 1) {
+        currentCalendarMonth = 12;
+        currentCalendarYear--;
+    } else if (currentCalendarMonth > 12) {
+        currentCalendarMonth = 1;
+        currentCalendarYear++;
+    }
+    updateCalendarSelectors();
+    loadCalendarData();
+}
+
+function goToToday() {
+    const today = new Date();
+    currentCalendarYear = today.getFullYear();
+    currentCalendarMonth = today.getMonth() + 1;
+    updateCalendarSelectors();
+    loadCalendarData();
+}
+
+function changeCalendarMonth() {
+    const monthSelector = document.getElementById('monthSelector');
+    currentCalendarMonth = parseInt(monthSelector.value);
+    loadCalendarData();
+}
+
+function changeCalendarYear() {
+    const yearSelector = document.getElementById('yearSelector');
+    currentCalendarYear = parseInt(yearSelector.value);
+    loadCalendarData();
+}
+
+function updateCalendarSelectors() {
+    const monthSelector = document.getElementById('monthSelector');
+    const yearSelector = document.getElementById('yearSelector');
+    
+    if (monthSelector) {
+        monthSelector.value = currentCalendarMonth;
+    }
+    
+    if (yearSelector) {
+        yearSelector.value = currentCalendarYear;
+    }
+}
+
+function initializeYearSelector() {
+    const yearSelector = document.getElementById('yearSelector');
+    if (!yearSelector) return;
+    
+    const currentYear = new Date().getFullYear();
+    const startYear = currentYear - 5;
+    const endYear = currentYear + 5;
+    
+    yearSelector.innerHTML = '';
+    
+    for (let year = startYear; year <= endYear; year++) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentCalendarYear) {
+            option.selected = true;
+        }
+        yearSelector.appendChild(option);
+    }
+}
+
+function loadCalendarData() {
+    updateCalendarSelectors();
+    renderCalendar();
+    updateMonthStats();
+}
+
+function updateCalendarHeader() {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+    document.getElementById('currentMonthYear').textContent = 
+        monthNames[currentCalendarMonth - 1] + ' ' + currentCalendarYear;
+}
+
+function renderCalendar() {
+    const calendarDays = document.getElementById('calendarDays');
+    const today = new Date();
+    const firstDay = new Date(currentCalendarYear, currentCalendarMonth - 1, 1);
+    const lastDay = new Date(currentCalendarYear, currentCalendarMonth, 0);
+    
+    // Calculate the start date (Monday of the week containing the first day)
+    const startDate = new Date(firstDay);
+    const dayOfWeek = (firstDay.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+    
+    let calendarHTML = '';
+    
+    // Generate 6 weeks (42 days) to ensure full calendar grid
+    for (let i = 0; i < 42; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        
+        const isCurrentMonth = currentDate.getMonth() === (currentCalendarMonth - 1);
+        const isToday = currentDate.toDateString() === today.toDateString();
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        // Get appointments for this day
+        const dayAppointments = getDayAppointments(dateStr);
+        
+        calendarHTML += '<div class="calendar-day-compact ' + 
+            (!isCurrentMonth ? 'other-month ' : '') + 
+            (isToday ? 'today ' : '') + 
+            (dayAppointments.length > 0 ? 'has-appointments' : '') + 
+            '" onclick="showDayAppointments(\'' + dateStr + '\')">' +
+            '<div class="day-number-compact">' + currentDate.getDate() + '</div>';
+        
+        // Show appointment indicators and view link
+        if (dayAppointments.length > 0) {
+            calendarHTML += '<div class="appointment-count-compact">' + dayAppointments.length + '</div>';
+            calendarHTML += '<div class="appointment-dots">';
+            
+            // Show up to 3 dots for appointments
+            for (let j = 0; j < Math.min(dayAppointments.length, 3); j++) {
+                calendarHTML += '<div class="appointment-dot"></div>';
+            }
+            
+            calendarHTML += '</div>';
+            calendarHTML += '<div class="view-appointments-link" onclick="event.stopPropagation(); showDayAppointments(\'' + dateStr + '\')">View</div>';
+        }
+        
+        calendarHTML += '</div>';
+    }
+    
+    calendarDays.innerHTML = calendarHTML;
+}
+
+function showDayAppointments(dateStr) {
+    const dayAppointments = getDayAppointments(dateStr);
+    
+    if (dayAppointments.length === 0) {
+        alert('No appointments for ' + dateStr);
+        return;
+    }
+    
+    // Show modal with all appointments for the day
+    const modal = new bootstrap.Modal(document.getElementById('appointmentDetailModal'));
+    const titleElement = document.getElementById('appointmentModalTitle');
+    const bodyElement = document.getElementById('appointmentModalBody');
+    const viewBtn = document.getElementById('viewFullAppointmentBtn');
+    
+    const date = new Date(dateStr);
+    const formattedDate = date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    titleElement.textContent = 'Appointments for ' + formattedDate;
+    
+    const statusColors = {
+        'scheduled': 'warning',
+        'confirmed': 'success', 
+        'completed': 'primary',
+        'cancelled': 'danger'
+    };
+    
+    let appointmentsHTML = '<div class="row">';
+    
+    dayAppointments.forEach((appointment, index) => {
+        appointmentsHTML += `
+            <div class="col-md-6 mb-3">
+                <div class="card h-100 border-left-${statusColors[appointment.status] || 'secondary'}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title text-primary mb-0">
+                                <i class="bi bi-clock"></i> ${appointment.time}
+                            </h6>
+                            <span class="fw-semibold text-${statusColors[appointment.status] || 'secondary'}">
+                                ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                            </span>
+                        </div>
+                        <p class="card-text mb-1">
+                            <strong><i class="bi bi-person"></i> Patient:</strong> ${appointment.patient_name}
+                        </p>
+                        <p class="card-text mb-1">
+                            <strong><i class="bi bi-heart-pulse"></i> Service:</strong> ${appointment.service}
+                        </p>
+                        <p class="card-text mb-2">
+                            <strong><i class="bi bi-person-badge"></i> Provider:</strong> ${appointment.provider}
+                        </p>
+                        <div class="text-end">
+                            <a href="/appointments/${appointment.id}/" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    appointmentsHTML += '</div>';
+    
+    if (dayAppointments.length > 4) {
+        appointmentsHTML += `
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i> 
+                Showing ${dayAppointments.length} appointments for this day. 
+                Use the appointment list view for more detailed management options.
+            </div>
+        `;
+    }
+    
+    bodyElement.innerHTML = appointmentsHTML;
+    
+    // Hide the single view button since we have individual buttons
+    viewBtn.style.display = 'none';
+    
+    modal.show();
+}
+
+function updateMonthStats() {
+    let totalAppointments = 0;
+    for (const date in calendarAppointmentData) {
+        totalAppointments += calendarAppointmentData[date].length;
+    }
+    document.getElementById('monthStats').textContent = totalAppointments + ' appointments this month';
+}
+
+// Calendar appointment data
+let calendarAppointmentData = {};
+
+function getDayAppointments(dateStr) {
+    return calendarAppointmentData[dateStr] || [];
+}
+
+// Load appointment data from Django backend
+function loadCalendarData() {
+    // Get current filter parameters from the form
+    const form = document.getElementById('appointmentFilterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    params.append('year', currentCalendarYear);
+    params.append('month', currentCalendarMonth);
+    
+    const url = `/appointments/calendar/?${params.toString()}`;
+    
+    fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            calendarAppointmentData = {};
+            
+            // Process appointments by date
+            if (data.appointments_by_date) {
+                for (const [dateStr, appointments] of Object.entries(data.appointments_by_date)) {
+                    calendarAppointmentData[dateStr] = appointments.map(apt => ({
+                        id: apt.id,
+                        time: apt.appointment_time,
+                        patient_name: apt.patient_name,
+                        service: apt.service_name,
+                        provider: apt.provider_name,
+                        status: apt.status
+                    }));
+                }
+            }
+            
+            renderCalendar();
+            updateMonthStats();
+        })
+        .catch(error => {
+            console.error('Error loading calendar data:', error);
+            // Clear appointment data for months with no appointments
+            calendarAppointmentData = {};
+            renderCalendar();
+            updateMonthStats();
+        });
+}
+
+function showAppointmentDetail(appointmentId) {
+    // Find the appointment
+    let appointment = null;
+    for (const date in calendarAppointmentData) {
+        const found = calendarAppointmentData[date].find(apt => apt.id === appointmentId);
+        if (found) {
+            appointment = found;
+            break;
+        }
+    }
+    
+    if (!appointment) return;
+    
+    // Show modal with appointment details
+    const modal = new bootstrap.Modal(document.getElementById('appointmentDetailModal'));
+    const titleElement = document.getElementById('appointmentModalTitle');
+    const bodyElement = document.getElementById('appointmentModalBody');
+    const viewBtn = document.getElementById('viewFullAppointmentBtn');
+    
+    titleElement.textContent = 'Appointment Details - ' + appointment.patient_name;
+    
+    const statusColors = {
+        'scheduled': 'warning',
+        'confirmed': 'success', 
+        'completed': 'primary',
+        'cancelled': 'danger'
+    };
+    
+    bodyElement.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card border-left-primary h-100">
+                    <div class="card-body">
+                        <h6 class="text-primary mb-3"><i class="bi bi-person-fill"></i> Patient Information</h6>
+                        <p class="mb-2"><strong>Name:</strong> ${appointment.patient_name}</p>
+                        <p class="mb-2"><strong>Service:</strong> ${appointment.service}</p>
+                        <p class="mb-0"><strong>Provider:</strong> ${appointment.provider}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-left-success h-100">
+                    <div class="card-body">
+                        <h6 class="text-success mb-3"><i class="bi bi-clock-fill"></i> Appointment Details</h6>
+                        <p class="mb-2"><strong>Time:</strong> ${appointment.time}</p>
+                        <p class="mb-2"><strong>Status:</strong> 
+                            <span class="fw-semibold text-${statusColors[appointment.status]}">${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}</span>
+                        </p>
+                        <p class="mb-0"><strong>Duration:</strong> 60 minutes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-info mb-3"><i class="bi bi-chat-text-fill"></i> Notes</h6>
+                        <p class="text-muted mb-0">Regular follow-up appointment. Patient showing good progress.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Check if appointment exists before setting link
+    fetch('/appointments/' + appointmentId + '/', {method: 'HEAD'})
+        .then(response => {
+            if (response.ok) {
+                viewBtn.href = '/appointments/' + appointmentId + '/';
+                viewBtn.style.display = 'inline-block';
+            } else {
+                viewBtn.style.display = 'none';
+            }
+        })
+        .catch(() => {
+            viewBtn.style.display = 'none';
+        });
+    
+    modal.show();
+}
+
+// Connect to real appointment data
+function loadRealAppointmentData() {
+    loadCalendarData();
+}
+
+function refreshCalendar() {
+    loadCalendarData();
+}
+
+// Clear all filters
+function clearFilters() {
+    window.location.href = window.location.pathname;
+}
+
+// Apply filters when form changes
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('appointmentFilterForm');
+    if (filterForm) {
+        // Auto-submit on select change
+        const selects = filterForm.querySelectorAll('select');
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+        
+        // Auto-submit on date change
+        const dateInputs = filterForm.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+        
+        // Reload calendar when filters change
+        filterForm.addEventListener('submit', function(e) {
+            // If calendar view is active, reload calendar data with new filters
+            const calendarView = document.getElementById('calendar-view');
+            if (calendarView && calendarView.checked) {
+                e.preventDefault();
+                // Update URL with new parameters
+                const formData = new FormData(filterForm);
+                const params = new URLSearchParams(formData);
+                const newUrl = window.location.pathname + '?' + params.toString();
+                window.history.pushState({}, '', newUrl);
+                // Reload calendar with new filters
+                loadCalendarData();
+            }
+        });
+    }
+});
+
+// Export to Excel
+function exportAppointmentsToExcel() {
+    const table = document.getElementById('appointmentsTable');
+    const wb = XLSX.utils.table_to_book(table, {sheet: 'Appointments'});
+    const filename = `Alafia_Point_Appointments_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
+// Export to PDF
+function exportAppointmentsToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Add header
+    doc.setFontSize(16);
+    doc.text('Alafia Point Wellness Clinic', 20, 20);
+    doc.setFontSize(12);
+    doc.text('Appointment List Report', 20, 30);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 40);
+    
+    // Get table data
+    const table = document.getElementById('appointmentsTable');
+    const headers = [];
+    const data = [];
+    
+    // Extract headers
+    const headerCells = table.querySelectorAll('thead th');
+    headerCells.forEach((cell, index) => {
+        if (index < headerCells.length - 1) { // Exclude Actions column
+            headers.push(cell.textContent.replace(/\s+/g, ' ').trim());
+        }
+    });
+    
+    // Extract data
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const rowData = [];
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, index) => {
+            if (index < cells.length - 1) { // Exclude Actions column
+                rowData.push(cell.textContent.replace(/\s+/g, ' ').trim());
+            }
+        });
+        data.push(rowData);
+    });
+    
+    // Add table
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 50,
+        theme: 'striped',
+        headStyles: { fillColor: [27, 94, 150] },
+        styles: { fontSize: 8 }
+    });
+    
+    const filename = `Alafia_Point_Appointments_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+}
+
+// Real-time search
+document.getElementById('globalAppointmentSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('appointmentsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+        
+        for (let j = 0; j < cells.length - 1; j++) { // Exclude Actions column
+            const cellText = cells[j].textContent.toLowerCase();
+            if (cellText.indexOf(searchTerm) > -1) {
+                found = true;
+                break;
+            }
+        }
+        
+        row.style.display = found ? '' : 'none';
+    }
+});
+
+// Cancel appointment function
+function cancelAppointment(appointmentId) {
+    if (confirm('Are you sure you want to cancel this appointment?')) {
+        // This would typically make an AJAX call to cancel the appointment
+        // For now, we'll redirect to a cancel URL
+        window.location.href = `/appointments/${appointmentId}/cancel/`;
+    }
+}
+</script>
+
+<!-- Appointment Create Modal -->
+<div class="modal fade" id="appointmentCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--alafia-gradient); color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-calendar-plus"></i> Schedule New Appointment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="appointmentCreateForm" method="post" action="{% url 'appointments:appointment_create_ajax' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_patient" class="form-label">
+                                <i class="bi bi-person"></i> Patient <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="id_patient" name="patient" required>
+                                <option value="">Select Patient</option>
+                                {% for patient in all_patients %}
+                                <option value="{{ patient.id }}">{{ patient.get_full_name }} - {{ patient.patient_id }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_service" class="form-label">
+                                <i class="bi bi-clipboard-pulse"></i> Service <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="id_service" name="service" required>
+                                <option value="">Select Service</option>
+                                {% for service in services %}
+                                <option value="{{ service.id }}" data-duration="{{ service.duration_minutes }}" data-price="{{ service.base_price }}">
+                                    {{ service.name }} - {{ service.get_category_display }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted" id="serviceInfo" style="display:none;">
+                                Duration: <span id="serviceDuration">-</span> min | Price: UGX <span id="servicePrice">-</span>
+                            </small>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_provider" class="form-label">
+                                <i class="bi bi-person-badge"></i> Provider <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="id_provider" name="provider" required>
+                                <option value="">Select Provider</option>
+                                {% for provider in providers %}
+                                <option value="{{ provider.id }}">{{ provider.get_full_name }} - {{ provider.get_role_display }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="id_appointment_date" class="form-label">
+                                <i class="bi bi-calendar"></i> Date <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="id_appointment_date" name="appointment_date" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="id_appointment_time" class="form-label">
+                                <i class="bi bi-clock"></i> Time <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="id_appointment_time" name="appointment_time" value="09:00" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="id_notes" class="form-label">
+                                <i class="bi bi-pencil-square"></i> Notes
+                            </label>
+                            <textarea class="form-control" id="id_notes" name="notes" rows="3" placeholder="Special instructions or notes for this appointment"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitAppointmentBtn">
+                        <i class="bi bi-check-circle"></i> Schedule Appointment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Service selection handler - show duration and price
+document.addEventListener('DOMContentLoaded', function() {
+    const serviceSelect = document.getElementById('id_service');
+    if (serviceSelect) {
+        serviceSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const duration = selectedOption.getAttribute('data-duration');
+            const price = selectedOption.getAttribute('data-price');
+            const serviceInfo = document.getElementById('serviceInfo');
+            
+            if (duration && price) {
+                document.getElementById('serviceDuration').textContent = duration;
+                document.getElementById('servicePrice').textContent = parseFloat(price).toFixed(0);
+                serviceInfo.style.display = 'block';
+            } else {
+                serviceInfo.style.display = 'none';
+            }
+        });
+    }
+});
+
+// Handle appointment creation form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const appointmentForm = document.getElementById('appointmentCreateForm');
+    if (appointmentForm) {
+        // Set minimum date to today
+        const dateInput = document.getElementById('id_appointment_date');
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.setAttribute('min', today);
+        }
+        
+        appointmentForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Clear previous errors
+            appointmentForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            appointmentForm.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+            
+            const formData = new FormData(this);
+            const submitBtn = document.getElementById('submitAppointmentBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split spinner-border spinner-border-sm"></i> Scheduling...';
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('appointmentCreateModal'));
+                    modal.hide();
+                    appointmentForm.reset();
+                    document.getElementById('serviceInfo').style.display = 'none';
+                    
+                    // Show success alert
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    alertDiv.style.zIndex = '9999';
+                    alertDiv.innerHTML = `
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <strong>Success!</strong> ${data.message || 'Appointment scheduled successfully!'}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(alertDiv);
+                    
+                    // Reload page after 2 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // Display field errors
+                    if (data.errors) {
+                        for (const [field, errors] of Object.entries(data.errors)) {
+                            const input = appointmentForm.querySelector(`[name="${field}"]`);
+                            if (input) {
+                                input.classList.add('is-invalid');
+                                const feedback = input.parentElement.querySelector('.invalid-feedback');
+                                if (feedback) {
+                                    feedback.textContent = Array.isArray(errors) ? errors.join(', ') : errors;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Show error message
+                    alert(data.message || 'Error scheduling appointment. Please check the form and try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
+        
+        // Reset modal when closed
+        document.getElementById('appointmentCreateModal').addEventListener('hidden.bs.modal', function() {
+            appointmentForm.reset();
+            appointmentForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            appointmentForm.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+            document.getElementById('serviceInfo').style.display = 'none';
+        });
+    }
+});
+</script>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+</style>
+{% endblock %}

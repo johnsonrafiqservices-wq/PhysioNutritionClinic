@@ -1,0 +1,676 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Excellence med care') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<!-- Google Fonts (still remote unless you host Inter locally) -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Font Awesome (local) -->
+<link href="{% static 'vendor/fontawesome/css/all.min.css' %}" rel="stylesheet">
+
+<style>
+    :root {
+        /* Alafia Color System */
+        --ww:#979696;
+        --alafia-primary: #1B5E96;
+        --alafia-primary-dark: #154a7a;
+        --alafia-primary-light: #e6f1fa;
+        --alafia-success: #2E8B57;
+        --alafia-success-dark: #236b43;
+        --alafia-success-light: #e8f5f0;
+        --alafia-accent: #00A86B;
+        --alafia-accent-dark: #008554;
+        --alafia-accent-light: #e6f9f3;
+        --alafia-warning: #FF8C00;
+        --alafia-warning-dark: #e67e00;
+        --alafia-warning-light: #fff4e6;
+        --alafia-danger: #dc2626;
+        --alafia-danger-dark: #b91c1c;
+        --alafia-danger-light: #fecaca;
+        --alafia-info: #0891b2;
+        --alafia-info-dark: #0e7490;
+        --alafia-info-light: #cffafe;
+        --alafia-secondary: #64748b;
+        --alafia-secondary-dark: #475569;
+        --alafia-secondary-light: #f1f5f9;
+        --alafia-dark: #1e293b;
+        --alafia-light: #f8fafc;
+        --alafia-border: #e2e8f0;
+        --alafia-shadow: 0 2px 4px 0 rgb(27 94 150 / 0.1), 0 1px 2px -1px rgb(27 94 150 / 0.1);
+        --alafia-shadow-lg: 0 10px 25px -3px rgb(27 94 150 / 0.15), 0 4px 6px -4px rgb(27 94 150 / 0.1);
+        --alafia-gradient: linear-gradient(135deg, var(--alafia-primary) 0%, var(--alafia-success) 100%);
+        --alafia-gradient-light: linear-gradient(135deg, var(--alafia-primary-light) 0%, var(--alafia-success-light) 100%);
+        
+        /* Sidebar Width Variables */
+        --sidebar-width: 280px;
+        --sidebar-width-collapsed: 70px;
+        --header-height: 60px;
+    }
+
+    /* Override Jet's default styling */
+    html, body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        background: var(--alafia-light) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    *, *::before, *::after {
+        box-sizing: border-box !important;
+    }
+
+    /* Enhanced Header */
+    #header {
+        /* background: var(--alafia-gradient) !important; */
+        background: transparent !important;
+        color: white !important;
+        border-bottom: none !important;
+        box-shadow: var(--alafia-shadow) !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: var(--sidebar-width) !important;
+        right: 0 !important;
+        height: var(--header-height) !important;
+        z-index: 999 !important;
+        padding: 0 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+    .submit-row{
+        margin-left: 20px !important;
+    }
+
+    /* Header adjustments when sidebar is collapsed */
+    body.sidebar-collapsed #header {
+        left: var(--sidebar-width-collapsed) !important;
+    }
+
+    #branding {
+        margin: 0 !important;
+        padding: 0 2rem !important;
+    }
+
+    #branding h1 {
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 1.25rem !important;
+        font-weight: 600 !important;
+    }
+
+    #branding h1 a:link,
+    #branding h1 a:visited {
+        color: white !important;
+        text-decoration: none !important;
+    }
+
+    #user-tools {
+        margin: 0 !important;
+        padding: 0 2rem !important;
+        color: white !important;
+        font-size: 0.875rem !important;
+    }
+
+    #user-tools a {
+        color: white !important;
+        text-decoration: none !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 6px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    #user-tools a:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Sidebar Styling */
+    #navigation {
+        background: white !important;
+        border-right: 1px solid var(--alafia-border) !important;
+        box-shadow: var(--alafia-shadow) !important;
+        width: var(--sidebar-width) !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        z-index: 1000 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* Collapsed Sidebar State */
+    body.sidebar-collapsed #navigation {
+        width: var(--sidebar-width-collapsed) !important;
+    }
+
+    .sidebar-title {
+        background: var(--alafia-gradient) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 1.5rem 1.25rem !important;
+        border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+        margin: 0 !important;
+        font-size: 1rem !important;
+        height: var(--header-height) !important;
+        display: flex !important;
+        align-items: center !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .sidebar-title-link {
+        color: white !important;
+        text-decoration: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+    }
+
+    /* Hide text content when collapsed */
+    body.sidebar-collapsed #navigation .sidebar-title span {
+        opacity: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+        display: none !important;
+    }
+
+    body.sidebar-collapsed #navigation .app-list .app h2 a span {
+        opacity: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+        display: none !important;
+    }
+
+    body.sidebar-collapsed #navigation .model-list {
+        display: none !important;
+    }
+
+    body.sidebar-collapsed #navigation .app-list .app h2 .dropdown-chevron {
+        display: none !important;
+    }
+
+    /* Show only icons when collapsed */
+    body.sidebar-collapsed #navigation .sidebar-title {
+        padding: 1.5rem 0.5rem !important;
+        justify-content: center !important;
+    }
+
+    body.sidebar-collapsed #navigation .sidebar-title-link {
+        justify-content: center !important;
+    }
+
+    /* Adjust app headers when collapsed */
+    body.sidebar-collapsed #navigation .app-list .app h2 {
+        padding: 1rem 0.5rem !important;
+        text-align: center !important;
+        justify-content: center !important;
+    }
+
+    /* Hide expanded state when sidebar is collapsed */
+    body.sidebar-collapsed #navigation .app-list .app.expanded .model-list {
+        display: none !important;
+    }
+
+    /* Main Content Area - Responsive to Sidebar */
+    #content {
+        background: var(--alafia-light) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box;
+        overflow-x: hidden;
+    }
+
+    /* #content-main {
+        background: var(--alafia-light) !important;
+        margin-top: 5px !important;
+
+    } */
+
+    /* Content adjustments when sidebar is collapsed */
+    body.sidebar-collapsed #content {
+        padding-left: var(--sidebar-width-collapsed) !important;
+    }
+
+    /* Dashboard Container - Full Width */
+    .dashboard-container {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+    }
+
+    .dashboard-container .hero-section,
+    .dashboard-container .stats-grid,
+    .dashboard-container .quick-actions-section,
+    .dashboard-container .modules-section {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Ensure all content takes full available width */
+    #content .dashboard,
+    #content .dashboard-content,
+    #content .changelist,
+    #content .change-form {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Sidebar Toggle Button */
+    /* .sidebar-toggle {
+        position: fixed !important;
+        top: calc(var(--header-height) + 20px) !important;
+        left: calc(var(--sidebar-width) - 20px) !important;
+        z-index: 1001 !important;
+        background: var(--alafia-primary) !important;
+        color: white !important;
+        border: none !important;
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 50% !important;
+        cursor: pointer !important;
+        box-shadow: var(--alafia-shadow-lg) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    } */
+
+    .sidebar-toggle:hover {
+        background: var(--alafia-primary-dark) !important;
+        transform: scale(1.1) !important;
+    }
+
+    body.sidebar-collapsed .sidebar-toggle {
+        left: calc(var(--sidebar-width-collapsed) - 20px) !important;
+    }
+
+    .sidebar-toggle i {
+        transition: transform 0.3s ease !important;
+    }
+
+    body.sidebar-collapsed .sidebar-toggle i {
+        transform: rotate(180deg) !important;
+    }
+
+    /* App list styling */
+    .app-list {
+        margin: 0 !important;
+        padding: 1rem 0 !important;
+        width: 100% !important;
+    }
+
+    .app-list .app {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .app-list .app h2 {
+        background: transparent !important;
+        color: var(--alafia-dark) !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.25rem !important;
+        margin: 0 !important;
+        font-size: 0.875rem !important;
+        border: none !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+        user-select: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .app-list .app h2:hover {
+        background: var(--alafia-primary-light) !important;
+    }
+
+    .app-list .app h2 a {
+        color: var(--alafia-dark) !important;
+        text-decoration: none !important;
+        flex-grow: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+    }
+
+    .app-list .app h2 a:hover {
+        color: var(--alafia-primary) !important;
+    }
+
+    .app-list .model-list {
+        margin: 0 !important;
+        padding: 0 !important;
+        list-style: none !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        background: var(--alafia-light) !important;
+        width: 100% !important;
+    }
+
+    .app-list .app.expanded .model-list {
+        max-height: 600px !important;
+    }
+
+    .app-list .model-list li {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .app-list .model-list li a {
+        color: var(--alafia-secondary) !important;
+        padding: 0.5rem 1.25rem 0.5rem 2.5rem !important;
+        transition: all 0.2s ease !important;
+        font-weight: 500 !important;
+        font-size: 0.875rem !important;
+        display: flex !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        border-left: 3px solid transparent !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .app-list .model-list li a:hover {
+        color: var(--alafia-primary) !important;
+        background: white !important;
+        border-left-color: var(--alafia-primary) !important;
+    }
+
+    /* Enhanced Dropdown sidebar styling */
+    .app-list .app h2 .dropdown-chevron {
+        font-size: 0.75rem !important;
+        transition: transform 0.3s ease !important;
+        color: var(--alafia-secondary) !important;
+    }
+
+    .app-list .app.expanded h2 .dropdown-chevron {
+        transform: rotate(180deg) !important;
+    }
+
+    /* Breadcrumbs */
+    .breadcrumbs {
+        background: var(--alafia-gradient) !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 1rem 2rem !important;
+        margin: 0 !important;
+        font-size: 0.875rem !important;
+        box-shadow: none !important;
+        border-bottom: 1px solid var(--alafia-border) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Messages */
+    .messagelist {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .messagelist li {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0.75rem 2rem !important;
+        border-radius: 0 !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Module styling */
+    .module {
+        background: white !important;
+        border: 1px solid var(--alafia-border) !important;
+        border-radius: 12px !important;
+        box-shadow: var(--alafia-shadow) !important;
+        margin: 1rem 2rem !important;
+        margin-top: 8px !important;
+        overflow: hidden !important;
+        width: calc(100% - 4rem) !important;
+        box-sizing: border-box !important;
+        padding: 9px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        :root {
+            --sidebar-width: 280px;
+            --sidebar-width-collapsed: 0px;
+        }
+
+        #navigation {
+            transform: translateX(-100%) !important;
+            width: 280px !important;
+        }
+
+        /* body.sidebar-collapsed #navigation {
+            transform: translateX(0) !important;
+            width: 280px !important;
+        } */
+
+        #header {
+            left: 0 !important;
+        }
+
+        /* body.sidebar-collapsed #header {
+            left: 0 !important;
+        } */
+
+        #content {
+            padding-left: 0 !important;
+        }
+
+        /* body.sidebar-collapsed #content {
+            padding-left: 0 !important;
+        } */
+
+        /* .sidebar-toggle {
+            left: 20px !important;
+            top: 20px !important;
+        } */
+
+        /* body.sidebar-collapsed .sidebar-toggle {
+            left: 240px !important;
+        } */
+
+        .module {
+            margin: 1rem !important;
+            width: calc(100% - 2rem) !important;
+        }
+
+        .breadcrumbs {
+            padding: 1rem !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        #branding {
+            padding: 0 1rem !important;
+        }
+
+        #user-tools {
+            padding: 0 1rem !important;
+        }
+
+        .module {
+            margin: 0.5rem !important;
+            width: calc(100% - 1rem) !important;
+        }
+
+        .breadcrumbs {
+            padding: 0.75rem 1rem !important;
+        }
+    }
+
+    /* Custom scrollbar styling for sidebar */
+    #navigation::-webkit-scrollbar {
+        width: 6px !important;
+    }
+
+    #navigation::-webkit-scrollbar-track {
+        background: var(--alafia-light) !important;
+    }
+
+    #navigation::-webkit-scrollbar-thumb {
+        background: var(--alafia-border) !important;
+        border-radius: 3px !important;
+    }
+
+    #navigation::-webkit-scrollbar-thumb:hover {
+        background: var(--alafia-secondary) !important;
+    }
+
+    /* Firefox scrollbar styling */
+    #navigation {
+        scrollbar-width: thin !important;
+        scrollbar-color: var(--alafia-border) var(--alafia-light) !important;
+    }
+
+    /* Additional utility styles */
+    .sidebar-link {
+        color: var(--alafia-secondary) !important;
+        padding: 0.75rem 1.25rem !important;
+        margin: 0.125rem 0 !important;
+        border-radius: 0 !important;
+        transition: all 0.2s ease !important;
+        font-weight: 500 !important;
+        font-size: 0.875rem !important;
+        display: flex !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .sidebar-link:hover {
+        color: var(--alafia-primary) !important;
+        background: var(--alafia-primary-light) !important;
+        text-decoration: none !important;
+    }
+
+    .sidebar-link.active {
+        background: var(--alafia-primary-light) !important;
+        color: var(--alafia-primary) !important;
+        border-right: 3px solid var(--alafia-primary) !important;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create and add sidebar toggle button
+    const toggleButton = document.createElement('button');
+    toggleButton.className = 'sidebar-toggle';
+    toggleButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    toggleButton.setAttribute('aria-label', 'Toggle Sidebar');
+    toggleButton.setAttribute('title', 'Toggle Sidebar');
+    document.body.appendChild(toggleButton);
+
+    // Check localStorage for saved state
+    const sidebarState = localStorage.getItem('sidebarCollapsed');
+    if (sidebarState === 'true') {
+        document.body.classList.add('sidebar-collapsed');
+    }
+
+    // Toggle sidebar on button click
+    toggleButton.addEventListener('click', function() {
+        document.body.classList.toggle('sidebar-collapsed');
+        
+        // Save state to localStorage
+        const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+    });
+
+    // Add dropdown functionality to app sections
+    const appHeaders = document.querySelectorAll('.app-list .app h2');
+    
+    appHeaders.forEach(function(header) {
+        const app = header.closest('.app');
+        const modelList = app.querySelector('.model-list');
+        
+        // Add chevron icon if it doesn't exist
+        if (!header.querySelector('.dropdown-chevron')) {
+            const chevron = document.createElement('i');
+            chevron.className = 'fas fa-chevron-down dropdown-chevron';
+            header.appendChild(chevron);
+        }
+        
+        // Initially collapse all sections
+        app.classList.remove('expanded');
+        
+        header.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Don't allow dropdown when sidebar is collapsed
+            if (document.body.classList.contains('sidebar-collapsed')) {
+                return;
+            }
+            
+            // Close all other expanded sections
+            document.querySelectorAll('.app-list .app.expanded').forEach(function(expandedApp) {
+                if (expandedApp !== app) {
+                    expandedApp.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current section
+            app.classList.toggle('expanded');
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.app-list')) {
+            document.querySelectorAll('.app-list .app.expanded').forEach(function(app) {
+                app.classList.remove('expanded');
+            });
+        }
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth <= 768) {
+            document.body.classList.add('mobile-view');
+        } else {
+            document.body.classList.remove('mobile-view');
+        }
+    });
+
+    // Initialize mobile view check
+    if (window.innerWidth <= 768) {
+        document.body.classList.add('mobile-view');
+    }
+});
+</script>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        <i class="fas fa-hospital-alt" style="margin-right: 0.75rem;"></i>
+        Excellence Med Care
+    </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load budget_tags %}
+
+{% block title %}All Budgets - {{ clinic_settings.clinic_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-wallet2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">
+            Budget &amp; Expense Management
+        </span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'budget:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Dashboard
+    </a>
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createBudgetModal">
+        <i class="bi bi-plus-circle"></i> Create Budget
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --alafia-primary: #0ea5e9;
+        --alafia-success: #10b981;
+        --alafia-warning: #f59e0b;
+        --alafia-danger: #ef4444;
+        --alafia-info: #6366f1;
+    }
+
+    .stats-card {
+        border-radius: 6px;
+        padding: 0.75rem;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        border-left: 3px solid;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    .stats-card.primary { border-left-color: var(--alafia-primary); }
+    .stats-card.success { border-left-color: var(--alafia-success); }
+    .stats-card.warning { border-left-color: var(--alafia-warning); }
+    .stats-card.danger { border-left-color: var(--alafia-danger); }
+
+    .stats-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .stats-icon.primary { background: rgba(14, 165, 233, 0.1); color: var(--alafia-primary); }
+    .stats-icon.success { background: rgba(16, 185, 129, 0.1); color: var(--alafia-success); }
+    .stats-icon.warning { background: rgba(245, 158, 11, 0.1); color: var(--alafia-warning); }
+    .stats-icon.danger { background: rgba(239, 68, 68, 0.1); color: var(--alafia-danger); }
+
+    .stats-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0.15rem 0;
+        color: #1e293b;
+    }
+
+    .stats-label {
+        color: #64748b;
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 0.15rem;
+    }
+
+    .table-wrapper {
+        background: white;
+        border-radius: 8px;
+        padding: 0;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+    .modern-table thead th {
+        background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+        color: white;
+        font-weight: 600;
+        padding: 0.65rem 0.75rem;
+        text-align: left;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        border: none;
+    }
+
+    .modern-table tbody tr {
+        border-bottom: 1px solid #e2e8f0;
+        transition: background-color 0.2s;
+    }
+
+    .modern-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .modern-table tbody td {
+        padding: 0.65rem 0.75rem;
+        color: #475569;
+        font-size: 0.825rem;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- Statistics Cards -->
+    <div class="row mb-3">
+        <div class="col-lg-3 col-md-6 mb-2">
+            <div class="stats-card primary">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="stats-label">Total Budget Amount</div>
+                        <div class="stats-value">UGX {{ total_budget_amount|floatformat:0|intcomma }}</div>
+                        <small class="text-muted" style="font-size: 0.7rem;">{{ budgets.count }} budgets</small>
+                    </div>
+                    <div class="stats-icon primary">
+                        <i class="bi bi-currency-exchange"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-2">
+            <div class="stats-card danger">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="stats-label">Total Spent</div>
+                        <div class="stats-value">UGX {{ total_spent|floatformat:0|intcomma }}</div>
+                        <small class="text-muted" style="font-size: 0.7rem;">Across all budgets</small>
+                    </div>
+                    <div class="stats-icon danger">
+                        <i class="bi bi-arrow-down-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-2">
+            <div class="stats-card success">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="stats-label">Total Remaining</div>
+                        <div class="stats-value">UGX {{ total_remaining|floatformat:0|intcomma }}</div>
+                        <small class="text-muted" style="font-size: 0.7rem;">Available budget</small>
+                    </div>
+                    <div class="stats-icon success">
+                        <i class="bi bi-arrow-up-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-2">
+            <div class="stats-card warning">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="stats-label">Utilization Rate</div>
+                        <div class="stats-value">{% if total_budget_amount > 0 %}{% widthratio total_spent total_budget_amount 100 %}%{% else %}0%{% endif %}</div>
+                        <small class="text-muted" style="font-size: 0.7rem;">Overall usage</small>
+                    </div>
+                    <div class="stats-icon warning">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0 small">
+                        <i class="bi bi-funnel"></i> Filter Budgets
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3">
+                    <form method="get" action="{% url 'budget:budget_list' %}" class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small mb-1">Search</label>
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Budget name or description..." value="{{ search_query|default:'' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small mb-1">Status</label>
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">All Statuses</option>
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small mb-1">Period Type</label>
+                            <select name="period_type" class="form-select form-select-sm">
+                                <option value="">All Periods</option>
+                                {% for value, label in period_choices %}
+                                    <option value="{{ value }}" {% if period_type_filter == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small mb-1">Start Date From</label>
+                            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from|default:'' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small mb-1">End Date To</label>
+                            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|default:'' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label d-block small mb-1">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary btn-sm me-2">
+                                <i class="bi bi-search"></i> Apply
+                            </button>
+                            <a href="{% url 'budget:budget_list' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <div class="table-responsive">
+            <table class="modern-table table mb-0">
+                <thead>
+                        <tr>
+                            <th>Budget Name</th>
+                            <th>Period</th>
+                            <th>Total Amount</th>
+                            <th>Spent</th>
+                            <th>Remaining</th>
+                            <th>Utilization</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for budget in budgets %}
+                        <tr>
+                            <td>
+                                <strong>{{ budget.name }}</strong>
+                                {% if budget.description %}
+                                    <br><small class="text-muted">{{ budget.description|truncatewords:10 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>
+                                    {{ budget.start_date|date:"M d" }} - {{ budget.end_date|date:"M d, Y" }}
+                                    <br><span class="fw-semibold text-secondary">{{ budget.get_period_type_display }}</span>
+                                </small>
+                            </td>
+                            <td class="fw-bold">UGX {{ budget.total_amount|floatformat:0|intcomma }}</td>
+                            <td class="text-danger">UGX {{ budget.get_spent_amount|floatformat:0|intcomma }}</td>
+                            <td class="text-success">UGX {{ budget.get_remaining_amount|floatformat:0|intcomma }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-2" style="height: 8px; width: 100px;">
+                                        {% with utilization=budget.get_utilization_percentage %}
+                                            <div class="progress-bar {% if utilization >= 90 %}bg-danger{% elif utilization >= 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                                 style="width: {{ utilization }}%"></div>
+                                        {% endwith %}
+                                    </div>
+                                    <small>{{ budget.get_utilization_percentage|floatformat:1 }}%</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if budget.status == 'draft' %}
+                                    <span class="fw-semibold text-secondary">Draft</span>
+                                {% elif budget.status == 'active' %}
+                                    <span class="fw-semibold text-success">Active</span>
+                                {% elif budget.status == 'closed' %}
+                                    <span class="fw-semibold text-dark">Closed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'budget:budget_detail' budget.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="bi bi-folder2-open fs-1 text-muted mb-3"></i>
+                                <p class="text-muted mb-3">No budgets found matching your filters</p>
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBudgetModal">
+                                    <i class="bi bi-plus-circle me-1"></i> Create Budget
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if budgets %}
+                    <tfoot>
+                        <tr class="table-active">
+                            <td colspan="2" class="text-end fw-bold small">TOTALS:</td>
+                            <td class="fw-bold text-primary small">UGX {{ total_budget_amount|floatformat:0|intcomma }}</td>
+                            <td class="fw-bold text-danger small">UGX {{ total_spent|floatformat:0|intcomma }}</td>
+                            <td class="fw-bold text-success small">UGX {{ total_remaining|floatformat:0|intcomma }}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+{% include 'budget/modals.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show active filter indicator
+    document.addEventListener('DOMContentLoaded', function() {
+        const hasFilters = {{ status_filter|yesno:"true,false" }} || 
+                          {{ period_type_filter|yesno:"true,false" }} || 
+                          {{ date_from|yesno:"true,false" }} || 
+                          {{ date_to|yesno:"true,false" }} ||
+                          {{ search_query|yesno:"true,false" }};
+        
+        if (hasFilters) {
+            const filterHeader = document.querySelector('.card-header h6');
+            if (filterHeader) {
+                filterHeader.innerHTML += ' <span class="fw-semibold text-primary ms-2">Active</span>';
+            }
+        }
+    });
+</script>
+{% endblock %}

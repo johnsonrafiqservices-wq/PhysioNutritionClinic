@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Custom Financial Report{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-bar-chart-line me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Custom Financial Report</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'reports:download_custom_financial_report' %}?{{ query_string }}" class="btn btn-success me-2">
+    <i class="bi bi-file-earmark-excel"></i> Download Excel
+</a>
+<a href="{% url 'reports:financial_reports' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Financial Reports
+</a>
+{% endblock %}
+
+{% block content %}
+{% if filters_applied %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body py-3">
+        <h6 class="fw-bold mb-2"><i class="bi bi-funnel me-1"></i> Applied Filters</h6>
+        <div class="d-flex flex-wrap gap-2">
+            {% for key, val in filters_applied.items %}
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2">
+                <strong>{{ key }}:</strong> {{ val }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    {% if summary.total_invoices is not None %}
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold text-primary mb-0">{{ summary.total_invoices|intcomma }}</div>
+                <div class="text-muted small">Invoices</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h5 fw-bold text-success mb-0">{{ summary.total_billed|floatformat:0|intcomma }}</div>
+                <div class="text-muted small">Total Billed</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h5 fw-bold text-info mb-0">{{ summary.total_collected|floatformat:0|intcomma }}</div>
+                <div class="text-muted small">Collected</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h5 fw-bold text-warning mb-0">{{ summary.outstanding|floatformat:0|intcomma }}</div>
+                <div class="text-muted small">Outstanding</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if summary.total_appts is not None %}
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold mb-0" style="color:#6f42c1;">{{ summary.total_appts|intcomma }}</div>
+                <div class="text-muted small">Appointments</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold text-success mb-0">{{ summary.completed_appts|intcomma }}</div>
+                <div class="text-muted small">Completed</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Invoice Table -->
+{% if inv_data %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-bottom">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-receipt me-2"></i>Invoices</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Invoice #</th><th>Patient</th><th>Status</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in inv_data %}
+                    <tr>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td><code>{{ row.invoice.invoice_number }}</code></td>
+                        <td>{{ row.invoice.patient.get_full_name }}</td>
+                        <td><span class="badge bg-{% if row.invoice.status == 'paid' %}success{% elif row.invoice.status == 'overdue' %}danger{% else %}secondary{% endif %}">{{ row.invoice.get_status_display }}</span></td>
+                        <td class="text-end">{{ row.invoice.total_amount|floatformat:0|intcomma }}</td>
+                        <td class="text-end">{{ row.paid|floatformat:0|intcomma }}</td>
+                        <td class="text-end">{{ row.balance|floatformat:0|intcomma }}</td>
+                        <td class="small">{{ row.invoice.issue_date|date:"Y-m-d" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Appointments Table -->
+{% if appt_data %}
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-check me-2"></i>Appointments</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Patient</th><th>Service</th><th>Provider</th><th>Date</th><th>Time</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for a in appt_data %}
+                    <tr>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td>{{ a.patient.get_full_name }}</td>
+                        <td>{{ a.service.name }}</td>
+                        <td>{{ a.provider.get_full_name }}</td>
+                        <td>{{ a.appointment_date|date:"Y-m-d" }}</td>
+                        <td>{{ a.appointment_time|time:"H:i" }}</td>
+                        <td><span class="badge bg-{% if a.status == 'completed' %}success{% elif a.status == 'cancelled' %}danger{% elif a.status == 'no_show' %}warning{% else %}primary{% endif %}">{{ a.get_status_display }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not inv_data and not appt_data %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-search display-4 d-block mb-3"></i>
+    <h5>No financial data matches the selected criteria</h5>
+    <p>Try adjusting your filters and generating the report again.</p>
+</div>
+{% endif %}
+{% endblock %}

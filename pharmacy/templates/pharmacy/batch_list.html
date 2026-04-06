@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-boxes me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Medication Batches</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:pharmacy_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Dashboard
+</a>
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+    <i class="bi bi-plus-circle"></i> Receive Batch
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <select name="low_stock" class="form-select form-select-sm">
+                    <option value="">All Batches</option>
+                    <option value="1" {% if low_stock_filter %}selected{% endif %}>Low Stock Only</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-funnel me-1"></i>Apply
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Batches Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-boxes text-primary me-1"></i>Batch List</h6>
+        <span class="badge bg-primary-subtle text-primary" style="font-size:.75rem;">{{ batches.count }} batches</span>
+    </div>
+    <div class="card-body p-0">
+        {% if batches %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 ps-3">Batch #</th>
+                        <th class="border-0">Medication</th>
+                        <th class="border-0">Supplier</th>
+                        <th class="border-0 text-center">Qty Remaining</th>
+                        <th class="border-0">Expiry</th>
+                        <th class="border-0 text-center">Shelf Life</th>
+                        <th class="border-0 text-center">Status</th>
+                        <th class="border-0 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                    <tr>
+                        <td class="ps-3"><code class="text-primary" style="font-size:.78rem;">{{ batch.batch_number }}</code></td>
+                        <td>
+                            <a href="{% url 'pharmacy:medication_detail' batch.medication.pk %}" class="text-decoration-none fw-medium">
+                                {{ batch.medication.name }}
+                            </a>
+                            <br><small class="text-muted">{{ batch.medication.generic_name }}</small>
+                        </td>
+                        <td class="text-muted">{{ batch.supplier.name }}</td>
+                        <td class="text-center">
+                            {% if batch.quantity_remaining <= 10 %}
+                                <span class="badge bg-danger">{{ batch.quantity_remaining }}</span>
+                            {% elif batch.quantity_remaining <= 50 %}
+                                <span class="badge bg-warning text-dark">{{ batch.quantity_remaining }}</span>
+                            {% else %}
+                                <span class="badge bg-success">{{ batch.quantity_remaining }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ batch.expiry_date|date:"d M Y" }}</td>
+                        <td class="text-center">
+                            {% with days=batch.get_remaining_shelf_life_days %}
+                                {% if days <= 0 %}
+                                    <span class="badge bg-dark">Expired</span>
+                                {% elif days <= 30 %}
+                                    <span class="badge bg-danger">{{ days }}d</span>
+                                {% elif days <= 90 %}
+                                    <span class="badge bg-warning text-dark">{{ days }}d</span>
+                                {% else %}
+                                    <span class="badge bg-success">{{ days }}d</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            {% if batch.is_active %}<span class="badge bg-success-subtle text-success" style="font-size:.65rem;">Active</span>
+                            {% else %}<span class="badge bg-secondary-subtle text-secondary" style="font-size:.65rem;">Inactive</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'pharmacy:batch_detail' batch.pk %}" class="btn btn-outline-primary py-0 px-1" title="View" style="font-size:.72rem;">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'pharmacy:batch_edit' batch.pk %}" class="btn btn-outline-warning py-0 px-1" title="Edit" style="font-size:.72rem;">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger py-0 px-1" onclick="toggleStatus({{ batch.pk }})" title="Toggle Status" style="font-size:.72rem;">
+                                    <i class="bi bi-power"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-boxes text-muted" style="font-size:2rem;"></i>
+            <p class="text-muted mt-1 mb-2 small">No batches found</p>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+                <i class="bi bi-plus-circle me-1"></i>Receive First Batch
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Toggle Status Form -->
+<form id="toggleStatusForm" method="post" action="{% url 'pharmacy:batch_toggle_status' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="batch_id" id="batch_id">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.submitBatchForm = function(formId, url) {
+    const form = document.getElementById(formId);
+    if (!form) { alert('Form not found'); return; }
+    const formData = new FormData(form);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    fetch(url, {
+        method: 'POST', body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('batchCreateModal'));
+            if (modal) modal.hide();
+            setTimeout(() => { window.location.href = data.redirect_url || window.location.href; }, 400);
+        } else {
+            if (data.errors) {
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    const input = form.querySelector(`[name="${field}"]`);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback d-block';
+                        errorDiv.textContent = Array.isArray(errors) ? errors.join(', ') : errors;
+                        input.parentNode.appendChild(errorDiv);
+                    }
+                }
+            }
+            alert(data.message || 'Please correct the errors and try again.');
+        }
+    })
+    .catch(error => alert('Error: ' + error.message));
+};
+
+function toggleStatus(batchId) {
+    if (confirm('Are you sure you want to toggle the status of this batch?')) {
+        document.getElementById('batch_id').value = batchId;
+        document.getElementById('toggleStatusForm').submit();
+    }
+}
+</script>
+{% include 'pharmacy/modals/all_pharmacy_modals.html' %}
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Expense: {{ expense.description }} - {{ clinic_settings.clinic_name }}{% endblock %}
+
+{% block page_title %}
+    <div>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{% url 'budget:dashboard' %}">Budget</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'budget:expense_list' %}">Expenses</a></li>
+                <li class="breadcrumb-item active">{{ expense.description|truncatewords:3 }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center">
+            <i class="bi bi-receipt me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+            <span style="background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">
+                Expense Details
+            </span>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    {% if expense.status == 'pending' and user.is_superuser %}
+        <a href="{% url 'budget:expense_approve' expense.pk %}" class="btn btn-success">
+            <i class="bi bi-check-circle"></i> Approve/Reject
+        </a>
+    {% endif %}
+    <a href="{% url 'budget:expense_edit' expense.pk %}" class="btn btn-outline-primary">
+        <i class="bi bi-pencil"></i> Edit
+    </a>
+    <a href="{% url 'budget:expense_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --alafia-primary: #0ea5e9;
+        --alafia-success: #10b981;
+        --alafia-warning: #f59e0b;
+        --alafia-danger: #ef4444;
+    }
+
+    .card-modern {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        margin-bottom: 1rem;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card-modern">
+                <h5 class="section-title"><i class="bi bi-info-circle me-2"></i>Expense Information</h5>
+                <div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Description</strong>
+                            <p class="mb-0">{{ expense.description }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Category</strong>
+                            <span class="fw-semibold text-{{ expense.category.color }} bg-opacity-10 text-{{ expense.category.color }}">
+                                <i class="bi {{ expense.category.icon }}"></i> {{ expense.category.name }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Amount</strong>
+                            <h4 class="mb-0 text-danger">{{ expense.currency }} {{ expense.amount|floatformat:0|intcomma }}</h4>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Expense Date</strong>
+                            <p class="mb-0">{{ expense.expense_date|date:"l, F d, Y" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Payment Method</strong>
+                            <p class="mb-0">{{ expense.get_payment_method_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Reference Number</strong>
+                            <p class="mb-0">{{ expense.reference_number|default:"-" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Vendor Name</strong>
+                            <p class="mb-0">{{ expense.vendor_name|default:"-" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Budget Item</strong>
+                            <p class="mb-0">
+                                {% if expense.budget_item %}
+                                    <a href="{% url 'budget:budget_detail' expense.budget_item.budget.pk %}">
+                                        {{ expense.budget_item.budget.name }} - {{ expense.budget_item.category.name }}
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if expense.notes %}
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <strong class="text-muted d-block small">Notes</strong>
+                            <p class="mb-0">{{ expense.notes }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if expense.receipt_file %}
+                    <div class="row">
+                        <div class="col-12">
+                            <strong class="text-muted d-block small mb-2">Receipt/Invoice</strong>
+                            <a href="{{ expense.receipt_file.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> View Receipt
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card-modern">
+                <h5 class="section-title"><i class="bi bi-check-circle me-2"></i>Status</h5>
+                <div>
+                    <div class="mb-3 text-center">
+                        {% if expense.status == 'pending' %}
+                            <span class="fw-semibold text-warning p-3 fs-6">
+                                <i class="bi bi-clock-history me-1"></i> Pending Approval
+                            </span>
+                        {% elif expense.status == 'approved' %}
+                            <span class="fw-semibold text-success p-3 fs-6">
+                                <i class="bi bi-check-circle me-1"></i> Approved
+                            </span>
+                        {% elif expense.status == 'rejected' %}
+                            <span class="fw-semibold text-danger p-3 fs-6">
+                                <i class="bi bi-x-circle me-1"></i> Rejected
+                            </span>
+                        {% elif expense.status == 'paid' %}
+                            <span class="fw-semibold text-primary p-3 fs-6">
+                                <i class="bi bi-cash me-1"></i> Paid
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    {% if expense.approved_by %}
+                    <div class="mb-2">
+                        <strong class="text-muted d-block small">Approved/Rejected By</strong>
+                        <p class="mb-0">{{ expense.approved_by.get_full_name }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if expense.approved_at %}
+                    <div class="mb-2">
+                        <strong class="text-muted d-block small">Approval Date</strong>
+                        <p class="mb-0">{{ expense.approved_at|date:"M d, Y g:i A" }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if expense.approval_notes %}
+                    <div>
+                        <strong class="text-muted d-block small">Approval Notes</strong>
+                        <p class="mb-0">{{ expense.approval_notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-modern">
+                <h5 class="section-title"><i class="bi bi-person me-2"></i>Submitted By</h5>
+                <div>
+                    <div class="mb-2">
+                        <strong class="text-muted d-block small">Name</strong>
+                        <p class="mb-0">{{ expense.submitted_by.get_full_name }}</p>
+                    </div>
+                    <div>
+                        <strong class="text-muted d-block small">Submitted At</strong>
+                        <p class="mb-0">{{ expense.created_at|date:"M d, Y g:i A" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

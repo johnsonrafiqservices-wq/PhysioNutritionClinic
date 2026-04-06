@@ -1,0 +1,177 @@
+{% load static %}
+
+<!-- Appointment Create Modal -->
+<div class="modal fade" id="appointmentCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-calendar-plus"></i> Schedule New Appointment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="appointmentCreateForm" action="{% url 'appointments:appointment_create_ajax' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Patient <span class="text-danger">*</span></label>
+                            <select name="patient" class="form-control" required>
+                                <option value="">Select Patient</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Service <span class="text-danger">*</span></label>
+                            <select name="service" class="form-control" required>
+                                <option value="">Select Service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Provider <span class="text-danger">*</span></label>
+                            <select name="provider" class="form-control" required>
+                                <option value="">Select Provider</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="appointment_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Time <span class="text-danger">*</span></label>
+                            <input type="time" name="appointment_time" class="form-control" required>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Schedule Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Reschedule Modal -->
+<div class="modal fade" id="appointmentRescheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-calendar-event"></i> Reschedule Appointment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="appointmentRescheduleForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">New Date <span class="text-danger">*</span></label>
+                        <input type="date" name="appointment_date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Time <span class="text-danger">*</span></label>
+                        <input type="time" name="appointment_time" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Reschedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Treatment Session Modal -->
+<div class="modal fade" id="treatmentSessionModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-clipboard2-pulse"></i> Treatment Session</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="treatmentSessionForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Chief Complaint <span class="text-danger">*</span></label>
+                            <textarea name="chief_complaint" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Assessment Findings</label>
+                            <textarea name="assessment_findings" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Treatment Provided <span class="text-danger">*</span></label>
+                            <textarea name="treatment_provided" class="form-control" rows="4" required></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Pain Level Before (0-10)</label>
+                            <input type="number" name="pain_level_before" class="form-control" min="0" max="10">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Pain Level After (0-10)</label>
+                            <input type="number" name="pain_level_after" class="form-control" min="0" max="10">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Home Exercises</label>
+                            <textarea name="home_exercises" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" name="session_completed" class="form-check-input" id="sessionCompleted">
+                                <label class="form-check-label" for="sessionCompleted">Mark session as completed</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Appointment Create Form Handler
+document.getElementById('appointmentCreateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    window.modalForms.submitModalForm('appointmentCreateForm', 'appointmentCreateModal');
+});
+
+// Appointment Reschedule Form Handler  
+document.getElementById('appointmentRescheduleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    window.modalForms.submitModalForm('appointmentRescheduleForm', 'appointmentRescheduleModal');
+});
+
+// Treatment Session Form Handler
+document.getElementById('treatmentSessionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    window.modalForms.submitModalForm('treatmentSessionForm', 'treatmentSessionModal');
+});
+
+// Setup modal reset
+window.modalForms.setupModalReset('appointmentCreateModal', 'appointmentCreateForm');
+window.modalForms.setupModalReset('appointmentRescheduleModal', 'appointmentRescheduleForm');
+window.modalForms.setupModalReset('treatmentSessionModal', 'treatmentSessionForm');
+
+// Function to open reschedule modal with appointment ID
+function openRescheduleModal(appointmentId) {
+    const form = document.getElementById('appointmentRescheduleForm');
+    form.action = `/appointments/ajax/${appointmentId}/reschedule/`;
+    const modal = new bootstrap.Modal(document.getElementById('appointmentRescheduleModal'));
+    modal.show();
+}
+
+// Function to open treatment session modal with appointment ID
+function openTreatmentSessionModal(appointmentId) {
+    const form = document.getElementById('treatmentSessionForm');
+    form.action = `/appointments/ajax/${appointmentId}/treatment/`;
+    const modal = new bootstrap.Modal(document.getElementById('treatmentSessionModal'));
+    modal.show();
+}
+</script>

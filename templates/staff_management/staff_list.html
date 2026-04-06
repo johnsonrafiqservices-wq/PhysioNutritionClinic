@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Staff Management - {{ clinic_settings.clinic_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-people-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">
+            Staff Management
+        </span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'staff_management:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Dashboard
+    </a>
+    {% if user.is_superuser or user.role in 'admin,clinic_manager' %}
+    <a href="{% url 'staff_management:staff_create' %}" class="btn btn-success btn-sm">
+        <i class="bi bi-person-plus"></i> Add Staff Member
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0 small">
+                        <i class="bi bi-funnel"></i> Filter Staff
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3">
+                    <form method="get" class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small mb-1">Search</label>
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Name or employee ID" value="{{ search_query|default:'' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small mb-1">Department</label>
+                            <select name="department" class="form-select form-select-sm">
+                                <option value="">All Departments</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if selected_department == dept.id|stringformat:'s' %}selected{% endif %}>{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-sm me-2">
+                                <i class="bi bi-search"></i> Apply
+                            </button>
+                            <a href="{% url 'staff_management:staff_list' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Table -->
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-people me-2"></i>Staff Members</h6>
+                <span class="fw-semibold text-primary">{{ staff.paginator.count|default:0 }} total</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0" id="staffTable" style="border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <thead style="background: var(--alafia-gradient); color: white;">
+                        <tr>
+                            <th onclick="sortStaffTable(0)" style="cursor: pointer; user-select: none;">Name <i class="bi bi-arrow-down-up text-light"></i></th>
+                            <th onclick="sortStaffTable(1)" style="cursor: pointer; user-select: none;">Employee ID <i class="bi bi-arrow-down-up text-light"></i></th>
+                            <th onclick="sortStaffTable(2)" style="cursor: pointer; user-select: none;">Department <i class="bi bi-arrow-down-up text-light"></i></th>
+                            <th onclick="sortStaffTable(3)" style="cursor: pointer; user-select: none;">Role <i class="bi bi-arrow-down-up text-light"></i></th>
+                            <th onclick="sortStaffTable(4)" style="cursor: pointer; user-select: none;">Status <i class="bi bi-arrow-down-up text-light"></i></th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in staff %}
+                        <tr>
+                            <td>
+                                <strong>{{ s.user.get_full_name }}</strong>
+                                <br><small class="text-muted">{{ s.user.email }}</small>
+                            </td>
+                            <td>{{ s.employee_id|default:'-' }}</td>
+                            <td>{{ s.department.name|default:'Unassigned' }}</td>
+                            <td>{{ s.user.get_role_display|default:'-' }}</td>
+                            <td>
+                                {% if s.is_active %}
+                                    <span class="fw-semibold text-success">Active</span>
+                                {% else %}
+                                    <span class="fw-semibold text-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center" style="width: 60px; padding: 0.25rem;">
+                                <a href="{% url 'staff_management:staff_detail' s.pk %}" class="btn btn-sm btn-link text-muted p-1" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
+                                <p class="text-muted mb-2">No staff members found.</p>
+                                {% if user.is_superuser or user.role in 'admin,clinic_manager' %}
+                                <a href="{% url 'staff_management:staff_create' %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-person-plus"></i> Add First Staff Member
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if staff.has_other_pages %}
+        <div class="card-footer py-2">
+            {% include 'includes/pagination_with_size.html' with page_obj=staff %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
