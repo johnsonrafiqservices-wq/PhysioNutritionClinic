@@ -583,6 +583,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label class="form-label">Clinical Notes</label>
                         <textarea name="clinical_notes" class="form-control" rows="3"></textarea>
                     </div>
+                    <hr class="my-2">
+                    <!-- Discount Section -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold mb-1">Discount</label>
+                        <div class="d-flex flex-wrap gap-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="discount_type" id="lr_disc_none" value="none" checked>
+                                <label class="form-check-label" for="lr_disc_none" style="font-size:.85rem;">None</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="discount_type" id="lr_disc_pct" value="percentage">
+                                <label class="form-check-label" for="lr_disc_pct" style="font-size:.85rem;">Percentage (%)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="discount_type" id="lr_disc_flat" value="flat">
+                                <label class="form-check-label" for="lr_disc_flat" style="font-size:.85rem;">Flat Amount</label>
+                            </div>
+                        </div>
+                        <div id="lrDiscountValueWrap" style="display:none;">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text" id="lrDiscSymbol">%</span>
+                                <input type="number" class="form-control" id="lr_discount_value" name="discount_value" min="0" step="0.01" value="" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -993,9 +1018,41 @@ function openPaymentModal(invoiceId, invoiceNumber, balanceDue, patientId) {
 function openLabRequestModal(patientId) {
     const form = document.getElementById('labRequestForm');
     form.action = `/laboratory/ajax/request/create/?patient=${patientId}`;
+    // Reset discount fields
+    var lrDiscNone = document.getElementById('lr_disc_none');
+    if (lrDiscNone) lrDiscNone.checked = true;
+    var lrDiscWrap = document.getElementById('lrDiscountValueWrap');
+    if (lrDiscWrap) lrDiscWrap.style.display = 'none';
+    var lrDiscVal = document.getElementById('lr_discount_value');
+    if (lrDiscVal) lrDiscVal.value = '';
     const modal = new bootstrap.Modal(document.getElementById('labRequestModal'));
     modal.show();
 }
+
+// Discount toggle for #labRequestModal
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        var discWrap = document.getElementById('lrDiscountValueWrap');
+        var discSym = document.getElementById('lrDiscSymbol');
+        var discValInp = document.getElementById('lr_discount_value');
+        document.querySelectorAll('#labRequestModal input[name="discount_type"]').forEach(function(r) {
+            r.addEventListener('change', function() {
+                if (this.value === 'none') {
+                    if (discWrap) discWrap.style.display = 'none';
+                    if (discValInp) discValInp.value = '';
+                } else {
+                    if (discWrap) discWrap.style.display = 'block';
+                    if (discSym) discSym.textContent = this.value === 'percentage' ? '%' : 'UGX';
+                    if (discValInp && this.value === 'percentage') {
+                        discValInp.max = '100'; discValInp.placeholder = '0-100';
+                    } else if (discValInp) {
+                        discValInp.removeAttribute('max'); discValInp.placeholder = '0';
+                    }
+                }
+            });
+        });
+    });
+}());
 
 function openLabResultModal(requestId) {
     const form = document.getElementById('labResultForm');

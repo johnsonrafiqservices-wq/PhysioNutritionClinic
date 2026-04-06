@@ -4455,7 +4455,31 @@
                                 <textarea class="form-control form-control-sm" name="clinical_notes" rows="1" placeholder="Additional clinical information"></textarea>
                             </div>
                         </div>
-                        <input type="hidden" name="discount_type" value="none">
+                        <hr class="my-2">
+                        <!-- Discount Section -->
+                        <div class="mb-2">
+                            <label class="form-label form-label-sm fw-semibold mb-1">Discount</label>
+                            <div class="d-flex flex-wrap gap-3 mb-2">
+                                <div class="form-check form-check-sm">
+                                    <input class="form-check-input" type="radio" name="discount_type" id="pd_disc_none" value="none" checked>
+                                    <label class="form-check-label" for="pd_disc_none" style="font-size:.82rem;">None</label>
+                                </div>
+                                <div class="form-check form-check-sm">
+                                    <input class="form-check-input" type="radio" name="discount_type" id="pd_disc_pct" value="percentage">
+                                    <label class="form-check-label" for="pd_disc_pct" style="font-size:.82rem;">Percentage (%)</label>
+                                </div>
+                                <div class="form-check form-check-sm">
+                                    <input class="form-check-input" type="radio" name="discount_type" id="pd_disc_flat" value="flat">
+                                    <label class="form-check-label" for="pd_disc_flat" style="font-size:.82rem;">Flat Amount</label>
+                                </div>
+                            </div>
+                            <div id="pdDiscountValueWrap" style="display:none;">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" id="pdDiscSymbol">%</span>
+                                    <input type="number" class="form-control form-control-sm" id="pd_discount_value" name="discount_value" min="0" step="0.01" value="" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -4631,6 +4655,10 @@
         }
 
         // Discount toggle
+        var discWrap = document.getElementById('pdDiscountValueWrap');
+        var discSym = document.getElementById('pdDiscSymbol');
+        var discValInp = document.getElementById('pd_discount_value');
+
         document.querySelectorAll('#requestLabTestModal input[name="discount_type"]').forEach(function (r) {
             r.addEventListener('change', function () {
                 if (this.value === 'none') {
