@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Access Restricted{% endblock %}
+
+{% block extra_css %}
+<style>
+    .restricted-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 70vh;
+        padding: 40px 20px;
+    }
+    .restricted-card {
+        max-width: 540px;
+        width: 100%;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        overflow: hidden;
+        text-align: center;
+    }
+    .restricted-header {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f87171 100%);
+        padding: 40px 30px 30px;
+        position: relative;
+        overflow: hidden;
+    }
+    .restricted-header::before {
+        content: '';
+        position: absolute;
+        top: -40%; right: -25%;
+        width: 250px; height: 250px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .restricted-icon {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        position: relative;
+        z-index: 1;
+    }
+    .restricted-icon i {
+        font-size: 36px;
+        color: #fff;
+    }
+    .restricted-header h1 {
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+        margin: 0 0 6px 0;
+        position: relative;
+        z-index: 1;
+    }
+    .restricted-header p {
+        font-size: 14px;
+        color: rgba(255,255,255,0.85);
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+    .restricted-body {
+        padding: 32px 36px;
+    }
+    .restricted-info {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin-bottom: 24px;
+        text-align: left;
+    }
+    .restricted-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 13px;
+    }
+    .restricted-info-row + .restricted-info-row {
+        border-top: 1px solid #fecaca;
+    }
+    .restricted-info-label {
+        color: #991b1b;
+        font-weight: 600;
+    }
+    .restricted-info-value {
+        color: #7f1d1d;
+        font-weight: 700;
+    }
+    .restricted-message {
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.7;
+        margin-bottom: 28px;
+    }
+    .restricted-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 24px;
+        background: linear-gradient(135deg, #1B5E96, #2980b9);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 14px;
+        text-decoration: none;
+        transition: all 0.2s;
+        box-shadow: 0 3px 10px rgba(27,94,150,0.25);
+    }
+    .btn-back:hover {
+        background: linear-gradient(135deg, #154a7a, #1B5E96);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .btn-home {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 24px;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .btn-home:hover {
+        background: #e2e8f0;
+        color: #1e293b;
+    }
+    .restricted-footer {
+        padding: 0 36px 28px;
+        text-align: center;
+    }
+    .restricted-footer p {
+        font-size: 12px;
+        color: #94a3b8;
+        margin: 0;
+    }
+    .restricted-footer a {
+        color: #1B5E96;
+        text-decoration: none;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="restricted-page">
+    <div class="restricted-card">
+        <div class="restricted-header">
+            <div class="restricted-icon">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <h1>Access Restricted</h1>
+            <p>You don't have permission to view this page</p>
+        </div>
+        <div class="restricted-body">
+            <div class="restricted-info">
+                <div class="restricted-info-row">
+                    <span class="restricted-info-label">Module</span>
+                    <span class="restricted-info-value">{{ restricted_app }}</span>
+                </div>
+                {% if restricted_action == 'access' %}
+                <div class="restricted-info-row">
+                    <span class="restricted-info-label">Issue</span>
+                    <span class="restricted-info-value">No access to this module</span>
+                </div>
+                {% elif restricted_action == 'create' %}
+                <div class="restricted-info-row">
+                    <span class="restricted-info-label">Issue</span>
+                    <span class="restricted-info-value">Cannot create items here</span>
+                </div>
+                {% elif restricted_action == 'update' %}
+                <div class="restricted-info-row">
+                    <span class="restricted-info-label">Issue</span>
+                    <span class="restricted-info-value">Cannot edit items here</span>
+                </div>
+                {% elif restricted_action == 'delete' %}
+                <div class="restricted-info-row">
+                    <span class="restricted-info-label">Issue</span>
+                    <span class="restricted-info-value">Cannot delete items here</span>
+                </div>
+                {% endif %}
+                <div class="restricted-info-row">
+                    <span class="restricted-info-label">Your Role</span>
+                    <span class="restricted-info-value">{{ user_role }}</span>
+                </div>
+            </div>
+            <p class="restricted-message">
+                Your current role does not grant access to the <strong>{{ restricted_app }}</strong> module.
+                If you believe this is an error, please contact your system administrator to request access.
+            </p>
+            <div class="restricted-actions">
+                <a href="javascript:history.back();" class="btn-back">
+                    <i class="bi bi-arrow-left"></i> Go Back
+                </a>
+                <a href="{% url 'dashboard' %}" class="btn-home">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+            </div>
+        </div>
+        <div class="restricted-footer">
+            <p>Need access? Contact an admin or <a href="{% url 'dashboard' %}">return to dashboard</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

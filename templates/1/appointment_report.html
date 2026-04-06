@@ -1,0 +1,637 @@
+{% extends 'base.html' %}
+
+{% block title %}Appointment Reports - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Appointment Analytics Report</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportReport('appointment', 'pdf')">
+                <i class="bi bi-file-pdf"></i> Export as PDF
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportReport('appointment', 'excel')">
+                <i class="bi bi-file-excel"></i> Export as Excel
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportReport('appointment', 'csv')">
+                <i class="bi bi-file-csv"></i> Export as CSV
+            </a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Date Range Filter -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="bi bi-funnel"></i> Report Filters
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" 
+                       value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" 
+                       value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> Apply Filters
+                </button>
+                <a href="{% url 'reports:appointment_report' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Appointments
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_appointments }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-event fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Completed Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ completion_rate }}%
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Unique Services
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ service_stats|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-gear fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Active Providers
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ provider_stats|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-person-badge fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Appointment Status Distribution -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-pie-chart"></i> Appointment Status
+                </h6>
+                <div class="dropdown no-arrow">
+                    <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical fa-sm fa-fw text-gray-400"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow">
+                        <a class="dropdown-item" href="#" onclick="exportChart('status', 'png')">Export as PNG</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="mt-4 text-center small">
+                    {% for status in status_stats %}
+                        <span class="mr-2">
+                            <i class="bi bi-circle-fill" style="color: 
+                                {% if status.status == 'completed' %}var(--alafia-chart-2)
+                                {% elif status.status == 'scheduled' %}var(--alafia-chart-1)
+                                {% elif status.status == 'cancelled' %}var(--alafia-chart-5)
+                                {% elif status.status == 'no_show' %}var(--alafia-chart-4)
+                                {% else %}var(--alafia-chart-6){% endif %}"></i>
+                            {{ status.status|title }}: {{ status.count }}
+                        </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Popularity -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-bar-chart"></i> Service Popularity
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="serviceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Tables Row -->
+<div class="row">
+    <!-- Appointment Status Breakdown -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-list-check"></i> Status Breakdown
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Status</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for status in status_stats %}
+                                <tr>
+                                    <td>
+                                        {% if status.status == 'completed' %}
+                                            <span class="fw-semibold text-success">
+                                                <i class="bi bi-check-circle"></i> {{ status.status|title }}
+                                            </span>
+                                        {% elif status.status == 'scheduled' %}
+                                            <span class="fw-semibold text-primary">
+                                                <i class="bi bi-calendar-check"></i> {{ status.status|title }}
+                                            </span>
+                                        {% elif status.status == 'cancelled' %}
+                                            <span class="fw-semibold text-danger">
+                                                <i class="bi bi-x-circle"></i> {{ status.status|title }}
+                                            </span>
+                                        {% elif status.status == 'no_show' %}
+                                            <span class="fw-semibold text-warning">
+                                                <i class="bi bi-person-x"></i> No Show
+                                            </span>
+                                        {% else %}
+                                            <span class="fw-semibold text-secondary">{{ status.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ status.count }}</strong></td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar 
+                                                {% if status.status == 'completed' %}bg-success
+                                                {% elif status.status == 'scheduled' %}bg-primary
+                                                {% elif status.status == 'cancelled' %}bg-danger
+                                                {% elif status.status == 'no_show' %}bg-warning
+                                                {% else %}bg-secondary{% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {% widthratio status.count total_appointments 100 %}%">
+                                                {% widthratio status.count total_appointments 100 %}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if status.status == 'completed' %}
+                                            <i class="bi bi-arrow-up text-success"></i>
+                                        {% elif status.status == 'cancelled' %}
+                                            <i class="bi bi-arrow-down text-danger"></i>
+                                        {% else %}
+                                            <i class="bi bi-dash text-muted"></i>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        No appointment status data available
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider Workload -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-person-workspace"></i> Provider Workload
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Provider</th>
+                                <th>Appointments</th>
+                                <th>Workload %</th>
+                                <th>Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for provider in provider_stats|slice:":10" %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ provider.provider__first_name }} {{ provider.provider__last_name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold text-secondary">{{ provider.total_count }}</span>
+                                        <small class="text-muted ms-2">
+                                            (✓{{ provider.completed }} | ⏱{{ provider.scheduled }} | ✗{{ provider.cancelled }})
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-info" role="progressbar" 
+                                                 style="width: {% widthratio provider.total_count provider_stats.0.total_count 100 %}%">
+                                                {% widthratio provider.total_count provider_stats.0.total_count 100 %}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if provider.total_count >= 20 %}
+                                            <span class="fw-semibold text-success">High</span>
+                                        {% elif provider.total_count >= 10 %}
+                                            <span class="fw-semibold text-primary">Medium</span>
+                                        {% else %}
+                                            <span class="fw-semibold text-warning">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        No provider workload data available
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Service Performance Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="bi bi-graph-up"></i> Service Performance Analysis
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Service Name</th>
+                        <th>Total Appointments</th>
+                        <th>Popularity Rank</th>
+                        <th>Market Share</th>
+                        <th>Growth Trend</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in service_stats|slice:":15" %}
+                        <tr>
+                            <td>
+                                <strong>{{ service.service__name|default:"Unknown Service" }}</strong>
+                            </td>
+                            <td>{{ service.count }}</td>
+                            <td>
+                                <span class="fw-semibold text-primary">#{{ forloop.counter }}</span>
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {% widthratio service.count service_stats.0.count 100 %}%">
+                                        {% widthratio service.count service_stats.0.count 100 %}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if forloop.counter <= 3 %}
+                                    <i class="bi bi-arrow-up text-success"></i> Growing
+                                {% elif forloop.counter <= 8 %}
+                                    <i class="bi bi-arrow-right text-primary"></i> Stable
+                                {% else %}
+                                    <i class="bi bi-arrow-down text-warning"></i> Declining
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if service.count >= 10 %}
+                                    <span class="fw-semibold text-success">Popular</span>
+                                {% elif service.count >= 5 %}
+                                    <span class="fw-semibold text-primary">Moderate</span>
+                                {% else %}
+                                    <span class="fw-semibold text-warning">Low Demand</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                No service performance data available
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for CSRF token -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Helper function to get CSS variable values
+function getCSSVariable(name) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value;
+}
+
+// Status Distribution Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [
+            {% for status in status_stats %}
+                '{{ status.status|title }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for status in status_stats %}
+                    {{ status.count }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: [
+                getCSSVariable('--alafia-chart-2') || '#1cc88a',
+                getCSSVariable('--alafia-chart-1') || '#4e73df',
+                getCSSVariable('--alafia-chart-5') || '#e74a3b',
+                getCSSVariable('--alafia-chart-4') || '#f6c23e',
+                getCSSVariable('--alafia-chart-6') || '#6c757d'
+            ],
+            hoverBackgroundColor: [
+                getCSSVariable('--alafia-chart-2') || '#17a673',
+                getCSSVariable('--alafia-chart-1') || '#2e59d9',
+                getCSSVariable('--alafia-chart-5') || '#c0392b',
+                getCSSVariable('--alafia-chart-4') || '#d4ac0d',
+                getCSSVariable('--alafia-chart-6') || '#5a6268'
+            ],
+            hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }],
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                        return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Service Popularity Chart
+const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+const serviceChart = new Chart(serviceCtx, {
+    type: 'bar',
+    data: {
+        labels: [
+            {% for service in service_stats|slice:":10" %}
+                '{{ service.service__name|truncatechars:20|default:"Unknown" }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Appointments',
+            data: [
+                {% for service in service_stats|slice:":10" %}
+                    {{ service.count }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: getCSSVariable('--alafia-chart-1') || '#4e73df',
+            hoverBackgroundColor: getCSSVariable('--alafia-chart-1') || '#2e59d9',
+            borderColor: getCSSVariable('--alafia-chart-1') || '#4e73df',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            },
+            x: {
+                ticks: {
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+            }
+        }
+    }
+});
+
+// Export functions
+function exportChart(chartType, format) {
+    let chart;
+    switch(chartType) {
+        case 'status':
+            chart = statusChart;
+            break;
+        case 'service':
+            chart = serviceChart;
+            break;
+    }
+    
+    if (format === 'png') {
+        const url = chart.toBase64Image();
+        const link = document.createElement('a');
+        link.download = `${chartType}_chart.png`;
+        link.href = url;
+        link.click();
+    }
+}
+
+function exportReport(reportType, format) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "reports:export_report" %}';
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add report type
+    const reportTypeInput = document.createElement('input');
+    reportTypeInput.type = 'hidden';
+    reportTypeInput.name = 'report_type';
+    reportTypeInput.value = reportType;
+    form.appendChild(reportTypeInput);
+    
+    // Add export format
+    const formatInput = document.createElement('input');
+    formatInput.type = 'hidden';
+    formatInput.name = 'export_format';
+    formatInput.value = format;
+    form.appendChild(formatInput);
+    
+    // Add report name
+    const nameInput = document.createElement('input');
+    nameInput.type = 'hidden';
+    nameInput.name = 'report_name';
+    nameInput.value = 'Appointment Analytics Report';
+    form.appendChild(nameInput);
+    
+    // Add date filters
+    const startDateInput = document.createElement('input');
+    startDateInput.type = 'hidden';
+    startDateInput.name = 'start_date';
+    startDateInput.value = '{{ start_date|date:"Y-m-d" }}';
+    form.appendChild(startDateInput);
+    
+    const endDateInput = document.createElement('input');
+    endDateInput.type = 'hidden';
+    endDateInput.name = 'end_date';
+    endDateInput.value = '{{ end_date|date:"Y-m-d" }}';
+    form.appendChild(endDateInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.chart-area {
+    position: relative;
+    height: 300px;
+}
+.chart-pie {
+    position: relative;
+    height: 250px;
+}
+</style>
+{% endblock %}

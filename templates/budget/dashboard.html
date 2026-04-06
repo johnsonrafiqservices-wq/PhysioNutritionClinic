@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Budget & Expenses{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-wallet2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Budget & Expenses</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center">
+    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addExpenseModal"><i class="bi bi-plus-circle me-1"></i>Add Expense</button>
+    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createBudgetModal"><i class="bi bi-file-earmark-plus me-1"></i>New Budget</button>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+.kpi{border-left:3px solid transparent;transition:border-color .2s;}
+.kpi:hover{border-left-color:var(--accent,#0d6efd);}
+.kpi .kpi-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.kpi .kpi-val{font-size:1.3rem;font-weight:700;line-height:1.2;}
+.kpi .kpi-lbl{font-size:.7rem;color:#6c757d;margin:0;}
+.kpi .kpi-sub{font-size:.62rem;}
+.qa-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;font-size:.76rem;font-weight:500;text-decoration:none;border:1px solid #dee2e6;color:#495057;background:#fff;transition:all .15s;}
+.qa-btn:hover{background:var(--alafia-primary);color:#fff;border-color:var(--alafia-primary);}
+.qa-btn i{font-size:.88rem;}
+</style>
+
+<!-- KPI Row -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#dc3545;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fde2e4;color:#dc3545;"><i class="bi bi-cash-stack"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#dc3545;">{{ total_expenses|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">Total Expenses (UGX)</p>
+                    <span class="badge bg-danger-subtle text-danger kpi-sub">All approved</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#e67e22;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-calendar-month"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#e67e22;">{{ month_expenses|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">This Month (UGX)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi" style="--accent:{% if pending_expenses > 0 %}#dc3545{% else %}#198754{% endif %};">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#cfe2ff;color:#0d6efd;"><i class="bi bi-hourglass-split"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:{% if pending_expenses > 0 %}#dc3545{% else %}#198754{% endif %};">{{ pending_expenses }}</div>
+                    <p class="kpi-lbl">Pending Approval</p>
+                    {% if pending_expenses > 0 %}<span class="badge bg-warning-subtle text-warning kpi-sub">Needs review</span>{% else %}<span class="badge bg-success-subtle text-success kpi-sub">All clear</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-clipboard-check"></i></div>
+                <div>
+                    {% if active_budget %}
+                    <div class="kpi-val" style="color:#198754;">{{ active_budget.total_amount|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">Active Budget (UGX)</p>
+                    <span class="badge bg-success-subtle text-success kpi-sub">{{ active_budget.get_utilization_percentage|floatformat:0 }}% used</span>
+                    {% else %}
+                    <div class="kpi-val text-muted">—</div>
+                    <p class="kpi-lbl">No Active Budget</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<style>
+.budget-qa .alafia-action-btn{padding:8px 6px;min-height:0;flex:1;min-width:80px;}
+.budget-qa .alafia-action-btn i{font-size:1.15rem;margin-bottom:4px;}
+.budget-qa .alafia-action-btn span{font-size:.73rem;}
+</style>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Actions
+            </div>
+            <div class="card-body py-2 budget-qa">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="#" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>New Expense</span>
+                    </a>
+                    <a href="#" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#createBudgetModal">
+                        <i class="bi bi-file-earmark-plus"></i>
+                        <span>New Budget</span>
+                    </a>
+                    <a href="{% url 'budget:expense_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-list-ul"></i>
+                        <span>All Expenses</span>
+                    </a>
+                    <a href="{% url 'budget:budget_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-folder2"></i>
+                        <span>All Budgets</span>
+                    </a>
+                    <a href="{% url 'budget:category_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-tags"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="{% url 'reports:budget_expense_reports' %}" class="alafia-action-btn">
+                        <i class="bi bi-bar-chart"></i>
+                        <span>Reports</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Budget Overview + Top Categories -->
+<div class="row g-3 mb-3">
+    {% if active_budget %}
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart text-success me-1"></i>Active Budget Overview</h6>
+                <a href="{% url 'budget:budget_detail' active_budget.pk %}" class="text-primary text-decoration-none" style="font-size:.75rem;">Details <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <span class="fw-semibold" style="font-size:.85rem;">{{ active_budget.name }}</span>
+                        <span class="text-muted ms-2" style="font-size:.72rem;"><i class="bi bi-calendar3 me-1"></i>{{ active_budget.start_date|date:"M d" }} – {{ active_budget.end_date|date:"M d, Y" }}</span>
+                    </div>
+                    <span class="badge {% if active_budget.get_utilization_percentage >= 90 %}bg-danger{% elif active_budget.get_utilization_percentage >= 70 %}bg-warning text-dark{% else %}bg-success{% endif %}" style="font-size:.7rem;">{{ active_budget.get_utilization_percentage|floatformat:1 }}% used</span>
+                </div>
+                <div class="progress mb-2" style="height:8px;">
+                    {% with utilization=active_budget.get_utilization_percentage %}
+                    <div class="progress-bar {% if utilization >= 90 %}bg-danger{% elif utilization >= 70 %}bg-warning{% else %}bg-success{% endif %}" style="width:{{ utilization }}%;"></div>
+                    {% endwith %}
+                </div>
+                <div class="row g-2">
+                    <div class="col-4">
+                        <div class="text-center p-2 rounded" style="background:#f8f9fa;">
+                            <div class="text-muted" style="font-size:.65rem;">TOTAL</div>
+                            <div class="fw-bold" style="font-size:.82rem;">{{ active_budget.total_amount|floatformat:0|intcomma }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center p-2 rounded" style="background:#fde2e4;">
+                            <div class="text-muted" style="font-size:.65rem;">SPENT</div>
+                            <div class="fw-bold text-danger" style="font-size:.82rem;">{{ active_budget.get_spent_amount|floatformat:0|intcomma }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center p-2 rounded" style="background:#d1e7dd;">
+                            <div class="text-muted" style="font-size:.65rem;">REMAINING</div>
+                            <div class="fw-bold text-success" style="font-size:.82rem;">{{ active_budget.get_remaining_amount|floatformat:0|intcomma }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="{% if active_budget %}col-lg-5{% else %}col-lg-12{% endif %}">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-bar-chart text-info me-1"></i>Top Categories</h6>
+                <a href="{% url 'budget:category_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">Manage <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body py-2 px-3">
+                {% if category_stats %}
+                {% for category in category_stats %}
+                <div class="d-flex justify-content-between align-items-center {% if not forloop.last %}border-bottom{% endif %}" style="padding:5px 0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-2 d-flex align-items-center justify-content-center" style="width:28px;height:28px;background:rgba(var(--bs-primary-rgb),.08);"><i class="bi {{ category.icon }} text-{{ category.color }}" style="font-size:.82rem;"></i></div>
+                        <div>
+                            <div class="fw-medium" style="font-size:.8rem;">{{ category.name }}</div>
+                            <div class="text-muted" style="font-size:.65rem;">{{ category.expense_count }} txn{{ category.expense_count|pluralize }}</div>
+                        </div>
+                    </div>
+                    <span class="fw-bold text-danger" style="font-size:.8rem;">{{ category.total_spent|floatformat:0|intcomma|default:"0" }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-3"><i class="bi bi-inbox text-muted" style="font-size:1.5rem;"></i><p class="text-muted small mt-1 mb-0">No data yet</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Expenses Table -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-receipt-cutoff text-warning me-1"></i>Recent Expenses</h6>
+        <a href="{% url 'budget:expense_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 ps-3">Date</th>
+                        <th class="border-0">Description</th>
+                        <th class="border-0">Category</th>
+                        <th class="border-0 text-end">Amount</th>
+                        <th class="border-0 text-center">Status</th>
+                        <th class="border-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in recent_expenses %}
+                    <tr>
+                        <td class="ps-3 text-muted">{{ expense.expense_date|date:"d M Y" }}</td>
+                        <td>
+                            <span class="fw-medium">{{ expense.description|truncatechars:40 }}</span>
+                            {% if expense.vendor_name %}<br><span class="text-muted" style="font-size:.7rem;">{{ expense.vendor_name }}</span>{% endif %}
+                        </td>
+                        <td><i class="bi {{ expense.category.icon }} text-{{ expense.category.color }} me-1" style="font-size:.75rem;"></i>{{ expense.category.name }}</td>
+                        <td class="text-end fw-bold text-danger">{{ expense.amount|floatformat:0|intcomma }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if expense.status == 'pending' %}bg-warning text-dark{% elif expense.status == 'approved' %}bg-success{% elif expense.status == 'rejected' %}bg-danger{% elif expense.status == 'paid' %}bg-primary{% endif %}" style="font-size:.65rem;">
+                                {{ expense.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'budget:expense_detail' expense.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size:.72rem;"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="bi bi-inbox text-muted" style="font-size:1.8rem;"></i>
+                            <p class="text-muted small mt-1 mb-2">No expenses recorded yet</p>
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addExpenseModal"><i class="bi bi-plus-circle me-1"></i>Add Expense</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Budgets Table -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-folder2 text-primary me-1"></i>Budgets</h6>
+        <a href="{% url 'budget:budget_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 ps-3">Budget</th>
+                        <th class="border-0">Period</th>
+                        <th class="border-0 text-end">Total</th>
+                        <th class="border-0 text-end">Spent</th>
+                        <th class="border-0" style="width:130px;">Utilization</th>
+                        <th class="border-0 text-center">Status</th>
+                        <th class="border-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for budget in all_budgets %}
+                    <tr>
+                        <td class="ps-3 fw-medium">{{ budget.name }}</td>
+                        <td class="text-muted">{{ budget.start_date|date:"d M" }} – {{ budget.end_date|date:"d M, Y" }}<br><span class="badge bg-light text-secondary border" style="font-size:.6rem;">{{ budget.get_period_type_display }}</span></td>
+                        <td class="text-end fw-bold">{{ budget.total_amount|floatformat:0|intcomma }}</td>
+                        <td class="text-end text-danger">{{ budget.get_spent_amount|floatformat:0|intcomma }}</td>
+                        <td>
+                            {% with utilization=budget.get_utilization_percentage %}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:6px;">
+                                    <div class="progress-bar {% if utilization >= 90 %}bg-danger{% elif utilization >= 70 %}bg-warning{% else %}bg-success{% endif %}" style="width:{{ utilization }}%;"></div>
+                                </div>
+                                <span class="fw-bold {% if utilization >= 90 %}text-danger{% elif utilization >= 70 %}text-warning{% else %}text-success{% endif %}" style="font-size:.72rem;min-width:38px;text-align:right;">{{ utilization|floatformat:0 }}%</span>
+                            </div>
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {% if budget.status == 'draft' %}bg-secondary{% elif budget.status == 'active' %}bg-success{% else %}bg-dark{% endif %}" style="font-size:.65rem;">{{ budget.get_status_display }}</span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'budget:budget_detail' budget.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size:.72rem;"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="bi bi-folder2-open text-muted" style="font-size:1.8rem;"></i>
+                            <p class="text-muted small mt-1 mb-2">No budgets created yet</p>
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createBudgetModal"><i class="bi bi-plus-circle me-1"></i>Create Budget</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Include Budget & Expense Modals -->
+{% include 'budget/modals.html' %}
+{% endblock %}

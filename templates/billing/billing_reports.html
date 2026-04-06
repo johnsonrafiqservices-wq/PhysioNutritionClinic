@@ -1,0 +1,853 @@
+{% extends 'base.html' %}
+
+{% block title %}Billing Reports - PhysioNutrition Clinic{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-bar-chart-line me-3" style="font-size:1.5rem;color:var(--alafia-primary);"></i>
+    <span style="background:var(--alafia-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;">Billing Reports</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'billing:billing_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+    <a href="{% url 'billing:export_billing_excel' %}" class="btn btn-success btn-sm" id="btn-dl-all-excel" title="Download all sheets in one Excel file">
+        <i class="bi bi-file-earmark-excel"></i> Download Full Excel
+    </a>
+    <a href="{% url 'billing:invoice_export_csv' %}" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-download"></i> Invoices CSV
+    </a>
+    <a href="{% url 'billing:payment_export_csv' %}" class="btn btn-outline-info btn-sm">
+        <i class="bi bi-download"></i> Payments CSV
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- KPI Summary Strip (always visible) -->
+<div class="row mb-3 g-2">
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-left-primary shadow h-100 py-2"><div class="card-body py-2">
+            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Invoiced</div>
+            <div class="h6 mb-0 fw-bold">UGX {{ overall_stats.total_invoiced|floatformat:0 }}</div>
+        </div></div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-left-success shadow h-100 py-2"><div class="card-body py-2">
+            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Collected</div>
+            <div class="h6 mb-0 fw-bold">UGX {{ overall_stats.total_collected|floatformat:0 }}</div>
+        </div></div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-left-warning shadow h-100 py-2"><div class="card-body py-2">
+            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Outstanding</div>
+            <div class="h6 mb-0 fw-bold">UGX {{ overall_stats.total_outstanding|floatformat:0 }}</div>
+        </div></div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-left-info shadow h-100 py-2"><div class="card-body py-2">
+            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Invoices</div>
+            <div class="h6 mb-0 fw-bold">{{ overall_stats.total_invoices }}</div>
+        </div></div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-left-success shadow h-100 py-2"><div class="card-body py-2">
+            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Paid</div>
+            <div class="h6 mb-0 fw-bold">{{ overall_stats.paid_invoices }}</div>
+        </div></div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-left-danger shadow h-100 py-2"><div class="card-body py-2">
+            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Overdue</div>
+            <div class="h6 mb-0 fw-bold">{{ overall_stats.overdue_invoices }}</div>
+        </div></div>
+    </div>
+</div>
+
+<!-- ===== STICKY TAB MENUBAR ===== -->
+<div class="rpt-tabs-wrap sticky-top bg-white shadow-sm pt-1 mb-3" style="z-index:100;top:56px;">
+    <ul class="nav nav-tabs nav-fill flex-nowrap overflow-auto" id="reportTabs" role="tablist" style="white-space:nowrap;flex-wrap:nowrap;">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active px-3 py-2" id="tab-overview" data-bs-toggle="tab" data-bs-target="#pane-overview" type="button" role="tab">
+                <i class="bi bi-grid me-1"></i><span class="d-none d-sm-inline">Overview</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-services" data-bs-toggle="tab" data-bs-target="#pane-services" type="button" role="tab">
+                <i class="bi bi-list-check me-1"></i><span class="d-none d-sm-inline">By Service</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-aging" data-bs-toggle="tab" data-bs-target="#pane-aging" type="button" role="tab">
+                <i class="bi bi-clock-history me-1"></i><span class="d-none d-sm-inline">Aging</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-methods" data-bs-toggle="tab" data-bs-target="#pane-methods" type="button" role="tab">
+                <i class="bi bi-credit-card me-1"></i><span class="d-none d-sm-inline">Payment Methods</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-debtors" data-bs-toggle="tab" data-bs-target="#pane-debtors" type="button" role="tab">
+                <i class="bi bi-exclamation-triangle me-1"></i><span class="d-none d-sm-inline">Top Debtors</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-monthly" data-bs-toggle="tab" data-bs-target="#pane-monthly" type="button" role="tab">
+                <i class="bi bi-calendar3 me-1"></i><span class="d-none d-sm-inline">Monthly</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-appt" data-bs-toggle="tab" data-bs-target="#pane-appt" type="button" role="tab">
+                <i class="bi bi-calendar-check me-1"></i><span class="d-none d-sm-inline">Appointments</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-lab" data-bs-toggle="tab" data-bs-target="#pane-lab" type="button" role="tab">
+                <i class="bi bi-eyedropper me-1"></i><span class="d-none d-sm-inline">Lab Tests</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2" id="tab-patients" data-bs-toggle="tab" data-bs-target="#pane-patients" type="button" role="tab">
+                <i class="bi bi-people me-1"></i><span class="d-none d-sm-inline">By Patient</span>
+            </button>
+        </li>
+    </ul>
+</div>
+
+<!-- ===== TAB PANES ===== -->
+<div class="tab-content" id="reportTabsContent">
+
+<!-- ── TAB 1: OVERVIEW ── -->
+<div class="tab-pane fade show active" id="pane-overview" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3 p-0">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto"><span class="fw-semibold text-muted small"><i class="bi bi-funnel me-1"></i>Global Filters (applied to all Excel exports)</span></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">From</label><input type="date" class="form-control form-control-sm" id="gf-date-from"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">To</label><input type="date" class="form-control form-control-sm" id="gf-date-to"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Patient</label><input type="text" class="form-control form-control-sm" id="gf-patient" placeholder="Name…"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Inv. Status</label>
+                    <select class="form-select form-select-sm" id="gf-inv-status">
+                        <option value="">All</option><option value="draft">Draft</option><option value="sent">Sent</option>
+                        <option value="paid">Paid</option><option value="overdue">Overdue</option><option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-auto ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearGlobalFilters()"><i class="bi bi-x-circle"></i> Clear</button>
+                    <a href="{% url 'billing:export_billing_excel' %}" class="btn btn-sm btn-success" id="btn-dl-all-excel2">
+                        <i class="bi bi-file-earmark-excel"></i> Download Full Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-bar-chart me-2"></i>12-Month Revenue Trend</h6></div>
+                <div class="card-body"><canvas id="monthlyRevenueChart" height="100"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-pie-chart me-2"></i>Payment Methods (All-Time)</h6></div>
+                <div class="card-body"><canvas id="methodDoughnutOverview" height="190"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-warning"><i class="bi bi-clock-history me-2"></i>Aging Snapshot</h6></div>
+                <div class="card-body"><canvas id="agingOverviewChart" height="120"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-bar-chart-horizontal me-2"></i>Top 5 Services (All-Time)</h6></div>
+                <div class="card-body"><canvas id="svcOverviewChart" height="80"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 2: BY SERVICE ── -->
+<div class="tab-pane fade" id="pane-services" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto fw-semibold text-muted small"><i class="bi bi-funnel me-1"></i>Filter Services</div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">From</label><input type="date" class="form-control form-control-sm tab-date-from" data-tab="services"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">To</label><input type="date" class="form-control form-control-sm tab-date-to" data-tab="services"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Search</label><input type="text" class="form-control form-control-sm tab-search" data-tab="services" data-table="tbl-services" placeholder="Service name…"></div>
+                <div class="col-auto ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearTabFilter('services')"><i class="bi bi-x-circle"></i> Clear</button>
+                    <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="services"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-lg-9">
+            <div class="card shadow">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-bar-chart-horizontal me-2"></i>Top 10 Services by Revenue (All-Time)</h6></div>
+                <div class="card-body"><canvas id="svcBarChart" height="90"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card shadow">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-success"><i class="bi bi-calendar-check me-2"></i>This Month (Paid Invoices)</h6></div>
+                <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-dark sticky-top"><tr><th>Service</th><th class="text-center">Items</th><th class="text-end">Revenue</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>
+                        <tbody>
+                            {% for svc in revenue_by_service %}
+                            <tr>
+                                <td class="small">{{ svc.service__name|default:svc.description|default:"–" }}</td>
+                                <td class="text-center small">{{ svc.count }}</td>
+                                <td class="text-end fw-semibold small">{{ svc.total|floatformat:0 }}</td>
+                                <td class="text-end text-info small">{{ svc.paid_total|floatformat:0|default:0 }}</td>
+                                <td class="text-end text-warning small">{{ svc.balance_total|floatformat:0|default:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No paid data this month.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-table me-2"></i>All-Time Service Revenue Detail</h6></div>
+        <div class="card-body p-0" style="max-height:240px;overflow-y:auto;">
+            <table class="table table-sm table-hover mb-0 align-middle" id="tbl-services">
+                <thead class="table-dark sticky-top">
+                    <tr><th>#</th><th>Service / Description</th><th class="text-center">Times Billed</th><th class="text-end">Total Revenue</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th class="text-end">Avg Unit Price</th></tr>
+                </thead>
+                <tbody>
+                    {% for svc in revenue_by_service_alltime %}
+                    <tr>
+                        <td class="text-muted small">{{ forloop.counter }}</td>
+                        <td class="fw-semibold small">{{ svc.service__name|default:svc.description|default:"–" }}</td>
+                        <td class="text-center"><span class="badge bg-info rounded-pill">{{ svc.count }}</span></td>
+                        <td class="text-end fw-bold text-success small">{{ svc.total|floatformat:0 }}</td>
+                        <td class="text-end text-info small">{{ svc.paid_total|floatformat:0|default:0 }}</td>
+                        <td class="text-end text-warning small">{{ svc.balance_total|floatformat:0|default:0 }}</td>
+                        <td class="text-end text-muted small">{{ svc.avg|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-3">No service data available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 3: AGING ── -->
+<div class="tab-pane fade" id="pane-aging" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Aging is calculated as of today. Use the Excel export for a snapshot record.</span>
+            <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="aging"><i class="bi bi-file-earmark-excel"></i> Export Aging Excel</a>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-lg-5">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-warning"><i class="bi bi-clock-history me-2"></i>Accounts Receivable Aging</h6></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Bucket</th><th class="text-end">Invoices</th><th class="text-end">Amount (UGX)</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="badge bg-success">Current</span></td><td class="text-end">{{ aging_summary.current.invoices.count }}</td><td class="text-end fw-semibold">{{ aging_summary.current.total|floatformat:0 }}</td></tr>
+                            <tr><td><span class="badge bg-warning text-dark">1–30 Days</span></td><td class="text-end">{{ aging_summary.overdue_1_30.invoices.count }}</td><td class="text-end fw-semibold text-warning">{{ aging_summary.overdue_1_30.total|floatformat:0 }}</td></tr>
+                            <tr><td><span class="badge" style="background:#fd7e14;">31–60 Days</span></td><td class="text-end">{{ aging_summary.overdue_31_60.invoices.count }}</td><td class="text-end fw-semibold" style="color:#e07b00;">{{ aging_summary.overdue_31_60.total|floatformat:0 }}</td></tr>
+                            <tr><td><span class="badge bg-danger">61–90 Days</span></td><td class="text-end">{{ aging_summary.overdue_61_90.invoices.count }}</td><td class="text-end fw-semibold text-danger">{{ aging_summary.overdue_61_90.total|floatformat:0 }}</td></tr>
+                            <tr class="table-danger"><td><span class="badge bg-dark">90+ Days</span></td><td class="text-end">{{ aging_summary.overdue_90_plus.invoices.count }}</td><td class="text-end fw-bold text-danger">{{ aging_summary.overdue_90_plus.total|floatformat:0 }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-warning"><i class="bi bi-bar-chart me-2"></i>Aging Distribution</h6></div>
+                <div class="card-body"><canvas id="agingBarChart" height="140"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3"><h6 class="m-0 fw-bold text-danger"><i class="bi bi-people me-2"></i>Top Outstanding Balances by Patient</h6></div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light"><tr><th>Patient</th><th class="text-center">Invoices</th><th class="text-end">Outstanding (UGX)</th></tr></thead>
+                <tbody>
+                    {% for debtor in top_debtors %}
+                    <tr>
+                        <td>{{ debtor.patient__first_name }} {{ debtor.patient__last_name }}</td>
+                        <td class="text-center">{{ debtor.invoice_count }}</td>
+                        <td class="text-end fw-semibold text-danger">{{ debtor.outstanding|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted py-3">No outstanding balances.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 4: PAYMENT METHODS ── -->
+<div class="tab-pane fade" id="pane-methods" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto fw-semibold text-muted small"><i class="bi bi-funnel me-1"></i>Filter Payments</div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">From</label><input type="date" class="form-control form-control-sm tab-date-from" data-tab="methods"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">To</label><input type="date" class="form-control form-control-sm tab-date-to" data-tab="methods"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Method</label>
+                    <select class="form-select form-select-sm tab-method" data-tab="methods">
+                        <option value="">All</option><option value="cash">Cash</option><option value="mobile_money">Mobile Money</option>
+                        <option value="bank_transfer">Bank Transfer</option><option value="card">Card</option><option value="insurance">Insurance</option>
+                    </select>
+                </div>
+                <div class="col-auto ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearTabFilter('methods')"><i class="bi bi-x-circle"></i> Clear</button>
+                    <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="payments"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-lg-5">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-pie-chart me-2"></i>Payment Method Share</h6></div>
+                <div class="card-body d-flex justify-content-center align-items-center">
+                    <canvas id="methodDoughnutTab" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-success"><i class="bi bi-table me-2"></i>Method Breakdown (All-Time)</h6></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Method</th><th class="text-center">Transactions</th><th class="text-end">Total (UGX)</th><th style="width:120px;">Share</th></tr></thead>
+                        <tbody>
+                            {% for m in method_breakdown %}
+                            <tr>
+                                <td class="fw-semibold">{{ m.method }}</td>
+                                <td class="text-center"><span class="badge bg-info rounded-pill">{{ m.count }}</span></td>
+                                <td class="text-end fw-bold text-success">{{ m.total|floatformat:0 }}</td>
+                                <td>
+                                    {% if overall_stats.total_collected %}
+                                    <div class="progress" style="height:6px;">
+                                        <div class="progress-bar bg-primary" style="width:{% widthratio m.total overall_stats.total_collected 100 %}%;"></div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No payment data.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 5: TOP DEBTORS ── -->
+<div class="tab-pane fade" id="pane-debtors" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto fw-semibold text-muted small"><i class="bi bi-funnel me-1"></i>Filter Debtors</div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Patient Name</label><input type="text" class="form-control form-control-sm tab-search" data-tab="debtors" data-table="tbl-debtors" placeholder="Search…"></div>
+                <div class="col-auto ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearTabFilter('debtors')"><i class="bi bi-x-circle"></i> Clear</button>
+                    <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="all"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Top Patients with Outstanding Balances</h6>
+            <a href="{% url 'billing:invoice_aging_report' %}" class="btn btn-sm btn-outline-warning">Full Aging Report</a>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle" id="tbl-debtors">
+                <thead class="table-dark">
+                    <tr><th>#</th><th>Patient</th><th class="text-center">Open Invoices</th><th class="text-end">Outstanding (UGX)</th><th style="width:140px;">Risk Level</th></tr>
+                </thead>
+                <tbody>
+                    {% for debtor in top_debtors %}
+                    <tr>
+                        <td class="text-muted small">{{ forloop.counter }}</td>
+                        <td class="fw-semibold">
+                            <a href="{% url 'patients:patient_detail' debtor.patient__id %}" class="text-decoration-none">
+                                {{ debtor.patient__first_name }} {{ debtor.patient__last_name }}
+                            </a>
+                        </td>
+                        <td class="text-center"><span class="badge bg-warning text-dark">{{ debtor.invoice_count }}</span></td>
+                        <td class="text-end fw-bold text-danger">{{ debtor.outstanding|floatformat:0 }}</td>
+                        <td>
+                            {% if debtor.outstanding > 1000000 %}<span class="badge bg-danger">High</span>
+                            {% elif debtor.outstanding > 300000 %}<span class="badge bg-warning text-dark">Medium</span>
+                            {% else %}<span class="badge bg-success">Low</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No outstanding balances.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 6: MONTHLY REVENUE ── -->
+<div class="tab-pane fade" id="pane-monthly" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Showing last 12 months of completed payments.</span>
+            <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="all"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+        </div>
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-bar-chart me-2"></i>12-Month Revenue Trend</h6></div>
+        <div class="card-body"><canvas id="monthlyBarChart" height="80"></canvas></div>
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-calendar3 me-2"></i>Monthly Revenue Table</h6></div>
+        <div class="card-body p-0 overflow-auto">
+            <table class="table table-bordered table-sm mb-0 text-center">
+                <thead class="table-dark">
+                    <tr>{% for m in monthly_totals %}<th class="small">{{ m.month }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    <tr>{% for m in monthly_totals %}<td class="fw-semibold small">{{ m.revenue|floatformat:0 }}</td>{% endfor %}</tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 7: BY APPOINTMENT ── -->
+<div class="tab-pane fade" id="pane-appt" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto fw-semibold text-muted small"><i class="bi bi-funnel me-1"></i>Filter Appointments</div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">From</label><input type="date" class="form-control form-control-sm tab-date-from" data-tab="appt"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">To</label><input type="date" class="form-control form-control-sm tab-date-to" data-tab="appt"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Patient</label><input type="text" class="form-control form-control-sm tab-search" data-tab="appt" data-table="tbl-appt" placeholder="Name…"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Service</label><input type="text" class="form-control form-control-sm tab-search2" data-tab="appt" data-table="tbl-appt" data-col="2" placeholder="Service…"></div>
+                <div class="col-auto ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearTabFilter('appt')"><i class="bi bi-x-circle"></i> Clear</button>
+                    <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="appt"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-lg-5">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex justify-content-between">
+                    <h6 class="m-0 fw-bold text-info"><i class="bi bi-calendar-check me-2"></i>Revenue by Appointment Service</h6>
+                    <span class="badge bg-info">Total: UGX {{ appt_total|floatformat:0 }}</span>
+                </div>
+                <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-dark sticky-top"><tr><th>Service</th><th class="text-center">×</th><th class="text-end">Revenue</th></tr></thead>
+                        <tbody>
+                            {% for a in appt_by_service %}
+                            <tr>
+                                <td class="small fw-semibold">{{ a.appointment__service__name|default:"–" }}</td>
+                                <td class="text-center small">{{ a.count }}</td>
+                                <td class="text-end fw-bold text-success small">{{ a.total|floatformat:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">No appointment billing found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-info"><i class="bi bi-list-ul me-2"></i>Recent Appointments Billed</h6></div>
+                <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0" id="tbl-appt">
+                        <thead class="table-dark sticky-top"><tr><th>Date</th><th>Patient</th><th>Service</th><th>Invoice</th><th class="text-end">Amount</th></tr></thead>
+                        <tbody>
+                            {% for item in appt_billed %}
+                            <tr>
+                                <td class="small text-muted">{{ item.appointment.appointment_date }}</td>
+                                <td class="small">{{ item.appointment.patient.get_full_name }}</td>
+                                <td class="small fw-semibold">{{ item.appointment.service.name }}</td>
+                                <td class="small"><a href="{% url 'billing:invoice_detail' item.invoice.pk %}">{{ item.invoice.invoice_number }}</a></td>
+                                <td class="text-end small fw-bold text-success">{{ item.total_amount|floatformat:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No appointment billing records.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 8: BY LAB TEST ── -->
+<div class="tab-pane fade" id="pane-lab" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto fw-semibold text-muted small"><i class="bi bi-funnel me-1"></i>Filter Lab Tests</div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">From</label><input type="date" class="form-control form-control-sm tab-date-from" data-tab="lab"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">To</label><input type="date" class="form-control form-control-sm tab-date-to" data-tab="lab"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Patient</label><input type="text" class="form-control form-control-sm tab-search" data-tab="lab" data-table="tbl-lab" placeholder="Name…"></div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Test</label><input type="text" class="form-control form-control-sm tab-search2" data-tab="lab" data-table="tbl-lab" data-col="2" placeholder="Test name…"></div>
+                <div class="col-auto ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearTabFilter('lab')"><i class="bi bi-x-circle"></i> Clear</button>
+                    <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="lab"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-lg-5">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex justify-content-between">
+                    <h6 class="m-0 fw-bold text-danger"><i class="bi bi-eyedropper me-2"></i>Revenue by Test Type</h6>
+                    <span class="badge bg-danger">Total: UGX {{ lab_total|floatformat:0 }}</span>
+                </div>
+                <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-dark sticky-top"><tr><th>Test</th><th class="text-center">×</th><th class="text-end">Revenue</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>
+                        <tbody>
+                            {% for t in lab_by_test %}
+                            <tr>
+                                <td class="small fw-semibold">{{ t.lab_test_request__test__name|default:"–" }}</td>
+                                <td class="text-center small">{{ t.count }}</td>
+                                <td class="text-end fw-bold text-danger small">{{ t.total|floatformat:0 }}</td>
+                                <td class="text-end text-info small">{{ t.paid_total|floatformat:0|default:0 }}</td>
+                                <td class="text-end text-warning small">{{ t.balance_total|floatformat:0|default:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No lab test billing found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 fw-bold text-danger"><i class="bi bi-list-ul me-2"></i>Recent Lab Tests Billed</h6></div>
+                <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0" id="tbl-lab">
+                        <thead class="table-dark sticky-top"><tr><th>Date</th><th>Patient</th><th>Test</th><th>Invoice</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>
+                        <tbody>
+                            {% for item in lab_billed %}
+                            <tr>
+                                <td class="small text-muted">{{ item.lab_test_request.date_requested|date:"d M Y" }}</td>
+                                <td class="small">{{ item.lab_test_request.patient.get_full_name }}</td>
+                                <td class="small fw-semibold">{{ item.lab_test_request.test.name }}</td>
+                                <td class="small"><a href="{% url 'billing:invoice_detail' item.invoice.pk %}">{{ item.invoice.invoice_number }}</a></td>
+                                <td class="text-end small fw-bold text-danger">{{ item.total_amount|floatformat:0 }}</td>
+                                <td class="text-end text-info small">{{ item.paid_amount|floatformat:0|default:0 }}</td>
+                                <td class="text-end text-warning small">{{ item.balance_amount|floatformat:0|default:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="7" class="text-center text-muted py-3">No lab billing records.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── TAB 9: BY PATIENT ── -->
+<div class="tab-pane fade" id="pane-patients" role="tabpanel">
+    <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto fw-semibold text-muted small"><i class="bi bi-funnel me-1"></i>Filter Patients</div>
+                <div class="col-auto"><label class="form-label form-label-sm mb-0">Patient Name</label><input type="text" class="form-control form-control-sm tab-search" data-tab="patients" data-table="tbl-patients" placeholder="Search name…"></div>
+                <div class="col-auto ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearTabFilter('patients')"><i class="bi bi-x-circle"></i> Clear</button>
+                    <a href="#" class="btn btn-sm btn-success tab-excel-btn" data-section="all" data-patient-param="gf-patient"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="bi bi-person-lines-fill me-2"></i>Per-Patient Billing Summary (Top 30 by Total Invoiced)</h6></div>
+        <div class="card-body p-0" style="max-height:480px;overflow-y:auto;">
+            <table class="table table-sm table-hover mb-0 align-middle" id="tbl-patients">
+                <thead class="table-dark sticky-top">
+                    <tr>
+                        <th>#</th>
+                        <th>Patient</th>
+                        <th class="text-center">Invoices</th>
+                        <th class="text-center"><span class="text-success">Paid</span></th>
+                        <th class="text-center"><span class="text-danger">Overdue</span></th>
+                        <th class="text-end">Total Invoiced</th>
+                        <th class="text-end">Total Paid</th>
+                        <th class="text-end">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in patient_summary %}
+                    <tr>
+                        <td class="text-muted small">{{ forloop.counter }}</td>
+                        <td>
+                            <a href="{% url 'patients:patient_detail' p.id %}" class="fw-semibold text-decoration-none">{{ p.name }}</a>
+                        </td>
+                        <td class="text-center"><span class="badge bg-secondary">{{ p.invoice_count }}</span></td>
+                        <td class="text-center"><span class="badge bg-success">{{ p.paid_count }}</span></td>
+                        <td class="text-center"><span class="badge bg-{% if p.overdue_count > 0 %}danger{% else %}light text-dark{% endif %}">{{ p.overdue_count }}</span></td>
+                        <td class="text-end small fw-semibold">{{ p.total_invoiced|floatformat:0 }}</td>
+                        <td class="text-end small text-success fw-semibold">{{ p.total_paid|floatformat:0 }}</td>
+                        <td class="text-end small fw-bold {% if p.balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ p.balance|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">No patient billing data.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</div><!-- end tab-content -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// =====================================================================
+// FILTER & EXCEL URL BUILDER
+// =====================================================================
+const EXCEL_BASE = '{% url "billing:export_billing_excel" %}';
+
+function buildExcelUrl(extraParams) {
+    const p = new URLSearchParams();
+    const df = document.getElementById('gf-date-from').value;
+    const dt = document.getElementById('gf-date-to').value;
+    const pat = document.getElementById('gf-patient').value.trim();
+    const st  = document.getElementById('gf-inv-status').value;
+    if (df)  p.set('date_from', df);
+    if (dt)  p.set('date_to', dt);
+    if (pat) p.set('patient_q', pat);
+    if (st)  p.set('inv_status', st);
+    Object.entries(extraParams || {}).forEach(([k,v]) => { if (v) p.set(k,v); });
+    const qs = p.toString();
+    return EXCEL_BASE + (qs ? '?' + qs : '');
+}
+
+function updateAllExcelButtons() {
+    // Global buttons
+    const url = buildExcelUrl({});
+    document.getElementById('btn-dl-all-excel').href = url;
+    const btn2 = document.getElementById('btn-dl-all-excel2');
+    if (btn2) btn2.href = url;
+    // Per-tab buttons
+    document.querySelectorAll('.tab-excel-btn').forEach(btn => {
+        const section = btn.dataset.section || 'all';
+        const tabEl   = btn.closest('.tab-pane');
+        const extra   = {};
+        if (section !== 'all') extra.section = section;
+        // Per-tab date filters
+        if (tabEl) {
+            const df2 = tabEl.querySelector('.tab-date-from');
+            const dt2 = tabEl.querySelector('.tab-date-to');
+            const mth = tabEl.querySelector('.tab-method');
+            if (df2 && df2.value) extra.date_from = df2.value;
+            if (dt2 && dt2.value) extra.date_to   = dt2.value;
+            if (mth && mth.value) extra.pay_method = mth.value;
+        }
+        btn.href = buildExcelUrl(extra);
+    });
+}
+
+function filterTable(tableId, col1Val, col2Val, col2Idx) {
+    const tbl = document.getElementById(tableId);
+    if (!tbl) return;
+    const rows = tbl.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const text0 = cells.length > 0 ? cells[0].textContent.toLowerCase() : '';
+        const text1 = cells.length > 1 ? cells[1].textContent.toLowerCase() : '';
+        const textTarget = cells.length > (col2Idx || 1) ? cells[col2Idx || 1].textContent.toLowerCase() : '';
+        const match1 = !col1Val  || text1.includes(col1Val.toLowerCase());  // col1 = patient (col index 1)
+        const match2 = !col2Val  || textTarget.includes(col2Val.toLowerCase());
+        row.style.display = (match1 && match2) ? '' : 'none';
+    });
+}
+
+function clearGlobalFilters() {
+    ['gf-date-from','gf-date-to','gf-patient','gf-inv-status'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.tagName === 'SELECT' ? el.selectedIndex = 0 : el.value = ''; }
+    });
+    updateAllExcelButtons();
+}
+
+function clearTabFilter(tab) {
+    document.querySelectorAll(`[data-tab="${tab}"]`).forEach(el => {
+        el.tagName === 'SELECT' ? el.selectedIndex = 0 : el.value = '';
+    });
+    // Restore all rows in associated tables
+    document.querySelectorAll(`[data-tab="${tab}"][data-table]`).forEach(el => {
+        const tbl = document.getElementById(el.dataset.table);
+        if (tbl) tbl.querySelectorAll('tbody tr').forEach(r => r.style.display = '');
+    });
+    updateAllExcelButtons();
+}
+
+// Global filter changes → update Excel URLs
+['gf-date-from','gf-date-to','gf-patient','gf-inv-status'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateAllExcelButtons);
+});
+
+// Per-tab search inputs → filter rows + update Excel URLs
+document.querySelectorAll('.tab-search').forEach(el => {
+    el.addEventListener('input', () => {
+        const tableId = el.dataset.table;
+        const paired  = document.querySelector(`.tab-search2[data-table="${tableId}"]`);
+        filterTable(tableId, el.value, paired ? paired.value : '', paired ? parseInt(paired.dataset.col || 2) - 1 : 1);
+        updateAllExcelButtons();
+    });
+});
+document.querySelectorAll('.tab-search2').forEach(el => {
+    el.addEventListener('input', () => {
+        const tableId = el.dataset.table;
+        const primary = document.querySelector(`.tab-search[data-table="${tableId}"]`);
+        filterTable(tableId, primary ? primary.value : '', el.value, parseInt(el.dataset.col || 2) - 1);
+        updateAllExcelButtons();
+    });
+});
+
+// Per-tab date / method changes → update Excel URLs only
+document.querySelectorAll('.tab-date-from, .tab-date-to, .tab-method').forEach(el => {
+    el.addEventListener('input', updateAllExcelButtons);
+});
+
+// Init URLs on page load
+updateAllExcelButtons();
+// =====================================================================
+</script>
+<script>
+// ── Shared data ──
+const mLabels = {{ monthly_labels|safe }};
+const mData   = {{ monthly_data|safe }};
+const mColors = ['rgba(78,115,223,0.75)','rgba(78,115,223,0.75)','rgba(78,115,223,0.75)',
+                 'rgba(78,115,223,0.75)','rgba(78,115,223,0.75)','rgba(78,115,223,0.75)',
+                 'rgba(78,115,223,0.75)','rgba(78,115,223,0.75)','rgba(78,115,223,0.75)',
+                 'rgba(78,115,223,0.75)','rgba(78,115,223,0.75)','rgba(78,115,223,1)'];
+
+const methodColors = ['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b','#858796'];
+const rptMethodLabels = {{ method_chart_labels|safe }};
+const rptMethodData   = {{ method_chart_data|safe }};
+
+const agingLabels = {{ aging_chart_labels|safe }};
+const agingData   = {{ aging_chart_data|safe }};
+const agingColors = ['#1cc88a','#f6c23e','#fd7e14','#e74a3b','#6f0000'];
+
+const svcLabels = {{ svc_report_labels|safe }};
+const svcData   = {{ svc_report_data|safe }};
+
+const barOpts = (xLabel) => ({
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'UGX ' + ctx.parsed.y.toLocaleString() } } },
+    scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } } }
+});
+
+// ── Overview charts ──
+new Chart(document.getElementById('monthlyRevenueChart'), {
+    type: 'bar',
+    data: { labels: mLabels, datasets: [{ label: 'Revenue', data: mData, backgroundColor: mColors, borderColor: '#4e73df', borderWidth: 1 }] },
+    options: barOpts()
+});
+
+if (rptMethodLabels.length) {
+    new Chart(document.getElementById('methodDoughnutOverview'), {
+        type: 'doughnut',
+        data: { labels: rptMethodLabels, datasets: [{ data: rptMethodData, backgroundColor: methodColors, hoverOffset: 6 }] },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => ctx.label + ': UGX ' + ctx.parsed.toLocaleString() } } } }
+    });
+}
+
+new Chart(document.getElementById('agingOverviewChart'), {
+    type: 'bar',
+    data: { labels: agingLabels, datasets: [{ data: agingData, backgroundColor: agingColors, borderRadius: 4 }] },
+    options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'UGX ' + ctx.parsed.y.toLocaleString() } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } } } }
+});
+
+if (svcLabels.length) {
+    new Chart(document.getElementById('svcOverviewChart'), {
+        type: 'bar',
+        data: { labels: svcLabels.slice(0,5), datasets: [{ data: svcData.slice(0,5), backgroundColor: methodColors, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'UGX ' + ctx.parsed.x.toLocaleString() } } }, scales: { x: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } } } }
+    });
+}
+
+// ── Tab: By Service ──
+if (svcLabels.length) {
+    new Chart(document.getElementById('svcBarChart'), {
+        type: 'bar',
+        data: { labels: svcLabels, datasets: [{ label: 'Revenue', data: svcData, backgroundColor: ['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b','#858796','#5a5c69','#2e59d9','#17a673','#2c9faf'], borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'UGX ' + ctx.parsed.x.toLocaleString() } } }, scales: { x: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } } } }
+    });
+}
+
+// ── Tab: Aging ──
+new Chart(document.getElementById('agingBarChart'), {
+    type: 'bar',
+    data: { labels: agingLabels, datasets: [{ data: agingData, backgroundColor: agingColors, borderRadius: 4 }] },
+    options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'UGX ' + ctx.parsed.y.toLocaleString() } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } } } }
+});
+
+// ── Tab: Payment Methods ──
+if (rptMethodLabels.length) {
+    new Chart(document.getElementById('methodDoughnutTab'), {
+        type: 'doughnut',
+        data: { labels: rptMethodLabels, datasets: [{ data: rptMethodData, backgroundColor: methodColors, hoverOffset: 8 }] },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => ctx.label + ': UGX ' + ctx.parsed.toLocaleString() } } } }
+    });
+}
+
+// ── Tab: Monthly ──
+new Chart(document.getElementById('monthlyBarChart'), {
+    type: 'bar',
+    data: { labels: mLabels, datasets: [{ label: 'Revenue', data: mData, backgroundColor: mColors, borderColor: '#4e73df', borderWidth: 1 }] },
+    options: barOpts()
+});
+</script>
+
+<style>
+.border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+.border-left-success { border-left: 0.25rem solid #1cc88a !important; }
+.border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
+.border-left-info    { border-left: 0.25rem solid #36b9cc !important; }
+.border-left-danger  { border-left: 0.25rem solid #e74a3b !important; }
+.rpt-tabs-wrap .nav-tabs { border-bottom: 2px solid #dee2e6; }
+.rpt-tabs-wrap .nav-link { font-size: .82rem; font-weight: 500; }
+.rpt-tabs-wrap .nav-link.active { font-weight: 700; }
+</style>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Cash Flow</h2>
+<table class="table mt-3">
+    <thead>
+        <tr>
+            <th>Drug</th>
+            <th>Amount</th>
+            <th>Currency</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Country</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for flow in flows %}
+        <tr>
+            <td>{{ flow.drug }}</td>
+            <td>{{ flow.amount }}</td>
+            <td>{{ flow.currency }}</td>
+            <td>{{ flow.flow_type }}</td>
+            <td>{{ flow.description }}</td>
+            <td>{{ flow.country }}</td>
+            <td>{{ flow.date }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">No cash flow records found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'inventory:drug_list' %}" class="btn btn-secondary">Back to Inventory</a>
+{% endblock %}

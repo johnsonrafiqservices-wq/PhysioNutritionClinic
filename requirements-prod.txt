@@ -1,0 +1,26 @@
+# Production Requirements
+# Install with: pip install -r requirements-prod.txt
+
+# Include base requirements
+-r requirements.txt
+
+# Production Server
+gunicorn==23.0.0
+
+# Production Database
+psycopg2-binary==2.9.10
+
+# Static Files & Storage
+whitenoise==6.9.0
+django-storages==1.14.6
+
+# Security & Monitoring
+sentry-sdk==2.34.1
+
+# Environment Management
+python-decouple==3.8
+python-dotenv==1.0.1
+dj-database-url==3.0.1
+
+# CORS Headers (if needed for API)
+django-cors-headers==4.3.1

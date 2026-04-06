@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}
+<i class="bi bi-cart-check me-2"></i>Purchase Orders
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:inventory_dashboard' %}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+</a>
+<a href="{% url 'pharmacy:purchase_order_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> New Purchase Order
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Options -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="status" class="form-label">Filter by Status</label>
+                <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="ordered" {% if status_filter == 'ordered' %}selected{% endif %}>Ordered</option>
+                    <option value="received" {% if status_filter == 'received' %}selected{% endif %}>Received</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+                <a href="{% url 'pharmacy:purchase_order_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-1"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Purchase Orders Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-list-check me-2"></i>Purchase Orders List
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if purchase_orders %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>PO Number</th>
+                        <th>Supplier</th>
+                        <th>Order Date</th>
+                        <th>Expected Delivery</th>
+                        <th>Total Amount (UGX)</th>
+                        <th>Status</th>
+                        <th>Created By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for po in purchase_orders %}
+                    <tr>
+                        <td><strong>{{ po.po_number }}</strong></td>
+                        <td>{{ po.supplier.name }}</td>
+                        <td>{{ po.order_date|date:"M d, Y" }}</td>
+                        <td>{{ po.expected_delivery_date|date:"M d, Y"|default:"Not set" }}</td>
+                        <td>{{ po.total_amount|floatformat:0 }}</td>
+                        <td>
+                            {% if po.status == 'draft' %}
+                                <span class="fw-semibold text-secondary">Draft</span>
+                            {% elif po.status == 'pending' %}
+                                <span class="fw-semibold text-warning text-dark">Pending</span>
+                            {% elif po.status == 'approved' %}
+                                <span class="fw-semibold text-info">Approved</span>
+                            {% elif po.status == 'ordered' %}
+                                <span class="fw-semibold text-primary">Ordered</span>
+                            {% elif po.status == 'received' %}
+                                <span class="fw-semibold text-success">Received</span>
+                            {% elif po.status == 'cancelled' %}
+                                <span class="fw-semibold text-danger">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ po.created_by.get_full_name }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'pharmacy:purchase_order_detail' po.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if po.status == 'draft' %}
+                                <a href="{% url 'pharmacy:purchase_order_edit' po.pk %}" class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem; color: var(--alafia-text-muted);"></i>
+            <h4 class="mt-3">No Purchase Orders Found</h4>
+            <p class="text-muted">
+                {% if status_filter %}
+                    No purchase orders with status "{{ status_filter }}" found.
+                {% else %}
+                    No purchase orders have been created yet. Create your first purchase order to get started.
+                {% endif %}
+            </p>
+            <a href="{% url 'pharmacy:purchase_order_create' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle me-1"></i> Create Purchase Order
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Status Legend -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i>Status Information
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-2">
+                <span class="fw-semibold text-secondary">Draft</span>
+                <small class="d-block mt-1 text-muted">Being prepared</small>
+            </div>
+            <div class="col-md-2">
+                <span class="fw-semibold text-warning text-dark">Pending</span>
+                <small class="d-block mt-1 text-muted">Awaiting approval</small>
+            </div>
+            <div class="col-md-2">
+                <span class="fw-semibold text-info">Approved</span>
+                <small class="d-block mt-1 text-muted">Ready to order</small>
+            </div>
+            <div class="col-md-2">
+                <span class="fw-semibold text-primary">Ordered</span>
+                <small class="d-block mt-1 text-muted">Sent to supplier</small>
+            </div>
+            <div class="col-md-2">
+                <span class="fw-semibold text-success">Received</span>
+                <small class="d-block mt-1 text-muted">Delivery complete</small>
+            </div>
+            <div class="col-md-2">
+                <span class="fw-semibold text-danger">Cancelled</span>
+                <small class="d-block mt-1 text-muted">Order cancelled</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

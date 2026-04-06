@@ -1,0 +1,567 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-clipboard-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Lab Test Results</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-success btn-sm" id="batchExportBtn" onclick="batchExportReports()" style="display:none;">
+    <i class="bi bi-download"></i> Export Selected (<span id="selectedCount">0</span>)
+</button>
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addResultModal">
+    <i class="bi bi-plus-circle"></i> Add Result
+</button>
+<a href="{% url 'laboratory:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Dashboard
+</a>
+{% endblock %}
+
+{% block content %}
+
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Total Results</div>
+                        <h3 class="mb-0">{{ results.count }}</h3>
+                    </div>
+                    <div class="metric-icon" style="background: var(--alafia-primary-light); color: var(--alafia-primary);">
+                        <i class="bi bi-clipboard-data"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Verified</div>
+                        <h3 class="mb-0">{{ results|dictsort:"verified"|length }}</h3>
+                    </div>
+                    <div class="metric-icon" style="background: #d1fae5; color: #059669;">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Abnormal</div>
+                        <h3 class="mb-0">{{ results|dictsort:"is_abnormal"|length }}</h3>
+                    </div>
+                    <div class="metric-icon" style="background: #fee2e2; color: #dc2626;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Today</div>
+                        <h3 class="mb-0" id="todayCount">0</h3>
+                    </div>
+                    <div class="metric-icon" style="background: #dbeafe; color: #2563eb;">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-4" style="border: 1px solid #e3e6f0;">
+    <div class="card-body py-2">
+        <div class="row align-items-center g-2">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" id="searchResults"
+                    placeholder="🔍 Search by patient, test, or sample ID..." onkeyup="filterResults()">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="statusFilter" onchange="filterResults()">
+                    <option value="">All Status</option>
+                    <option value="verified">Verified</option>
+                    <option value="unverified">Unverified</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="abnormalFilter" onchange="filterResults()">
+                    <option value="">All Results</option>
+                    <option value="normal">Normal</option>
+                    <option value="abnormal">Abnormal</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" class="form-control form-control-sm" id="dateFilter" onchange="filterResults()">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearFilters()">
+                    <i class="bi bi-x-circle"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Laboratory Test Results</h5>
+            <span class="fw-semibold text-primary" id="resultCount">{{ results.count }} Results</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="resultsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 3%;">
+                            <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th style="width: 4%;">#</th>
+                        <th style="width: 17%;">Patient</th>
+                        <th style="width: 16%;">Test</th>
+                        <th style="width: 8%;">Sample ID</th>
+                        <th style="width: 13%;">Status</th>
+                        <th style="width: 11%;">Date</th>
+                        <th style="width: 11%;">Reported By</th>
+                        <th style="width: 12%;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                    <tr class="result-row" 
+                        data-patient="{{ result.request.patient.get_full_name|lower }}"
+                        data-test="{{ result.request.test.name|lower }}"
+                        data-sample="{{ result.request.sample_id|lower }}"
+                        data-verified="{% if result.verified %}verified{% else %}unverified{% endif %}"
+                        data-abnormal="{% if result.is_abnormal %}abnormal{% else %}normal{% endif %}"
+                        data-date="{{ result.date_reported|date:'Y-m-d' }}"
+                        style="white-space: nowrap;">
+                        <td>
+                            <input type="checkbox" class="form-check-input test-checkbox" value="{{ result.request.id }}" onchange="updateBatchExportButton()">
+                        </td>
+                        <td>{{ forloop.counter }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <span class="fw-bold">{{ result.request.patient.get_full_name }}</span>
+                            <small class="text-muted ms-1">({{ result.request.patient.patient_id }})</small>
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ result.request.test.name }} - {{ result.request.test.category|title }}">
+                            {{ result.request.test.name }}
+                        </td>
+                        <td style="white-space: nowrap;">
+                            <span class="fw-semibold text-secondary">{{ result.request.sample_id|default:"-" }}</span>
+                        </td>
+                        <td style="white-space: nowrap;">
+                            {% if result.verified %}
+                            <span class="fw-semibold text-success" title="Verified on {{ result.verified_at|date:'M d, Y' }}">
+                                <i class="bi bi-shield-check"></i> Verified
+                            </span>
+                            {% else %}
+                            <span class="fw-semibold text-warning text-dark">
+                                <i class="bi bi-clock"></i> Pending
+                            </span>
+                            {% endif %}
+                            {% if result.is_abnormal %}
+                            <span class="fw-semibold text-danger ms-1">Abnormal</span>
+                            {% elif result.result_value %}
+                            <span class="fw-semibold text-success ms-1">Normal</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap;">{{ result.date_reported|date:"d/m/Y H:i" }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{% if result.reported_by %}{{ result.reported_by.get_full_name }}{% else %}-{% endif %}">
+                            {% if result.reported_by %}
+                            {{ result.reported_by.get_full_name|truncatewords:2 }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap;">
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewResult({{ result.id }})" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success ms-1" onclick="printResultDirect({{ result.id }})" title="Print Result">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No test results found.</p>
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addResultModal">
+                                <i class="bi bi-plus-circle"></i> Add First Result
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Result Modal -->
+<div class="modal fade" id="addResultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form data-modal-form method="post" action="{% url 'laboratory:labtest_result_add' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h6 class="modal-title mb-0"><i class="bi bi-plus-circle"></i> Add Laboratory Result</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="font-size: 0.9rem;">
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Test Request *</label>
+                        <select name="request" class="form-select form-select-sm" required id="testRequestSelect">
+                            <option value="">Select Test Request</option>
+                            {% for req in pending_requests %}
+                            <option value="{{ req.id }}" 
+                                    data-normal-range="{{ req.test.normal_range }}"
+                                    data-test-name="{{ req.test.name }}">
+                                {{ req.patient.get_full_name }} - {{ req.test.name }} ({{ req.sample_id }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="normalRangeInfo" class="alert alert-info d-none mb-2 py-2">
+                        <small><strong>Normal Range:</strong> <span id="normalRangeValue"></span></small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Result Value *</label>
+                                <textarea name="result_value" class="form-control form-control-sm" rows="2" required placeholder="Enter test result values"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Unit</label>
+                                <input type="text" name="result_unit" class="form-control form-control-sm" placeholder="e.g., g/dL, mg/dL">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Interpretation</label>
+                        <textarea name="interpretation" class="form-control form-control-sm" rows="2" placeholder="Clinical interpretation of results"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Remarks</label>
+                        <textarea name="remarks" class="form-control form-control-sm" rows="2" placeholder="Additional remarks or notes"></textarea>
+                    </div>
+                    <div class="mb-0">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_abnormal" class="form-check-input" id="isAbnormal">
+                            <label class="form-check-label small" for="isAbnormal">
+                                <i class="bi bi-exclamation-triangle text-danger"></i> Mark as Abnormal
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="bi bi-save"></i> Save Result
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.metric-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.metric-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.result-row:hover {
+    background-color: #f8f9fa;
+}
+
+.table th {
+    font-weight: 600;
+    color: #4b5563;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+}
+</style>
+
+<script>
+// Filter results
+function filterResults() {
+    const searchText = document.getElementById('searchResults').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const abnormalFilter = document.getElementById('abnormalFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    
+    const rows = document.querySelectorAll('.result-row');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const patient = row.dataset.patient;
+        const test = row.dataset.test;
+        const sample = row.dataset.sample;
+        const verified = row.dataset.verified;
+        const abnormal = row.dataset.abnormal;
+        const date = row.dataset.date;
+        
+        let show = true;
+        
+        // Search filter
+        if (searchText && !patient.includes(searchText) && !test.includes(searchText) && !sample.includes(searchText)) {
+            show = false;
+        }
+        
+        // Status filter
+        if (statusFilter && verified !== statusFilter) {
+            show = false;
+        }
+        
+        // Abnormal filter
+        if (abnormalFilter && abnormal !== abnormalFilter) {
+            show = false;
+        }
+        
+        // Date filter
+        if (dateFilter && date !== dateFilter) {
+            show = false;
+        }
+        
+        row.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+    });
+    
+    document.getElementById('resultCount').textContent = `${visibleCount} Results`;
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('searchResults').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('abnormalFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    filterResults();
+}
+
+// View result details - navigate to dedicated page
+function viewResult(resultId) {
+    window.location.href = `/laboratory/result/${resultId}/`;
+}
+
+// Print lab report - use browser's native print dialog
+function printLabReport() {
+    // Simply use the browser's print function
+    // This will use all the CSS from the template including @media print styles
+    window.print();
+}
+
+// Print result directly - opens in new window and triggers print
+function printResultDirect(resultId) {
+    // Open result detail page in new window
+    const printWindow = window.open(`/laboratory/result/${resultId}/`, '_blank', 'width=900,height=800');
+    
+    // Wait for the page to load, then trigger print
+    if (printWindow) {
+        printWindow.onload = function() {
+            setTimeout(function() {
+                printWindow.print();
+            }, 500);
+        };
+    }
+}
+
+// Show normal range when test request is selected
+document.addEventListener('DOMContentLoaded', function() {
+    const testRequestSelect = document.getElementById('testRequestSelect');
+    if (testRequestSelect) {
+        testRequestSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const normalRange = selectedOption.getAttribute('data-normal-range');
+            const normalRangeInfo = document.getElementById('normalRangeInfo');
+            const normalRangeValue = document.getElementById('normalRangeValue');
+            
+            if (normalRange && normalRange !== 'None' && normalRange !== '') {
+                normalRangeValue.textContent = normalRange;
+                normalRangeInfo.classList.remove('d-none');
+            } else {
+                normalRangeInfo.classList.add('d-none');
+            }
+        });
+    }
+    
+    // Count today's results
+    const today = new Date().toISOString().split('T')[0];
+    const todayResults = document.querySelectorAll(`.result-row[data-date="${today}"]`);
+    document.getElementById('todayCount').textContent = todayResults.length;
+});
+
+// Batch export functionality
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.test-checkbox');
+    checkboxes.forEach(cb => {
+        if (cb.closest('tr').style.display !== 'none') {
+            cb.checked = checkbox.checked;
+        }
+    });
+    updateBatchExportButton();
+}
+
+function updateBatchExportButton() {
+    const checkedBoxes = document.querySelectorAll('.test-checkbox:checked');
+    const count = checkedBoxes.length;
+    const btn = document.getElementById('batchExportBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (count > 0) {
+        btn.style.display = 'inline-block';
+        countSpan.textContent = count;
+    } else {
+        btn.style.display = 'none';
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.test-checkbox');
+    const visibleCheckboxes = Array.from(allCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox && visibleCheckboxes.length > 0) {
+        const allChecked = visibleCheckboxes.every(cb => cb.checked);
+        selectAllCheckbox.checked = allChecked;
+    }
+}
+
+function batchExportReports() {
+    const checkedBoxes = document.querySelectorAll('.test-checkbox:checked');
+    const testIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+    
+    if (testIds.length === 0) {
+        alert('Please select at least one test to export');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('batchExportBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Exporting...';
+    
+    // Send request to batch export endpoint
+    fetch('{% url "laboratory:batch_export_reports" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ test_ids: testIds })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Export failed');
+            });
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lab_reports_${testIds.length}_tests.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        // Show success message
+        alert(`Successfully exported ${testIds.length} test report(s)`);
+    })
+    .catch(error => {
+        console.error('Export error:', error);
+        alert('Error exporting reports: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+</script>
+
+<style>
+/* Compact table styling */
+#resultsTable tbody tr td {
+    vertical-align: middle;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+#resultsTable {
+    table-layout: fixed;
+    width: 100%;
+}
+
+#resultsTable thead th {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Ensure badges stay inline and compact */
+#resultsTable .badge {
+    display: inline-block;
+    white-space: nowrap;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+}
+
+/* Compact row height */
+#resultsTable tbody tr {
+    height: 42px;
+}
+
+/* Compact buttons */
+#resultsTable .btn-sm {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.8rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+
+{% block title %}Report Audit Log - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-shield-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Report Audit Log</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+    <a href="{% url 'reports:report_performance' %}" class="btn btn-outline-info">
+        <i class="bi bi-speedometer2"></i> Performance Metrics
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filters Card -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="bi bi-funnel"></i> Filter Audit Logs
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="user" class="form-label">User</label>
+                <input type="text" class="form-control" id="user" name="user" 
+                       value="{{ filters.user }}" placeholder="Username">
+            </div>
+            <div class="col-md-3">
+                <label for="report_type" class="form-label">Report Type</label>
+                <select class="form-select" id="report_type" name="report_type">
+                    <option value="">All Types</option>
+                    {% for type in report_types %}
+                        <option value="{{ type }}" {% if filters.report_type == type %}selected{% endif %}>
+                            {{ type|title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="action" class="form-label">Action</label>
+                <select class="form-select" id="action" name="action">
+                    <option value="">All Actions</option>
+                    {% for action in actions %}
+                        <option value="{{ action }}" {% if filters.action == action %}selected{% endif %}>
+                            {{ action|title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="date_from" class="form-label">Date From</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" 
+                       value="{{ filters.date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_to" class="form-label">Date To</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" 
+                       value="{{ filters.date_to }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+                <a href="{% url 'reports:audit_log' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Audit Log Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="bi bi-list-ul"></i> Audit Log Entries
+        </h6>
+        <span class="fw-semibold text-info">{{ page_obj.paginator.count }} total entries</span>
+    </div>
+    <div class="card-body">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Report</th>
+                            <th>Action</th>
+                            <th>Execution Time</th>
+                            <th>Records</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in page_obj %}
+                            <tr class="{% if not log.success %}table-danger{% endif %}">
+                                <td>
+                                    <small>{{ log.timestamp|date:"M d, Y H:i:s" }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ log.user.username }}</strong>
+                                    <br><small class="text-muted">{{ log.user.get_full_name }}</small>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-secondary">{{ log.report_type|title }}</span>
+                                    <br><small>{{ log.report_name }}</small>
+                                </td>
+                                <td>
+                                    {% if log.action == 'viewed' %}
+                                        <span class="fw-semibold text-info">
+                                            <i class="bi bi-eye"></i> {{ log.get_action_display }}
+                                        </span>
+                                    {% elif log.action == 'exported_pdf' %}
+                                        <span class="fw-semibold text-danger">
+                                            <i class="bi bi-file-pdf"></i> PDF Export
+                                        </span>
+                                    {% elif log.action == 'exported_excel' %}
+                                        <span class="fw-semibold text-success">
+                                            <i class="bi bi-file-excel"></i> Excel Export
+                                        </span>
+                                    {% elif log.action == 'exported_csv' %}
+                                        <span class="fw-semibold text-warning">
+                                            <i class="bi bi-file-csv"></i> CSV Export
+                                        </span>
+                                    {% else %}
+                                        <span class="fw-semibold text-primary">{{ log.get_action_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.execution_time %}
+                                        <span class="{% if log.execution_time > 5 %}text-warning{% elif log.execution_time > 10 %}text-danger{% else %}text-success{% endif %}">
+                                            {{ log.execution_time|floatformat:2 }}s
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.record_count %}
+                                        <span class="fw-semibold text-light text-dark">{{ log.record_count }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.success %}
+                                        <span class="fw-semibold text-success">
+                                            <i class="bi bi-check-circle"></i> Success
+                                        </span>
+                                    {% else %}
+                                        <span class="fw-semibold text-danger">
+                                            <i class="bi bi-x-circle"></i> Failed
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#details-{{ log.id }}" 
+                                            aria-expanded="false">
+                                        <i class="bi bi-info-circle"></i> Details
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="details-{{ log.id }}">
+                                <td colspan="8" class="bg-light">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>IP Address:</strong> {{ log.ip_address|default:"N/A" }}<br>
+                                            <strong>File Size:</strong> 
+                                            {% if log.file_size %}
+                                                {{ log.file_size|filesizeformat }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>User Agent:</strong><br>
+                                            <small class="text-muted">{{ log.user_agent|truncatechars:100|default:"N/A" }}</small>
+                                        </div>
+                                        {% if log.parameters %}
+                                            <div class="col-12 mt-2">
+                                                <strong>Parameters:</strong><br>
+                                                <pre class="bg-white p-2 border rounded"><code>{{ log.parameters|pprint }}</code></pre>
+                                            </div>
+                                        {% endif %}
+                                        {% if log.error_message %}
+                                            <div class="col-12 mt-2">
+                                                <strong>Error Message:</strong><br>
+                                                <div class="alert alert-danger">{{ log.error_message }}</div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox" style="font-size: 2rem;"></i><br>
+                                    No audit log entries found matching your criteria.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <nav aria-label="Audit log pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.report_type %}&report_type={{ request.GET.report_type }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.report_type %}&report_type={{ request.GET.report_type }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.report_type %}&report_type={{ request.GET.report_type }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.report_type %}&report_type={{ request.GET.report_type }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">Last</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-inbox" style="font-size: 3rem;"></i><br>
+                <h5>No audit log entries found</h5>
+                <p>Start generating reports to see audit trail information here.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-graph-up"></i> Activity Summary
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-right">
+                            <h4 class="text-primary">{{ page_obj.paginator.count }}</h4>
+                            <small class="text-muted">Total Activities</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">
+                            {{ page_obj.object_list|length|add:0 }}
+                        </h4>
+                        <small class="text-muted">This Page</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-clock-history"></i> Recent Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if page_obj %}
+                    <p class="mb-1">
+                        <strong>Last Activity:</strong> 
+                        {{ page_obj.0.timestamp|timesince }} ago
+                    </p>
+                    <p class="mb-0">
+                        <strong>Most Active User:</strong> 
+                        {% for log in page_obj %}
+                            {% if forloop.first %}{{ log.user.username }}{% endif %}
+                        {% endfor %}
+                    </p>
+                {% else %}
+                    <p class="text-muted mb-0">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh functionality
+let autoRefresh = false;
+let refreshInterval;
+
+function toggleAutoRefresh() {
+    autoRefresh = !autoRefresh;
+    const button = document.getElementById('autoRefreshBtn');
+    
+    if (autoRefresh) {
+        button.innerHTML = '<i class="bi bi-pause"></i> Pause Auto-Refresh';
+        button.className = 'btn btn-warning btn-sm';
+        refreshInterval = setInterval(() => {
+            location.reload();
+        }, 30000); // Refresh every 30 seconds
+    } else {
+        button.innerHTML = '<i class="bi bi-play"></i> Auto-Refresh';
+        button.className = 'btn btn-success btn-sm';
+        clearInterval(refreshInterval);
+    }
+}
+</script>
+{% endblock %}

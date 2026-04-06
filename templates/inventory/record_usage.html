@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Record Drug Usage</h2>
+<form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Record Usage</button>
+    <a href="{% url 'inventory:drug_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

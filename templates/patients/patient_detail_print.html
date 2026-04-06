@@ -1,0 +1,577 @@
+{% extends 'base_print.html' %}
+{% load static %}
+
+{% block title %}{{ patient.get_full_name }} - Patient Printout{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Professional Medical Document Header -->
+    <div class="medical-document-header">
+        <div class="clinic-header-section">
+            <div class="clinic-info-left">
+                {% if clinic_settings.logo %}
+                <img src="{{ clinic_settings.logo.url }}" alt="{{ clinic_settings.clinic_name }}" class="clinic-logo-print">
+                {% else %}
+                <img src="{% static 'images/logo.png' %}" alt="Clinic Logo" class="clinic-logo-print" onerror="this.style.display='none'">
+                {% endif %}
+                <div class="clinic-details-print">
+                    <div class="clinic-name-print">{{ clinic_settings.clinic_name }}</div>
+                    <div class="clinic-address-print">
+                        {% if clinic_settings.address %}{{ clinic_settings.address|linebreaksbr }}{% else %}Address not set{% endif %}<br>
+                        {% if clinic_settings.phone %}Phone: {{ clinic_settings.phone }}{% endif %}
+                        {% if clinic_settings.phone and clinic_settings.email %}<br>{% endif %}
+                        {% if clinic_settings.email %}Email: {{ clinic_settings.email }}{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="document-title-section">
+                <h4 class="document-title">PATIENT MEDICAL RECORD</h4>
+                <div class="document-id">Patient ID: {{ patient.patient_id }}</div>
+                <div class="document-date">Generated: {% now "F j, Y g:i A" %}</div>
+            </div>
+        </div>
+
+        <div class="heartbeat-line">
+            <svg viewBox="0 0 680 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="0" y1="12" x2="290" y2="12" stroke="#8B0000" stroke-width="2"/>
+                <polyline points="290,12 300,12 308,2 316,22 324,6 332,18 340,12 350,12" fill="none" stroke="#8B0000" stroke-width="2"/>
+                <line x1="350" y1="12" x2="668" y2="12" stroke="#8B0000" stroke-width="2"/>
+                <circle cx="672" cy="12" r="6" fill="#8B0000"/>
+            </svg>
+        </div>
+        
+        <!-- Patient & Medical Details Header -->
+        <div class="patient-details-header">
+            <div class="patient-info-header">
+                <div class="header-section">
+                    <div class="header-label">Patient</div>
+                    <div class="header-value">{{ patient.get_full_name }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">ID</div>
+                    <div class="header-value">{{ patient.patient_id }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">DOB</div>
+                    <div class="header-value">{{ patient.date_of_birth|date:"M d, Y" }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Age</div>
+                    <div class="header-value">{{ patient.age }} years</div>
+                </div>
+            </div>
+            <div class="medical-info-header">
+                <div class="header-section">
+                    <div class="header-label">Gender</div>
+                    <div class="header-value">{{ patient.get_gender_display }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Blood Type</div>
+                    <div class="header-value">{% if patient.blood_type %}{{ patient.get_blood_type_display }}{% else %}Not specified{% endif %}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Phone</div>
+                    <div class="header-value">{{ patient.phone_number|default:"Not provided" }}</div>
+                </div>
+                <div class="header-section">
+                    <div class="header-label">Insurance</div>
+                    <div class="header-value">{{ patient.insurance_provider|default:"None" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact & Insurance Information -->
+    <div class="document-section">
+        <h4 class="section-heading">CONTACT & INSURANCE INFORMATION</h4>
+        <div class="section-content">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{ patient.email|default:"Not provided" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Address:</span>
+                    <span class="info-value">{{ patient.address|default:"Not provided" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Insurance Policy:</span>
+                    <span class="info-value">{{ patient.insurance_number|default:"Not provided" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vital Signs -->
+    {% if latest_vitals %}
+    <div class="print-section">
+        <h3>Latest Vital Signs</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <table class="print-table">
+                    <tr>
+                        <th>Date/Time:</th>
+                        <td>{{ latest_vitals.recorded_date|date:"F j, Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Blood Pressure:</th>
+                        <td>{{ latest_vitals.blood_pressure_systolic }}/{{ latest_vitals.blood_pressure_diastolic }} mmHg</td>
+                    </tr>
+                    <tr>
+                        <th>Heart Rate:</th>
+                        <td>{{ latest_vitals.heart_rate|default:"-" }} bpm</td>
+                    </tr>
+                    <tr>
+                        <th>Temperature:</th>
+                        <td>{{ latest_vitals.temperature|default:"-" }}°C</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="print-table">
+                    <tr>
+                        <th>Respiratory Rate:</th>
+                        <td>{{ latest_vitals.respiratory_rate|default:"-" }} /min</td>
+                    </tr>
+                    <tr>
+                        <th>Oxygen Saturation:</th>
+                        <td>{% if latest_vitals.oxygen_saturation %}{{ latest_vitals.oxygen_saturation }}%{% else %}-{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <th>Weight:</th>
+                        <td>{{ latest_vitals.weight|default:"-" }} kg</td>
+                    </tr>
+                    <tr>
+                        <th>Height:</th>
+                        <td>{{ latest_vitals.height|default:"-" }} cm</td>
+                    </tr>
+                    {% if latest_vitals.bmi %}
+                    <tr>
+                        <th>BMI:</th>
+                        <td>{{ latest_vitals.bmi|floatformat:1 }} 
+                            ({% if latest_vitals.bmi < 18.5 %}Underweight
+                            {% elif latest_vitals.bmi < 25 %}Normal
+                            {% elif latest_vitals.bmi < 30 %}Overweight
+                            {% else %}Obese
+                            {% endif %})
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Medical Information -->
+    <div class="print-section">
+        <h3>Medical Information</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Allergies</h4>
+                <div class="print-content-box">
+                    {% if patient.allergies %}
+                        {{ patient.allergies|linebreaksbr }}
+                    {% else %}
+                        <p class="text-muted">No known allergies</p>
+                    {% endif %}
+                </div>
+
+                <h4>Current Medications</h4>
+                <div class="print-content-box">
+                    {% if patient.current_medications %}
+                        {{ patient.current_medications|linebreaksbr }}
+                    {% else %}
+                        <p class="text-muted">No current medications</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h4>Medical History</h4>
+                <div class="print-content-box">
+                    {% if patient.medical_history %}
+                        {{ patient.medical_history|linebreaksbr }}
+                    {% else %}
+                        <p class="text-muted">No medical history recorded</p>
+                    {% endif %}
+                </div>
+
+                <h4>Surgical History</h4>
+                <div class="print-content-box">
+                    {% if patient.surgical_history %}
+                        {{ patient.surgical_history|linebreaksbr }}
+                    {% else %}
+                        <p class="text-muted">No surgical history recorded</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latest Triage Assessment -->
+    {% if latest_triage %}
+    <div class="print-section">
+        <h3>Latest Triage Assessment</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <table class="print-table">
+                    <tr>
+                        <th>Date/Time:</th>
+                        <td>{{ latest_triage.assessment_date|date:"F j, Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Priority Level:</th>
+                        <td>{{ latest_triage.get_priority_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>Chief Complaint:</th>
+                        <td>{{ latest_triage.chief_complaint|default:"-" }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="print-table">
+                    <tr>
+                        <th>Pain Level:</th>
+                        <td>{{ latest_triage.pain_level|default:"-" }}/10</td>
+                    </tr>
+                    <tr>
+                        <th>Blood Pressure:</th>
+                        <td>{{ latest_triage.blood_pressure|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Heart Rate:</th>
+                        <td>{{ latest_triage.heart_rate|default:"-" }} bpm</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        {% if latest_triage.notes %}
+        <div class="triage-notes">
+            <h4>Notes:</h4>
+            <div class="print-content-box">
+                {{ latest_triage.notes|linebreaksbr }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="print-footer">
+        <div class="disclaimer">
+            <p>This is a confidential medical document - {{ clinic_settings.clinic_name }}. Unauthorized access is prohibited.</p>
+        </div>
+        <div class="page-number">
+            Page <span class="page"></span> of <span class="topage"></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @page {
+        size: A4;
+        margin: 1.5cm;
+        @top-right {
+            content: "Patient ID: " string(patient_id);
+            font-size: 10pt;
+            font-family: Arial, sans-serif;
+        }
+        @bottom-center {
+            content: "Page " counter(page) " of " counter(pages);
+            font-size: 10pt;
+            font-family: Arial, sans-serif;
+        }
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 10pt;
+        line-height: 1.4;
+        color: #333;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    /* Professional Medical Document Header */
+    .medical-document-header {
+        background: #fff;
+        color: #333;
+        padding: 12px 15px 0 15px;
+        margin-bottom: 20px;
+        border-radius: 0;
+    }
+
+    .clinic-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .clinic-info-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .clinic-logo-print {
+        width: 90px;
+        height: 90px;
+        max-height: 90px;
+        max-width: 90px;
+        background: white;
+        padding: 4px;
+        border-radius: 50%;
+        border: 3px solid #8B0000;
+    }
+
+    .clinic-name-print {
+        font-size: 15pt;
+        font-weight: 700;
+        margin-bottom: 5px;
+        color: #0099CC;
+        white-space: nowrap;
+    }
+
+    .clinic-address-print {
+        font-size: 8.5pt;
+        color: #333;
+        line-height: 1.4;
+        white-space: nowrap;
+    }
+
+    .document-title-section {
+        text-align: right;
+    }
+
+    .document-title {
+        font-size: 14px !important;
+        font-weight: 200 !important;
+        margin: 0 0 8px 0;
+        color: #333;
+        /* letter-spacing: 1px; */
+    }
+
+    .document-id, .document-date {
+        font-size: 11px;
+        color: #555;
+        margin-bottom: 3px;
+    }
+
+    .heartbeat-line {
+        width: 100%;
+        height: 24px;
+        position: relative;
+        z-index: 5;
+    }
+
+    .heartbeat-line svg {
+        width: 100%;
+        height: 24px;
+        display: block;
+    }
+
+    /* Patient Details Header - Compact Style */
+    .patient-details-header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 12px;
+        padding: 12px 0 0 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .patient-info-header,
+    .medical-info-header {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px 12px;
+        font-size: 10px;
+    }
+
+    .header-section {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 32px;
+    }
+
+    .header-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        line-height: 1;
+    }
+
+    .header-value {
+        font-size: 11px;
+        font-weight: 600;
+        color: white;
+        line-height: 1.2;
+        word-break: break-word;
+    }
+
+    .print-section {
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+    }
+
+    /* Document Section Styling */
+    .document-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .document-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .section-heading {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 12px 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #1B5E96;
+        display: inline-block;
+    }
+
+    .section-content {
+        margin-top: 15px;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 6px;
+        border-left: 3px solid #1B5E96;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #475569;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .info-value {
+        font-weight: 500;
+        color: #1e293b;
+        font-size: 12px;
+        text-align: right;
+    }
+
+    .print-section h3 {
+        color: #1B5E96;
+        font-size: 12pt;
+        margin: 15px 0 10px 0;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .print-section h4 {
+        font-size: 10pt;
+        margin: 15px 0 5px 0;
+        color: #444;
+    }
+
+    .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+        font-size: 9pt;
+    }
+
+    .print-table th, .print-table td {
+        padding: 6px 8px;
+        text-align: left;
+        border: 1px solid #eee;
+    }
+
+    .print-table th {
+        background-color: #f5f5f5;
+        font-weight: bold;
+        color: #555;
+        width: 40%;
+    }
+
+    .print-content-box {
+        border: 1px solid #eee;
+        padding: 10px;
+        margin-bottom: 15px;
+        min-height: 60px;
+        border-radius: 4px;
+        background-color: #fafafa;
+    }
+
+    .triage-notes {
+        margin-top: 15px;
+    }
+
+    .print-footer {
+        margin-top: 30px;
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+        font-size: 8pt;
+        color: #777;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .disclaimer {
+        font-style: italic;
+    }
+
+    .page-number {
+        text-align: right;
+    }
+
+    @media print {
+        body {
+            font-size: 10pt;
+        }
+        
+        .no-print {
+            display: none !important;
+        }
+        
+        .print-section {
+            page-break-inside: avoid;
+        }
+        
+        .print-header, .print-title, .print-section h3 {
+            page-break-after: avoid;
+        }
+        
+        .print-footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard - {{ clinic_settings.clinic_name|default:"Clinic Management" }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-speedometer2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ clinic_settings.clinic_name|default:"Clinic" }} </span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center">
+    <span class="badge bg-light text-dark border px-2 py-1" style="font-size:.75rem;">
+        <i class="bi bi-calendar3 me-1"></i>{% now "D, M d" %}
+    </span>
+    <span class="badge text-white px-2 py-1" style="background:var(--alafia-primary);font-size:.75rem;">
+        <i class="bi bi-shield-check me-1"></i>{{ user.get_role_display|default:"Staff" }}
+    </span>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+.kpi{border-left:3px solid transparent;transition:border-color .2s;min-height:68px;}
+.kpi:hover{border-left-color:var(--accent,#0d6efd);}
+.kpi .kpi-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.kpi .kpi-val{font-size:1.35rem;font-weight:700;line-height:1.2;}
+.kpi .kpi-lbl{font-size:.72rem;color:#6c757d;margin:0;}
+.kpi .kpi-sub{font-size:.65rem;}
+.qa-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid #dee2e6;color:#495057;background:#fff;transition:all .15s;}
+.qa-btn:hover{background:var(--alafia-primary);color:#fff;border-color:var(--alafia-primary);}
+.qa-btn i{font-size:.9rem;}
+.mod-pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;text-decoration:none;color:#333;background:#fff;border:1px solid #e9ecef;transition:all .2s;font-size:.8rem;font-weight:500;}
+.mod-pill:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);color:var(--alafia-primary);border-color:var(--alafia-primary);}
+.mod-pill .mod-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;}
+.sched-item{padding:6px 0;border-bottom:1px solid #f0f0f0;}
+.sched-item:last-child{border-bottom:0;}
+</style>
+
+<!-- Welcome strip -->
+<div class="d-flex align-items-center justify-content-between rounded-3 px-3 py-2 mb-3" style="background:var(--alafia-gradient);color:#fff;">
+    <div>
+        <span class="fw-semibold" style="font-size:.95rem;">Welcome back, {{ user.get_full_name|default:user.username }}</span>
+        <span class="opacity-75 ms-2" style="font-size:.8rem;">{{ clinic_settings.clinic_name|default:"Clinic" }}</span>
+    </div>
+    <div class="d-flex gap-2">
+        {% if 'patients' in enabled_modules %}
+        <button type="button" class="btn btn-sm btn-light px-2 py-1" style="font-size:.75rem;" onclick="openPatientRegisterModal()"><i class="bi bi-person-plus me-1"></i>New Patient</button>
+        {% endif %}
+        {% if 'appointments' in enabled_modules %}
+        <button type="button" class="btn btn-sm btn-light px-2 py-1" style="font-size:.75rem;" onclick="openAppointmentModal()"><i class="bi bi-calendar-plus me-1"></i>Book Appt</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- KPI Row -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:var(--alafia-primary);">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:var(--alafia-primary-light);color:var(--alafia-primary);"><i class="bi bi-people-fill"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:var(--alafia-primary);">{{ total_patients|intcomma }}</div>
+                    <p class="kpi-lbl">Patients</p>
+                    {% if new_patients_today > 0 %}<span class="badge bg-success-subtle text-success kpi-sub">+{{ new_patients_today }} today</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1f5e0;color:#198754;"><i class="bi bi-calendar-check-fill"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#198754;">{{ appointments_today.count|default:0 }}</div>
+                    <p class="kpi-lbl">Today's Appts</p>
+                    <span class="badge bg-warning-subtle text-warning kpi-sub">{{ pending_appointments }} pending</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if 'laboratory' in enabled_modules %}
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:#e67e22;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-droplet-fill"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#e67e22;">{{ lab_pending }}</div>
+                    <p class="kpi-lbl">Pending Labs</p>
+                    <span class="badge bg-success-subtle text-success kpi-sub">{{ lab_completed_today }} done</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if 'billing' in enabled_modules %}
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-cash-stack"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#198754;">{{ revenue_today|intcomma }}</div>
+                    <p class="kpi-lbl">Revenue (UGX)</p>
+                    {% if pending_invoices > 0 %}<span class="badge bg-danger-subtle text-danger kpi-sub">{{ pending_invoices }} unpaid</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if 'pharmacy' in enabled_modules %}
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm kpi h-100" style="--accent:{% if low_stock_items > 0 %}#dc3545{% else %}#0d6efd{% endif %};">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#cfe2ff;color:#0d6efd;"><i class="bi bi-capsule"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:{% if low_stock_items > 0 %}#dc3545{% else %}#0d6efd{% endif %};">{{ low_stock_items }}</div>
+                    <p class="kpi-lbl">Low Stock</p>
+                    {% if low_stock_items > 0 %}<span class="badge bg-danger-subtle text-danger kpi-sub">Attention</span>{% else %}<span class="badge bg-success-subtle text-success kpi-sub">OK</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Quick Actions -->
+<style>
+.dash-qa .alafia-action-btn{padding:8px 6px;min-height:0;flex:1;min-width:80px;}
+.dash-qa .alafia-action-btn i{font-size:1.15rem;margin-bottom:4px;}
+.dash-qa .alafia-action-btn span{font-size:.73rem;}
+</style>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Actions
+            </div>
+            <div class="card-body py-2 dash-qa">
+                <div class="d-flex flex-wrap gap-2">
+                    {% if 'patients' in enabled_modules %}
+                        <button type="button" class="alafia-action-btn" onclick="openPatientRegisterModal()">
+                            <i class="bi bi-person-plus"></i>
+                            <span>New Patient</span>
+                        </button>
+                        <a href="{% url 'patients:patient_list' %}" class="alafia-action-btn">
+                            <i class="bi bi-search"></i>
+                            <span>Find Patient</span>
+                        </a>
+                    {% endif %}
+                    {% if 'appointments' in enabled_modules %}
+                        <button type="button" class="alafia-action-btn" onclick="openAppointmentModal()">
+                            <i class="bi bi-calendar-plus"></i>
+                            <span>New Appointment</span>
+                        </button>
+                    {% endif %}
+                    {% if 'billing' in enabled_modules %}
+                        <button type="button" class="alafia-action-btn" onclick="openFullInvoiceCreateModal()">
+                            <i class="bi bi-receipt"></i>
+                            <span>New Invoice</span>
+                        </button>
+                    {% endif %}
+                    {% if 'laboratory' in enabled_modules %}
+                        <a href="{% url 'laboratory:dashboard' %}" class="alafia-action-btn">
+                            <i class="bi bi-droplet"></i>
+                            <span>Laboratory</span>
+                        </a>
+                    {% endif %}
+                    {% if 'pharmacy' in enabled_modules %}
+                        <a href="{% url 'pharmacy:inventory' %}" class="alafia-action-btn">
+                            <i class="bi bi-capsule"></i>
+                            <span>Pharmacy</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content: Recent Patients + Today's Schedule -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-people text-primary me-1"></i>Recent Patients</h6>
+                <a href="{% url 'patients:patient_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_patients %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">ID</th>
+                                <th class="border-0">Name</th>
+                                <th class="border-0">Phone</th>
+                                <th class="border-0">Registered</th>
+                                <th class="border-0 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in recent_patients %}
+                            <tr>
+                                <td class="ps-3"><code class="text-primary" style="font-size:.78rem;">{{ patient.patient_id }}</code></td>
+                                <td class="fw-medium">{{ patient.get_full_name }}</td>
+                                <td class="text-muted">{{ patient.phone|default:"-" }}</td>
+                                <td class="text-muted">{{ patient.registration_date|date:"d M Y" }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size:.72rem;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-1 mb-2 small">No patients registered yet</p>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openPatientRegisterModal()"><i class="bi bi-person-plus me-1"></i>Register First Patient</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-calendar-event text-success me-1"></i>Today's Schedule</h6>
+                {% if 'appointments' in enabled_modules %}
+                <a href="{% url 'appointments:appointment_list' %}" class="text-success text-decoration-none" style="font-size:.75rem;">All <i class="bi bi-arrow-right"></i></a>
+                {% endif %}
+            </div>
+            <div class="card-body py-2 px-3">
+                {% if appointments_today %}
+                {% for appt in appointments_today|slice:":6" %}
+                <div class="sched-item d-flex justify-content-between align-items-center">
+                    <div style="min-width:0;">
+                        <div class="fw-medium text-truncate" style="font-size:.82rem;">{{ appt.patient.get_full_name }}</div>
+                        <div class="text-muted" style="font-size:.7rem;"><i class="bi bi-clock me-1"></i>{{ appt.appointment_time|time:"h:i A" }}{% if appt.service %} &middot; {{ appt.service.name }}{% endif %}</div>
+                    </div>
+                    <span class="badge {% if appt.status == 'completed' %}bg-success{% elif appt.status == 'cancelled' %}bg-danger{% elif appt.status == 'no_show' %}bg-secondary{% else %}bg-warning text-dark{% endif %}" style="font-size:.65rem;">
+                        {{ appt.get_status_display }}
+                    </span>
+                </div>
+                {% endfor %}
+                {% if appointments_today.count > 6 %}
+                <div class="text-center pt-1"><a href="{% url 'appointments:appointment_list' %}" class="text-muted small">+{{ appointments_today.count|add:"-6" }} more</a></div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-calendar-x text-muted" style="font-size: 1.8rem;"></i>
+                    <p class="text-muted mt-1 mb-0" style="font-size:.8rem;">No appointments today</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modules Grid -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-2 border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-grid-3x3-gap-fill text-primary me-1"></i>Modules</h6>
+    </div>
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2">
+            {% if 'patients' in enabled_modules %}
+            <a href="{% url 'patients:dashboard' %}" class="mod-pill">
+                <div class="mod-icon" style="background:var(--alafia-primary-light);color:var(--alafia-primary);"><i class="bi bi-people-fill"></i></div>
+                Patients
+            </a>
+            {% endif %}
+            {% if 'appointments' in enabled_modules %}
+            <a href="{% url 'appointments:appointment_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#d1f5e0;color:#198754;"><i class="bi bi-calendar-check-fill"></i></div>
+                Appointments
+            </a>
+            {% endif %}
+            {% if 'laboratory' in enabled_modules %}
+            <a href="{% url 'laboratory:dashboard' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-droplet-fill"></i></div>
+                Laboratory
+            </a>
+            {% endif %}
+            {% if 'pharmacy' in enabled_modules %}
+            <a href="{% url 'pharmacy:inventory' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#fde2e4;color:#dc3545;"><i class="bi bi-capsule"></i></div>
+                Pharmacy
+            </a>
+            {% endif %}
+            {% if 'billing' in enabled_modules %}
+            <a href="{% url 'billing:billing_dashboard' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-cash-stack"></i></div>
+                Billing
+            </a>
+            {% endif %}
+            {% if 'medical_records' in enabled_modules %}
+            <a href="{% url 'patients:patient_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#cfe2ff;color:#0d6efd;"><i class="bi bi-file-medical-fill"></i></div>
+                Medical Records
+            </a>
+            {% endif %}
+            {% if 'reports' in enabled_modules %}
+            <a href="{% url 'reports:reports_dashboard' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#e8daef;color:#6f42c1;"><i class="bi bi-bar-chart-fill"></i></div>
+                Reports
+            </a>
+            {% endif %}
+            {% if 'budget' in enabled_modules %}
+            <a href="{% url 'budget:dashboard' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#fef9e7;color:#d4ac0d;"><i class="bi bi-wallet2"></i></div>
+                Budget
+            </a>
+            {% endif %}
+            {% if 'staff_management' in enabled_modules %}
+            <a href="{% url 'staff_management:staff_list' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#ebf5fb;color:#2e86c1;"><i class="bi bi-person-badge-fill"></i></div>
+                Staff
+            </a>
+            {% endif %}
+            {% if 'clinic_settings' in enabled_modules %}
+            <a href="{% url 'clinic_settings:settings' %}" class="mod-pill">
+                <div class="mod-icon" style="background:#f0f0f0;color:#495057;"><i class="bi bi-gear-fill"></i></div>
+                Settings
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Record Payment - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-cash-coin me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Record Payment</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Recording Form</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Invoice Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Invoice Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.invoice|as_crispy_field }}
+                            <div id="invoice-info" class="mt-2" style="display: none;">
+                                <div class="alert alert-info">
+                                    <div id="invoice-details"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Details -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Payment Details</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.payment_date|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.amount|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.payment_method|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.reference_number|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Additional Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'billing:billing_dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-credit-card"></i> Record Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Payment Summary -->
+        <div class="card shadow mb-4" id="payment-summary" style="display: none;">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Summary</h6>
+            </div>
+            <div class="card-body">
+                <div id="summary-content"></div>
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Methods</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-credit-card text-primary"></i> Credit Card</span>
+                        <small class="text-muted">Visa, MasterCard, Amex</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-bank text-success"></i> Bank Transfer</span>
+                        <small class="text-muted">ACH, Wire</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-cash text-warning"></i> Cash</span>
+                        <small class="text-muted">In-person payments</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-file-text text-info"></i> Check</span>
+                        <small class="text-muted">Personal/Business</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Payments</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_payments %}
+                    {% for payment in recent_payments %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <small><strong>{{ payment.invoice.patient.get_full_name }}</strong></small><br>
+                                <small class="text-muted">{{ payment.invoice.invoice_number }}</small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-success">UGX {{ payment.amount|floatformat:0 }}</small><br>
+                                <small class="text-muted">{{ payment.payment_date|date:"M d" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No recent payments recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const invoiceSelect = document.getElementById('id_invoice');
+    const amountInput = document.getElementById('id_amount');
+    const paymentSummary = document.getElementById('payment-summary');
+    const summaryContent = document.getElementById('summary-content');
+    const invoiceInfo = document.getElementById('invoice-info');
+    const invoiceDetails = document.getElementById('invoice-details');
+
+    // Set default payment date to today
+    const paymentDate = document.getElementById('id_payment_date');
+    if (paymentDate && !paymentDate.value) {
+        const today = new Date();
+        paymentDate.value = today.toISOString().split('T')[0];
+    }
+
+    // Invoice selection handler
+    if (invoiceSelect) {
+        invoiceSelect.addEventListener('change', function() {
+            if (this.value) {
+                // Mock invoice data - in real app, fetch via AJAX
+                const selectedOption = this.options[this.selectedIndex];
+                const invoiceText = selectedOption.text;
+                
+                // Extract mock data from option text (in real app, this would come from server)
+                const mockInvoiceData = {
+                    number: 'INV-2024-001',
+                    patient: 'John Doe',
+                    total: 250.00,
+                    paid: 100.00,
+                    balance: 150.00,
+                    dueDate: '2024-02-15'
+                };
+
+                invoiceInfo.style.display = 'block';
+                invoiceDetails.innerHTML = `
+                    <strong>Invoice:</strong> ${mockInvoiceData.number}<br>
+                    <strong>Patient:</strong> ${mockInvoiceData.patient}<br>
+                    <strong>Total Amount:</strong> $${mockInvoiceData.total.toFixed(2)}<br>
+                    <strong>Amount Paid:</strong> $${mockInvoiceData.paid.toFixed(2)}<br>
+                    <strong>Balance Due:</strong> $${mockInvoiceData.balance.toFixed(2)}<br>
+                    <strong>Due Date:</strong> ${mockInvoiceData.dueDate}
+                `;
+
+                // Set default payment amount to balance due
+                if (amountInput) {
+                    amountInput.value = mockInvoiceData.balance.toFixed(2);
+                    amountInput.max = mockInvoiceData.balance.toFixed(2);
+                }
+
+                updatePaymentSummary(mockInvoiceData);
+            } else {
+                invoiceInfo.style.display = 'none';
+                paymentSummary.style.display = 'none';
+                if (amountInput) {
+                    amountInput.value = '';
+                    amountInput.removeAttribute('max');
+                }
+            }
+        });
+    }
+
+    // Amount input validation
+    if (amountInput) {
+        amountInput.addEventListener('input', function() {
+            const maxAmount = parseFloat(this.max);
+            const currentAmount = parseFloat(this.value);
+            
+            if (maxAmount && currentAmount > maxAmount) {
+                this.setCustomValidity(`Amount cannot exceed $${maxAmount.toFixed(2)}`);
+            } else if (currentAmount <= 0) {
+                this.setCustomValidity('Amount must be greater than 0');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+
+    function updatePaymentSummary(invoiceData) {
+        const paymentAmount = parseFloat(amountInput.value) || 0;
+        const newBalance = invoiceData.balance - paymentAmount;
+        
+        summaryContent.innerHTML = `
+            <div class="row">
+                <div class="col-12 mb-2">
+                    <strong>Current Balance:</strong> $${invoiceData.balance.toFixed(2)}
+                </div>
+                <div class="col-12 mb-2">
+                    <strong>Payment Amount:</strong> $${paymentAmount.toFixed(2)}
+                </div>
+                <div class="col-12 mb-2">
+                    <strong>New Balance:</strong> 
+                    <span class="${newBalance <= 0 ? 'text-success' : 'text-warning'}">
+                        $${Math.max(0, newBalance).toFixed(2)}
+                    </span>
+                </div>
+                ${newBalance <= 0 ? '<div class="col-12"><span class="fw-semibold text-success">Invoice will be marked as PAID</span></div>' : ''}
+            </div>
+        `;
+        
+        paymentSummary.style.display = 'block';
+    }
+
+    // Update payment summary when amount changes
+    if (amountInput) {
+        amountInput.addEventListener('input', function() {
+            if (invoiceSelect.value) {
+                const mockInvoiceData = {
+                    balance: parseFloat(this.max) || 0
+                };
+                updatePaymentSummary(mockInvoiceData);
+            }
+        });
+    }
+
+    // Pre-populate invoice if passed in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const invoiceId = urlParams.get('invoice');
+    if (invoiceId && invoiceSelect) {
+        invoiceSelect.value = invoiceId;
+        invoiceSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Payment method change handler for reference number field
+    const paymentMethodSelect = document.getElementById('id_payment_method');
+    const referenceField = document.getElementById('id_reference_number').closest('.form-group');
+    
+    if (paymentMethodSelect) {
+        paymentMethodSelect.addEventListener('change', function() {
+            const method = this.value;
+            const referenceLabel = referenceField.querySelector('label');
+            
+            switch(method) {
+                case 'credit_card':
+                    referenceLabel.textContent = 'Transaction ID';
+                    break;
+                case 'bank_transfer':
+                    referenceLabel.textContent = 'Transfer Reference';
+                    break;
+                case 'check':
+                    referenceLabel.textContent = 'Check Number';
+                    break;
+                default:
+                    referenceLabel.textContent = 'Reference Number';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

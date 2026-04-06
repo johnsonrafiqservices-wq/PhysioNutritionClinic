@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{% if form.instance.pk %}Edit Drug{% else %}Add Drug{% endif %}</h2>
+<form method="post">{% csrf_token %}
+    <div class="row">
+        <div class="col-md-6">{{ form.name.label_tag }}{{ form.name }}{{ form.atc_code.label_tag }}{{ form.atc_code }}{{ form.barcode.label_tag }}{{ form.barcode }}{{ form.manufacturer.label_tag }}{{ form.manufacturer }}{{ form.batch_number.label_tag }}{{ form.batch_number }}{{ form.expiry_date.label_tag }}{{ form.expiry_date }}</div>
+        <div class="col-md-6">{{ form.description.label_tag }}{{ form.description }}{{ form.quantity.label_tag }}{{ form.quantity }}{{ form.unit_price.label_tag }}{{ form.unit_price }}{{ form.currency.label_tag }}{{ form.currency }}{{ form.country.label_tag }}{{ form.country }}{{ form.supplier.label_tag }}{{ form.supplier }}</div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Save</button>
+    <a href="{% url 'inventory:drug_list' %}" class="btn btn-secondary mt-3">Cancel</a>
+</form>
+{% endblock %}

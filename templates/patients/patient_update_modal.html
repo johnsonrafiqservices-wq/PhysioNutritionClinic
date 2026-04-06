@@ -1,0 +1,407 @@
+<!-- Update Patient Modal - For All Patients -->
+<div class="modal fade" id="updatePatientModal" tabindex="-1" aria-labelledby="updatePatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updatePatientModalLabel">
+                    <i class="bi bi-person-gear me-2"></i>Update {{ patient.get_full_name }}'s Information
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Update Patient Information</strong><br>
+                    Edit patient details to keep records accurate and up-to-date.
+                </div>
+
+                <form id="updatePatientForm" method="post" action="{% url 'patients:patient_update' patient.pk %}">
+                    {% csrf_token %}
+                    
+                    <!-- Personal Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-person me-2"></i>Personal Information
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="first_name" value="{{ patient.first_name }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="last_name" value="{{ patient.last_name }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" name="date_of_birth" value="{{ patient.date_of_birth|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" name="gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="M" {% if patient.gender == 'M' %}selected{% endif %}>Male</option>
+                                    <option value="F" {% if patient.gender == 'F' %}selected{% endif %}>Female</option>
+                                    <option value="O" {% if patient.gender == 'O' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" name="phone" value="{{ patient.phone }}" placeholder="+1234567890">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email" value="{{ patient.email }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Identification Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-card-text me-2"></i>Identification Information
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Type</label>
+                                <select class="form-select" name="id_type">
+                                    <option value="">Select ID Type</option>
+                                    <option value="NATIONAL" {% if patient.id_type == 'NATIONAL' %}selected{% endif %}>National ID</option>
+                                    <option value="DRIVERS" {% if patient.id_type == 'DRIVERS' %}selected{% endif %}>Driver's License</option>
+                                    <option value="PASSPORT" {% if patient.id_type == 'PASSPORT' %}selected{% endif %}>Passport</option>
+                                    <option value="VOTER" {% if patient.id_type == 'VOTER' %}selected{% endif %}>Voter's ID</option>
+                                    <option value="OTHER" {% if patient.id_type == 'OTHER' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Number</label>
+                                <input type="text" class="form-control" name="id_number" value="{{ patient.id_number }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visit Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-clipboard-pulse me-2"></i>Visit Information
+                            </h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Visit</label>
+                                <select class="form-select" name="reason_for_visit">
+                                    <option value="">Select Reason</option>
+                                    <option value="CONSULTATION" {% if patient.reason_for_visit == 'CONSULTATION' %}selected{% endif %}>General Consultation</option>
+                                    <option value="CHECKUP" {% if patient.reason_for_visit == 'CHECKUP' %}selected{% endif %}>Routine Checkup</option>
+                                    <option value="EMERGENCY" {% if patient.reason_for_visit == 'EMERGENCY' %}selected{% endif %}>Emergency</option>
+                                    <option value="FOLLOWUP" {% if patient.reason_for_visit == 'FOLLOWUP' %}selected{% endif %}>Follow-up Visit</option>
+                                    <option value="REFERRAL" {% if patient.reason_for_visit == 'REFERRAL' %}selected{% endif %}>Referral</option>
+                                    <option value="TREATMENT" {% if patient.reason_for_visit == 'TREATMENT' %}selected{% endif %}>Treatment</option>
+                                    <option value="SCREENING" {% if patient.reason_for_visit == 'SCREENING' %}selected{% endif %}>Screening</option>
+                                    <option value="OTHER" {% if patient.reason_for_visit == 'OTHER' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-geo-alt me-2"></i>Address Information
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Address Line 1</label>
+                                <input type="text" class="form-control" name="address_line1" value="{{ patient.address_line1 }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Address Line 2</label>
+                                <input type="text" class="form-control" name="address_line2" value="{{ patient.address_line2 }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" name="city" value="{{ patient.city }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">State/Province</label>
+                                <input type="text" class="form-control" name="state" value="{{ patient.state }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Postal Code</label>
+                                <input type="text" class="form-control" name="postal_code" value="{{ patient.postal_code }}">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Country</label>
+                                <input type="text" class="form-control" name="country" value="{{ patient.country }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-telephone-plus me-2"></i>Emergency Contact
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Emergency Contact Name</label>
+                                <input type="text" class="form-control" name="emergency_contact_name" value="{{ patient.emergency_contact_name }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Emergency Contact Phone</label>
+                                <input type="tel" class="form-control" name="emergency_contact_phone" value="{{ patient.emergency_contact_phone }}">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Relationship</label>
+                                <input type="text" class="form-control" name="emergency_contact_relationship" value="{{ patient.emergency_contact_relationship }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Referring Doctor -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-person-badge me-2"></i>Referring Doctor
+                            </h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Doctor Name</label>
+                                <input type="text" class="form-control" name="referring_doctor_name" value="{{ patient.referring_doctor_name }}" placeholder="Doctor name">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Location / Clinic</label>
+                                <input type="text" class="form-control" name="referring_doctor_location" value="{{ patient.referring_doctor_location }}" placeholder="Clinic / Hospital">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Contact</label>
+                                <input type="text" class="form-control" name="referring_doctor_contact" value="{{ patient.referring_doctor_contact }}" placeholder="Phone or email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-heart-pulse me-2"></i>Medical Information
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Blood Type</label>
+                                <select class="form-select" name="blood_type">
+                                    <option value="">Select Blood Type</option>
+                                    <option value="A+" {% if patient.blood_type == 'A+' %}selected{% endif %}>A+</option>
+                                    <option value="A-" {% if patient.blood_type == 'A-' %}selected{% endif %}>A-</option>
+                                    <option value="B+" {% if patient.blood_type == 'B+' %}selected{% endif %}>B+</option>
+                                    <option value="B-" {% if patient.blood_type == 'B-' %}selected{% endif %}>B-</option>
+                                    <option value="AB+" {% if patient.blood_type == 'AB+' %}selected{% endif %}>AB+</option>
+                                    <option value="AB-" {% if patient.blood_type == 'AB-' %}selected{% endif %}>AB-</option>
+                                    <option value="O+" {% if patient.blood_type == 'O+' %}selected{% endif %}>O+</option>
+                                    <option value="O-" {% if patient.blood_type == 'O-' %}selected{% endif %}>O-</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Allergies</label>
+                                <textarea class="form-control" name="allergies" rows="2">{{ patient.allergies }}</textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Clinical Notes</label>
+                                <textarea class="form-control" name="medical_history" rows="2" placeholder="Clinical notes to appear on the report">{{ patient.medical_history }}</textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Current Medications</label>
+                                <textarea class="form-control" name="current_medications" rows="2">{{ patient.current_medications }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insurance Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-shield-check me-2"></i>Insurance Information
+                            </h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Insurance Provider</label>
+                                <input type="text" class="form-control" name="insurance_provider" value="{{ patient.insurance_provider }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Policy Number</label>
+                                <input type="text" class="form-control" name="insurance_policy_number" value="{{ patient.insurance_policy_number }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Group Number</label>
+                                <input type="text" class="form-control" name="insurance_group_number" value="{{ patient.insurance_group_number }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Group -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-people me-2"></i>Patient Group
+                            </h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Patient Group (for Pricing)</label>
+                                <select class="form-select" name="patient_group">
+                                    <option value="">Default Pricing</option>
+                                    {% for group in patient_groups %}
+                                    <option value="{{ group.id }}" {% if patient.patient_group.id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Assign patient to a group for differential pricing</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-success" id="savePatientInfo">
+                    <i class="bi bi-check-circle me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle patient information update
+document.addEventListener('DOMContentLoaded', function() {
+    const savePatientButton = document.getElementById('savePatientInfo');
+    if (savePatientButton) {
+        savePatientButton.addEventListener('click', function() {
+            const form = document.getElementById('updatePatientForm');
+            const formData = new FormData(form);
+            
+            // Show loading state
+            const originalText = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>Success!</strong> Patient information updated successfully.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row'));
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('updatePatientModal'));
+                    modal.hide();
+                    
+                    // Reload page to show updated information
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    // Show specific field errors inside the modal
+                    var errBox = document.getElementById('patientUpdateErrors');
+                    if (!errBox) {
+                        errBox = document.createElement('div');
+                        errBox.id = 'patientUpdateErrors';
+                        errBox.className = 'alert alert-danger alert-dismissible mb-3';
+                        errBox.innerHTML = '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                        document.getElementById('updatePatientForm').prepend(errBox);
+                    }
+                    var msgs = ['<strong><i class="bi bi-exclamation-triangle me-1"></i>Please fix the following errors:</strong><ul class="mb-0 mt-1">'];
+                    if (data.errors) {
+                        Object.keys(data.errors).forEach(function(field) {
+                            data.errors[field].forEach(function(msg) {
+                                var label = field.replace(/_/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+                                msgs.push('<li><strong>' + label + ':</strong> ' + msg + '</li>');
+                            });
+                        });
+                    } else {
+                        msgs.push('<li>An unknown error occurred. Please check all fields and try again.</li>');
+                    }
+                    msgs.push('</ul>');
+                    errBox.innerHTML = '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' + msgs.join('');
+                    errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating patient information. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                this.disabled = false;
+                this.innerHTML = originalText;
+            });
+        });
+    }
+});
+</script>

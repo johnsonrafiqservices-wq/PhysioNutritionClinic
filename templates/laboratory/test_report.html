@@ -1,0 +1,643 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Report – {{ request.test.name }} – {{ request.patient.get_full_name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 9pt;
+            line-height: 1.3;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 16px 22px;
+        }
+
+        .print-container { 
+            max-width: 840px; margin: 20px auto; padding: 30px 35px; 
+            display: flex; flex-direction: column; min-height: calc(100vh - 40px); 
+        }
+        
+        @media print {
+            .print-container {
+                min-height: 100vh;
+            }
+        }
+
+        /* ─── Header ─── */
+        .header-wrap {
+            display: flex; align-items: flex-start;
+            justify-content: space-between;
+            padding-bottom: 10px; margin-bottom: -40px;
+            position: relative; z-index: 10;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .logo-circle {
+            width: 90px; height: 90px;
+            border: 3px solid #8B0000; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: white; flex-shrink: 0;
+            position: relative; z-index: 15; margin-top: 9px;
+            overflow: hidden;
+        }
+        .logo-circle img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-icon { font-size: 34pt; line-height: 1; }
+        .clinic-text h1 {
+            font-size: 15pt; font-weight: bold; color: #0099CC;
+            margin: 0; line-height: 1.2; white-space: nowrap;
+        }
+        .clinic-tagline {
+            font-size: 8.5pt; color: #8B0000; font-style: italic;
+            margin-top: 2px; white-space: nowrap;
+        }
+        .header-right {
+            display: grid; grid-template-columns: auto 1fr;
+            gap: 3px 5px; font-size: 7.5pt; line-height: 1.3;
+            color: #333; flex-shrink: 0; align-items: center;
+        }
+        .ci {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; background: #444;
+            border-radius: 50%; color: #fff; font-size: 6pt; flex-shrink: 0;
+        }
+
+        /* ─── Heartbeat line ─── */
+        .ecg-line { width: 100%; height: 24px; position: relative; z-index: 5; }
+        .ecg-line svg { width: 100%; height: 24px; display: block; }
+
+        /* ─── Report title row ─── */
+        .report-id-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin: 6px 0 4px;
+        }
+        .report-id-left { display: flex; align-items: center; gap: 10px; }
+        .report-label {
+            font-size: 14pt; font-weight: 900; color: #0099CC;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .report-badge {
+            background: #0099CC; color: #fff;
+            padding: 3px 12px; border-radius: 4px;
+            font-size: 10pt; font-weight: 700; letter-spacing: 0.06em;
+        }
+        .report-dates { font-size: 8.5pt; color: #444; text-align: right; line-height: 1.6; }
+        .report-dates span { font-weight: 600; }
+        .title-divider { border: none; border-top: 2px solid #0d6efd; margin: 4px 0 14px; }
+
+        /* ─── Patient info table ─── */
+        .patient-section { margin-bottom: 6px; }
+        .patient-hdr {
+            background: #1a3a5c; color: #fff;
+            font-size: 9pt; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; padding: 6px 12px;
+        }
+        .patient-table { width: 100%; border-collapse: collapse; }
+        .patient-table td {
+            padding: 3px 10px; font-size: 8.5pt;
+            border-bottom: 1px solid #e0e0e0; vertical-align: top;
+        }
+        .patient-table .lbl { color: #0099CC; font-weight: 700; width: 28%; }
+
+        /* Patient info grid (matching certificate) */
+        .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+        .row-item { display: flex;  padding: 1px 2px; font-size: 8.5pt; }
+        .row-item label { font-weight: bold; white-space: nowrap; margin-right: 4px; color: #0099CC; }
+
+        /* ─── Department heading ─── */
+        .dept-heading {
+            text-align: center;
+            font-size: 12pt; font-weight: 700;
+            color: #0d6efd; text-decoration: underline;
+            
+        }
+        .category-section + .category-section .dept-heading {
+            margin-top: 2px;
+            padding-top: 4px;
+            border-top: 2px dashed #1a3a5c;
+        }
+
+        /* ─── Results table ─── */
+        .results-table {
+            width: 100%; border-collapse: collapse;
+            table-layout: fixed;
+            margin-bottom: 6px; font-size: 8pt;
+        }
+        .results-table th {
+            background: #fff; color: #1a1a1a;
+            padding: 2px 4px; text-align: left;
+            font-size: 7.5pt; font-weight: 700;
+            border: 1px solid #bbb;
+            line-height: 1.1;
+        }
+        .results-table td {
+            padding: 1.5px 4px; border: 1px solid #ccc;
+            vertical-align: top;
+            line-height: 1.1;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+        }
+        .results-table .subhdr td {
+            background: #d8d8d8; font-weight: 700;
+            /* font-size: 7.5pt; text-transform: uppercase; */
+            letter-spacing: 0.04em; border-color: #bbb;
+            padding: 1.5px 4px;
+        }
+        .results-table tr:not(.subhdr):nth-child(even) td { background: #f0f7ff; }
+
+        .flag-N { color: #1a7a1a; font-weight: 700; }
+        .flag-H { color: #c0392b; font-weight: 700; }
+        .flag-L { color: #1a4fa0; font-weight: 700; }
+        .flag-CH { color: #8B0000; font-weight: 900; font-size: 7pt; }
+        .flag-CL { color: #1a4fa0; font-weight: 900; font-size: 7pt; }
+        .flag-A  { color: #e67e22; font-weight: 700; }
+        .flag-nd { color: #999; }
+
+        /* ─── Remarks ─── */
+        .remark-box {
+            background: #f4f8ff; border-left: 3px solid #0099CC;
+            padding: 4px 8px; margin-bottom: 6px; font-size: 8pt;
+        }
+        .remark-box strong { display: block; color: #1a3a5c; margin-bottom: 2px; font-size: 8pt; text-transform: uppercase; }
+        .pending-box {
+            background: #fff3cd; border-left: 4px solid #ffc107;
+            padding: 6px 10px; border-radius: 3px;
+            font-size: 8.5pt; color: #856404; margin-bottom: 10px;
+        }
+
+        /* ─── Signatures ─── */
+        .sig-section { margin-top: 18px; }
+        .sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .sig-box { text-align: center; }
+        .sig-line { border-bottom: 1px solid #333; height: 30px; margin-bottom: 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; }
+        .sig-name { font-size: 9pt; font-weight: 700; color: #333; }
+        .sig-label { font-size: 8pt; color: #666; }
+
+        /* ─── Footer ─── */
+         .report-footer { margin-top: 10px; border-top: 2px solid #0099CC; padding-top: 8px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+        .footer-text { font-size: 7pt; color: #555; line-height: 1.5; }
+        .footer-text strong { color: #0099CC; font-size: 8pt; }
+        .qr-block { text-align: center; flex-shrink: 0; background: #fff; border: 1.5px solid #ddd; border-radius: 6px; padding: 6px 6px 4px; }
+        .qr-block img { width: 80px; height: 80px; display: block; image-rendering: pixelated; }
+        .qr-block small { font-size: 6pt; color: #666; display: block; margin-top: 3px; letter-spacing: 0.3px; }
+
+        /* ─── Footer wrapper (pushes to bottom of page) ─── */
+        .footer-wrapper { 
+            margin-top: auto; 
+            page-break-inside: avoid;
+        }
+
+        /* ─── Blue services footer ─── */
+        .services-footer { 
+            background: linear-gradient(135deg, #0099CC 0%, #0077AA 100%); 
+            color: white; 
+            padding: 6px 10px; 
+            font-size: 6.5pt; 
+            line-height: 1.4; 
+            text-align: center; 
+            border-radius: 3px; 
+            margin-bottom: 2px;
+            page-break-inside: avoid;
+            page-break-before: avoid;
+        }
+        
+
+        /* ─── Report type badge ─── */
+        .report-type-badge {
+            display: inline-block; padding: 3px 14px; border-radius: 4px;
+            font-size: 9pt; font-weight: 700; letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .report-type-badge.final { background: #1a7a1a; color: #fff; }
+        .report-type-badge.preliminary { background: #e67e22; color: #fff; }
+
+        /* ─── Referring doctor box ─── */
+        .ref-doctor-box {
+            background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;
+            padding: 6px 12px; margin-bottom: 14px; font-size: 8.5pt;
+            display: flex; gap: 20px; flex-wrap: wrap;
+        }
+        .ref-doctor-box .rd-label { color: #0099CC; font-weight: 700; margin-right: 4px; }
+
+        /* ─── Page numbers (print) ─── */
+        @page {
+            margin: 12mm 10mm 16mm 10mm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 7pt; color: #888;
+            }
+        }
+
+        /* ─── Print button ─── */
+        .print-actions {
+            position: fixed; top: 14px; right: 14px; z-index: 1000;
+            display: flex; gap: 8px;
+        }
+        .print-actions button {
+            padding: 8px 18px; font-size: 13px;
+            cursor: pointer; border: none; border-radius: 5px;
+        }
+        .btn-print { background: #1a3a5c; color: #fff; }
+        .btn-close-win { background: #6c757d; color: #fff; }
+
+        @media print {
+            body { padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .no-print { display: none !important; }
+            .print-container { max-width: 100%; padding: 15px 20px; min-height: 100%; }
+            .footer-wrapper { page-break-inside: avoid; }
+            .report-footer { margin-top: 8px !important; }
+        }
+
+        /* Automatic page numbering */
+        .page-number::after {
+            counter-increment: page;
+            content: counter(page);
+        }
+        .total-pages::after {
+            content: counter(pages);
+        }
+        body {
+            counter-reset: page pages;
+        }
+        .footer-wrapper {
+            counter-increment: pages;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-actions no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ Print</button>
+        <button class="btn-close-win" onclick="window.close()">✕ Close</button>
+        <button id="cloudinaryUploadBtn" onclick="publishTo('cloudinary')" style="display:none;background:#28a745;color:#fff;border:none;border-radius:5px;padding:8px 14px;font-size:13px;cursor:pointer;">{% if cloud_url %}&#128260; Update on Cloudinary{% else %}&#9729; Upload to Cloudinary{% endif %}</button>
+        <button id="firebaseUploadBtn" onclick="publishTo('firebase')" style="background:#FFA000;color:#fff;border:none;border-radius:5px;padding:8px 14px;font-size:13px;cursor:pointer;">{% if gdrive_url %}&#128260; Update on Firebase{% else %}&#128293; Upload to Firebase{% endif %}</button>
+        <a id="cloudinaryLink" href="{{ cloud_url }}" target="_blank" style="display:none;background:#1B8754;color:#fff;border-radius:5px;padding:8px 14px;font-size:13px;text-decoration:none;">&#9729; Cloudinary PDF</a>
+        <a id="firebaseLink" href="{{ gdrive_url }}" target="_blank" style="background:#E65100;color:#fff;border-radius:5px;padding:8px 14px;font-size:13px;text-decoration:none;display:{% if gdrive_url %}inline-block{% else %}none{% endif %};">&#128293; Firebase PDF</a>
+    </div>
+    <div id="reportToast" style="display:none;position:fixed;top:60px;right:10px;z-index:1001;background:#343a40;color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;max-width:400px;"></div>
+    <script>
+    function publishTo(target) {
+        var cBtn = document.getElementById('cloudinaryUploadBtn');
+        var fBtn = document.getElementById('firebaseUploadBtn');
+        var btn = (target === 'firebase') ? fBtn : cBtn;
+        var label = (target === 'firebase') ? 'Firebase' : 'Cloudinary';
+        btn.disabled = true; btn.textContent = 'Uploading to ' + label + '...';
+        var baseUrl = '{% url "laboratory:publish_report" request.pk %}';
+        fetch(baseUrl + '?target=' + target + window.location.search.replace('?','&'), {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}','Content-Type':'application/json'}})
+        .then(r => { if (!r.ok) return r.text().then(t => { throw new Error('Server ' + r.status + ': ' + t.substring(0, 200)); }); return r.json(); })
+        .then(data => {
+            var toast = document.getElementById('reportToast');
+            if (data.success) {
+                toast.style.background = '#155724';
+                toast.innerHTML = '&#10003; Uploaded to ' + label + '!';
+                btn.textContent = '\u{1F500} Update on ' + label;
+                if (data.url) { var cl = document.getElementById('cloudinaryLink'); cl.href = data.url; cl.style.display = 'inline-block'; }
+                if (data.gdrive_url) { var fl = document.getElementById('firebaseLink'); fl.href = data.gdrive_url; fl.style.display = 'inline-block'; }
+            } else {
+                toast.style.background = '#721c24';
+                toast.textContent = 'Error: ' + (data.error || 'Unknown error');
+            }
+            toast.style.display = 'block'; btn.disabled = false;
+            setTimeout(() => { toast.style.display = 'none'; }, 8000);
+        }).catch(e => { var toast = document.getElementById('reportToast'); toast.style.background='#721c24'; toast.textContent='Error: ' + e.message; toast.style.display='block'; btn.textContent='Upload to ' + label; btn.disabled=false; setTimeout(()=>{ toast.style.display='none'; }, 10000); });
+    }
+    </script>
+
+    <div class="print-container">
+
+        <!-- ═══ CLINIC HEADER ═══ -->
+        <div class="header-wrap">
+            <div class="header-left">
+                <div class="logo-circle">
+                    {% if logo_base64 %}
+                        <img src="{{ logo_base64 }}" alt="Logo">
+                    {% elif clinic_settings and clinic_settings.logo %}
+                        <img src="{{ clinic_settings.logo.url }}" alt="Logo">
+                    {% else %}
+                        <div class="logo-icon">🔬</div>
+                    {% endif %}
+                </div>
+                <div class="clinic-text">
+                    <h1>{% if clinic_settings and clinic_settings.clinic_name %}{{ clinic_settings.clinic_name }}{% else %}Alafia Point Wellness Clinic{% endif %}</h1>
+                    <div class="clinic-tagline">"Your Partner in Preventive health & Wellness."</div>
+                </div>
+            </div>
+            <div class="header-right">
+                {% if clinic_settings and clinic_settings.box_number %}
+                <span class="ci">&#9993;</span>
+                <div>{{ clinic_settings.box_number }}</div>
+                {% endif %}
+                
+                {% if clinic_settings and clinic_settings.postal_address %}
+                <span class="ci">&#9993;</span>
+                <div>{{ clinic_settings.postal_address|linebreaksbr }}</div>
+                {% endif %}
+                
+                {% if clinic_settings and clinic_settings.address %}
+                <span class="ci">&#9993;</span>
+                <div>{{ clinic_settings.address|linebreaksbr }}</div>
+                {% endif %}
+                
+                {% if clinic_settings and clinic_settings.phone %}
+                <span class="ci">&#9990;</span>
+                <div>{{ clinic_settings.phone }}</div>
+                {% endif %}
+
+                {% if clinic_settings and clinic_settings.email %}
+                <span class="ci">&#9993;</span>
+                <div>{{ clinic_settings.email }}</div>
+                {% endif %}
+
+                <!-- {% if clinic_settings and clinic_settings.website %}
+                <span class="ci">&#8962;</span>
+                <div>{{ clinic_settings.website }}</div>
+                {% endif %} -->
+            </div>
+        </div>
+
+        <!-- ECG heartbeat line -->
+        <div class="ecg-line">
+            <svg viewBox="0 0 680 26" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="0" y1="13" x2="290" y2="13" stroke="#8B0000" stroke-width="2"/>
+                <polyline points="290,13 300,13 308,3 316,23 324,7 332,19 340,13 350,13" fill="none" stroke="#8B0000" stroke-width="2"/>
+                <line x1="350" y1="13" x2="668" y2="13" stroke="#8B0000" stroke-width="2"/>
+                <circle cx="672" cy="13" r="6" fill="#8B0000"/>
+            </svg>
+        </div>
+
+        <!-- ═══ REPORT TITLE ROW ═══ -->
+        <div class="report-id-row">
+            <div class="report-id-left">
+                <span style="font-size:14pt; color:#0099CC;">&#x1F9EA;</span>
+                <span class="report-label">Lab Report</span>
+                <span class="report-badge">LAB-{{ request.pk|stringformat:"05d" }}</span>
+                <!-- <span class="report-type-badge {% if report_type == 'preliminary' %}preliminary{% else %}final{% endif %}">{% if report_type == 'preliminary' %}Preliminary{% else %}Final{% endif %}</span> -->
+            </div>
+            <div class="report-dates">
+                
+                Collection Date: <span>{% if request.patient.created_at %}{{ request.patient.created_at|date:"F d, Y" }}{% else %}—{% endif %}</span><br>
+                Received Date: <span>{{ request.date_requested|date:"F d, Y" }}</span><br>
+                Analysis Date: <span>{% if result and result.date_reported %}{{ result.date_reported|date:"F d, Y" }}{% else %}—{% endif %}</span><br>
+                Report Date: <span>{% if result and result.date_reported %}{{ result.date_reported|date:"F d, Y" }}{% else %}{% now "F d, Y" %}{% endif %}</span>
+            </div>
+        </div>
+        <!-- <hr class="title-divider"> -->
+
+        <!-- ═══ PATIENT INFORMATION ═══ -->
+        {% if show_patient %}
+        <div class="patient-section">
+            <div class="patient-hdr">Patient Information</div>
+            <div style="padding: 8px 12px;">
+                <div class="three-col">
+                    {% if show_patient_name %}<div class="row-item"><label>Patient Name:&nbsp </label><span>{{ request.patient.get_full_name|upper }}</span></div>{% endif %}
+                    {% if show_patient_id %}<div class="row-item"><label>Patient ID:</label>{{ request.patient.patient_id }}<span></span></div>{% endif %}
+                    {% if show_age %}<div class="row-item"><label>Age:</label><span>{{ request.patient.get_age }} years</span></div>{% endif %}
+                    {% if show_gender %}<div class="row-item"><label>Gender:</label>{{ request.patient.get_gender_display }}<span></span></div>{% endif %}
+                    {% if request.patient.height %}<div class="row-item"><label>Height:</label><span>{{ request.patient.height }} cm</span></div>{% endif %}
+                    {% if request.patient.weight %}<div class="row-item"><label>Weight:</label><span>{{ request.patient.weight }} kg</span></div>{% endif %}
+                    {% if request.patient.bmi %}<div class="row-item"><label>BMI:</label><span>{{ request.patient.bmi|floatformat:1 }} kg/m²</span></div>{% endif %}
+                    {% if show_phone %}<div class="row-item"><label>Phone:</label><span>{% if request.patient.phone %}{{ request.patient.phone }}{% else %}—{% endif %}</span></div>{% endif %}
+                    <!-- {% if show_nationality %}<div class="row-item"><label>Nationality:</label>{% if request.patient.country %}{{ request.patient.country }}{% else %}Uganda{% endif %}<span></span></div>{% endif %} -->
+                    <div class="row-item"><label>Nationality:</label>Ugandan<span></span></div>
+                    <!-- {% if show_id_type %}<div class="row-item"><label>ID Type:</label>{% if request.patient.id_type %}{{ request.patient.get_id_type_display }}{% else %}—{% endif %}<span></span></div>{% endif %} -->
+                    <!-- {% if show_id_number %}<div class="row-item"><label>ID Number:</label>{% if request.patient.id_number %}{{ request.patient.id_number }}{% else %}—{% endif %}<span></span></div>{% endif %} -->
+                    <!-- {% if sample_type %}<div class="row-item"><label>Sample Type:</label>{{ sample_type }}<span></span></div>{% endif %} -->
+                    <!-- {% if show_test_date %}<div class="row-item"><label>Test Date:</label>{{ request.date_requested|date:"d/m/Y" }}<span></span></div>{% endif %} -->
+                    {% if show_reason_for_test and request.reason_for_test %}
+                    <!-- <div class="row-item"><label>Reason for Test:</label><span>{{ request.reason_for_test }}</span></div> -->
+                    {% endif %}
+                    {% if show_clinical_notes %}
+                    {% with cn=request.patient.medical_history|default:request.clinical_notes %}
+                    <!-- {% if cn %}<div class="row-item"><label>Clinical Notes:</label>{{ cn }}<span></span></div>{% endif %} -->
+                    {% endwith %}
+                    {% endif %}
+                    {% if show_referring_doctor %}
+                    {% with rd_name=ref_doctor|default:request.patient.referring_doctor_name rd_loc=ref_location|default:request.patient.referring_doctor_location rd_con=ref_contact|default:request.patient.referring_doctor_contact %}
+                    {% if rd_name %}<div class="row-item"><label>Ref. Doctor:</label>{{ rd_name }}<span></span></div>{% endif %}
+                    <!-- <div class="row-item"><label>Ref. Doctor:</label>Dr. Ochung Samuel<span></span></div> -->
+                    {% if rd_loc %}<div class="row-item"><label>Ref. Location:</label>{{ rd_loc }}<span></span></div>{% endif %}
+                    {% if rd_con %}<div class="row-item"><label>Ref. Contact:</label>{{ rd_con }}<span></span></div>{% endif %}
+                    {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ═══ RESULTS SECTIONS (grouped by test category) ═══ -->
+        {% if show_results %}
+
+        {% if category_sections %}
+        {% for section in category_sections %}
+        <!-- ═══ {{ section.category_display }} SECTION ═══ -->
+        <div class="dept-heading">{{ section.category_display }} Department Report</div>
+        
+        {% for test_entry in section.tests %}
+        {% if test_entry.result and test_entry.profile_parameters %}
+        
+        <!-- Test Name Header (Blue Bar) -->
+        <div style="background: #0099CC; color: white; padding: 4px; font-size: 9.5pt; font-weight: bold; margin-top: 5px; margin-bottom: 2px;">
+            {{ test_entry.test.name }}
+        </div>
+        
+        <!-- Test Parameters Table -->
+        <table class="results-table" style="margin-top:0;">
+            <thead>
+                <tr>
+                    <th style="width:30%;">Parameter</th>
+                    <th style="width:15%;">Result</th>
+                    <th style="width:8%;">Units</th>
+                    <th style="width:8%;">Flag</th>
+                    <th style="width:20%;">Reference Range</th>
+                    <th style="width:19%;">Methodology</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Test Name Header -->
+                
+                {% if test_entry.has_multiple_param_cats %}
+                {% regroup test_entry.profile_parameters by param.category.id as category_list %}
+                {% for category in category_list %}
+                {% with category_obj=category.list.0.param.category %}
+                {% if category.grouper and category_obj.code != 'none' %}
+                <!-- Parameter Category Header Row -->
+                <tr style="background:#e8f4f8; border-top:2px solid #1a3a5c;">
+                    <td colspan="{% if test_entry.test.category.code == 'other' or test_entry.test.category.code == 'microbiology' %}4{% else %}6{% endif %}" style="font-weight:700; text-transform:uppercase; padding:4px 8px; font-size:8pt; color:#1a3a5c; letter-spacing:0.5px;">
+                        {% if category_obj.code == 'physical' %}Physical Examination
+                        {% elif category_obj.code == 'chemical' %}Chemical Examination
+                        {% elif category_obj.code == 'microscopic' %}Microscopic Examination
+                        {% elif category_obj.code == 'none' %}{# Don't show header for 'none' category #}
+                        {% else %}{{ category_obj.name|title }}{% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endwith %}
+                {% for item in category.list %}
+                {% with p=item.param pr=item.pr %}
+                {% if pr %}
+                <tr>
+                    <td>{{ p.name }}</td>
+                    <td style="text-align:left; ">
+                        {% if pr %}{{ pr.result_value }}{% else %}<span style="color:#aaa;"></span>{% endif %}
+                    </td>
+                    <td style="text-align:center;">{{ p.unit|default:"" }}</td>
+                    {% if test_entry.test.category.code != 'other' and test_entry.test.category.code != 'microbiology' %}
+                    <td style="text-align:center;">
+                        {% if pr %}
+                            {% if pr.flag == 'normal' %}<span class="flag-N">N</span>
+                            {% elif pr.flag == 'high' %}<span class="flag-H">H</span>
+                            {% elif pr.flag == 'low' %}<span class="flag-L">L</span>
+                            {% elif pr.flag == 'critical_high' %}<span class="flag-CH">CH</span>
+                            {% elif pr.flag == 'critical_low' %}<span class="flag-CL">CL</span>
+                            {% elif pr.flag == 'abnormal' %}<span class="flag-A">A</span>
+                            {% else %}<span class="flag-nd"> </span>
+                            {% endif %}
+                        {% else %}<span class="flag-nd"> </span>{% endif %}
+                    </td>
+                    <td>
+                        {% if p.reference_range_text %}{{ p.reference_range_text }}
+                        {% elif p.reference_range_min is not None and p.reference_range_max is not None %}{{ p.reference_range_min|floatformat:1 }} &ndash; {{ p.reference_range_max|floatformat:1 }}
+                        {% elif p.reference_range_min is not None %}&ge; {{ p.reference_range_min|floatformat:1 }}
+                        {% elif p.reference_range_max is not None %}&le; {{ p.reference_range_max|floatformat:1 }}
+                        {% else %}&mdash;{% endif %}
+                    </td>
+                    {% endif %}
+                    <td style="text-align:center;"> </td>
+                </tr>
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
+                {% endfor %}
+                {% else %}
+                {% for item in test_entry.profile_parameters %}
+                {% with p=item.param pr=item.pr %}
+                {% if pr %}
+                <tr>
+                    <td>{{ p.name }}</td>
+                    <td style="text-align:center; font-weight:600;">
+                        {% if pr %}{{ pr.result_value }}{% else %}<span style="color:#aaa;"></span>{% endif %}
+                    </td>
+                    <td style="text-align:center;">{{ p.unit|default:"" }}</td>
+                    {% if test_entry.test.category.code != 'other' and test_entry.test.category.code != 'microbiology' %}
+                    <td style="text-align:center;">
+                        {% if pr %}
+                            {% if pr.flag == 'normal' %}<span class="flag-N">N</span>
+                            {% elif pr.flag == 'high' %}<span class="flag-H">H</span>
+                            {% elif pr.flag == 'low' %}<span class="flag-L">L</span>
+                            {% elif pr.flag == 'critical_high' %}<span class="flag-CH">CH</span>
+                            {% elif pr.flag == 'critical_low' %}<span class="flag-CL">CL</span>
+                            {% elif pr.flag == 'abnormal' %}<span class="flag-A">A</span>
+                            {% else %}<span class="flag-nd"></span>
+                            {% endif %}
+                        {% else %}<span class="flag-nd"></span>{% endif %}
+                    </td>
+                    <td>
+                        {% if p.reference_range_text %}{{ p.reference_range_text }}
+                        {% elif p.reference_range_min is not None and p.reference_range_max is not None %}{{ p.reference_range_min|floatformat:1 }} &ndash; {{ p.reference_range_max|floatformat:1 }}
+                        {% elif p.reference_range_min is not None %}&ge; {{ p.reference_range_min|floatformat:1 }}
+                        {% elif p.reference_range_max is not None %}&le; {{ p.reference_range_max|floatformat:1 }}
+                        {% else %}&mdash;{% endif %}
+                    </td>
+                    {% endif %}
+                    <td style="text-align:center;"></td>
+                </tr>
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
+                {% endif %}
+                {% endif %}
+            </tbody>
+        </table>
+        
+        {% endfor %}
+        {% endfor %}
+
+        <table class="results-table" style="margin-top:0;">
+            <tbody><tr><td colspan="6" style="text-align:center; border-top:2px solid #1a3a5c;">End of Report</td></tr></tbody>
+        </table>
+        <div class="oo">
+            <p style="font-size: 10px;">Results reported are for the samples received and answer to the coresponding samples, reference range is age and sex dependant where applicale</p>
+            <p style="font-size: 10px;">Results should be interpreted in conjunction with clinical findings and other laboratory investigations.</p>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Interpretation / Remarks -->
+        {% if result %}
+        {% if result.interpretation %}
+        <div class="remark-box"><strong>Interpretation</strong>{{ result.interpretation }}</div>
+        {% endif %}
+        {% if result.remarks %}
+        <div class="remark-box"><strong>Remarks</strong>{{ result.remarks }}</div>
+        {% endif %}
+        {% endif %}
+
+        {% if comment %}
+        <div class="remark-box" style="border-left:3px solid #1a3a5c; background:#f0f5fb;">
+            <strong>Comment / Remarks</strong>
+            {{ comment }}
+        </div>
+        {% endif %}
+
+        <!-- ═══ SIGNATURES ═══ -->
+        <div class="sig-section">
+            <div class="sig-grid">
+                <div class="sig-box">
+                    <div class="sig-line">
+                        <!-- {% if result and result.reported_by %}<span class="sig-name">{{ result.reported_by.get_full_name }}</span>{% endif %} -->
+                    </div>
+                    <div class="sig-label">Analyzed By:</div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-line">
+                        <!-- {% if result and result.verified and result.verified_by %}<span class="sig-name">{{ result.verified_by.get_full_name }}</span>{% endif %} -->
+                    </div>
+                    <div class="sig-label">Verified By:</div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-line"></div>
+                    <div class="sig-label">Reviewed By: Lab Technologist</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ FOOTER ═══ -->
+        <div class="footer-wrapper">
+        <div class="report-footer" style="margin-top: 8px;">
+            <div class="footer-text">
+                <strong>{{ clinic_settings.clinic_name|default:"Medical Clinic" }}</strong><br>
+                {% if clinic_settings and clinic_settings.address %}{{ clinic_settings.address }}<br>{% endif %}
+                {% if clinic_settings and clinic_settings.phone %}Tel: {{ clinic_settings.phone }}{% endif %}
+                {% if clinic_settings and clinic_settings.email %} &nbsp;|&nbsp; {{ clinic_settings.email }}{% endif %}<br>
+                Printed: {% now "d M Y, g:i A" %} &nbsp;|&nbsp; Report No: LAB-{{ request.pk|stringformat:"05d" }}
+                {% if result %}
+                &nbsp;|&nbsp;
+                {% if result.verified %}<span style="color:#1a7a1a; font-weight:700;">&#10003; Verified</span>{% else %}<span style="color:#856404;">Unverified</span>{% endif %}
+                &nbsp;|&nbsp;Report Status: <strong>{% if result.verified %}Final{% else %}Preliminary{% endif %}</strong>
+                {% endif %}
+            </div>
+            {% if qr_code %}
+            <div class="qr-block">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR">
+                <small>Scan to verify authenticity</small>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ═══ BOTTOM SECTIONS (Services and Page Number) ═══ -->
+        <!-- ═══ BLUE SERVICES FOOTER ═══ -->
+        <div class="services-footer">
+            <strong>Our Services:</strong> General Laboratory Diagnostic Services, Wellness and Preventive Health Packages, Specialized Diagnostic Services,
+            Home-Based and Community Outreach Services, Counseling and Health Advisory Services, Corporate and Institutional Health Programs
+        </div>
+        
+        <!-- <div style="text-align:center; margin-top:4px; font-size:8pt; color:#666;">
+            Page <span class="page-number"></span> of <span class="total-pages"></span>
+        </div> -->
+        </div><!-- /.footer-wrapper -->
+
+    </div>
+</body>
+</html>

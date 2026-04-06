@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}
+<i class="bi bi-capsule-pill me-2"></i>Drugs Inventory
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'inventory:drug_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Add Drug
+</a>
+<a href="{% url 'inventory:supplier_add' %}" class="btn btn-secondary">
+    <i class="bi bi-building me-1"></i> Add Supplier
+</a>
+<a href="{% url 'inventory:record_usage' %}" class="btn btn-success">
+    <i class="bi bi-clipboard-check me-1"></i> Record Usage/Sale
+</a>
+<a href="{% url 'inventory:cashflow_list' %}" class="btn btn-info">
+    <i class="bi bi-cash-stack me-1"></i> View Cash Flow
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Drugs Inventory</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm" id="drugsTable" style="border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <thead style="background: var(--alafia-gradient); color: white;">
+                    <tr>
+                        <th onclick="sortDrugTable(0)" style="cursor: pointer; user-select: none;">Name <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(1)" style="cursor: pointer; user-select: none;">ATC Code <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(2)" style="cursor: pointer; user-select: none;">Barcode <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(3)" style="cursor: pointer; user-select: none;">Manufacturer <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(4)" style="cursor: pointer; user-select: none;">Batch <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(5)" style="cursor: pointer; user-select: none;">Expiry <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(6)" style="cursor: pointer; user-select: none;">Quantity <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(7)" style="cursor: pointer; user-select: none;">Unit Price <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(8)" style="cursor: pointer; user-select: none;">Currency <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(9)" style="cursor: pointer; user-select: none;">Country <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th onclick="sortDrugTable(10)" style="cursor: pointer; user-select: none;">Supplier <i class="bi bi-arrow-down-up text-light"></i></th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for drug in drugs %}
+                    <tr {% if drug.quantity < 10 %}class="table-warning"{% endif %}>
+                        <td><strong>{{ drug.name }}</strong></td>
+                        <td>{{ drug.atc_code }}</td>
+                        <td><small>{{ drug.barcode }}</small></td>
+                        <td>{{ drug.manufacturer }}</td>
+                        <td>{{ drug.batch_number }}</td>
+                        <td>{{ drug.expiry_date|date:"M d, Y" }}</td>
+                        <td>
+                            <span class="badge {% if drug.quantity < 10 %}bg-warning{% elif drug.quantity < 50 %}bg-info{% else %}bg-success{% endif %}">
+                                {{ drug.quantity }}
+                            </span>
+                        </td>
+                        <td>{{ drug.unit_price|floatformat:0 }}</td>
+                        <td>{{ drug.currency }}</td>
+                        <td>{{ drug.country }}</td>
+                        <td>{{ drug.supplier }}</td>
+                        <td class="text-center" style="width: 120px; padding: 0.25rem;">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-link text-success p-1" onclick="openSaleModal({{ drug.id }}, '{{ drug.name|escapejs }}', {{ drug.unit_price }}, '{{ drug.currency|escapejs }}', {{ drug.quantity }})" title="Record Sale">
+                                    <i class="bi bi-cash-coin"></i>
+                                </button>
+                                <a href="{% url 'inventory:drug_edit' drug.pk %}" class="btn btn-sm btn-link text-primary p-1" title="Edit Drug">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="12" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1"></i>
+                            <p class="mt-2">No drugs found in inventory.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Sale Modal -->
+<div class="modal fade" id="quickSaleModal" tabindex="-1" aria-labelledby="quickSaleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="quickSaleModalLabel">
+                    <i class="bi bi-cash-coin me-2"></i>Quick Sale
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickSaleForm" method="post" action="{% url 'inventory:record_usage' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="drug" id="sale_drug_id">
+                    <input type="hidden" name="usage_type" value="sale">
+                    
+                    <div class="alert alert-info">
+                        <strong id="sale_drug_name"></strong>
+                        <br>
+                        <small>Available: <span id="sale_available_qty"></span> | Unit Price: <span id="sale_unit_price"></span> <span id="sale_currency"></span></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sale_quantity" class="form-label">Quantity Sold <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="sale_quantity" name="used_quantity" min="1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sale_price" class="form-label">Sale Price (Total) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="sale_price" name="sale_price" step="0.01" min="0" required>
+                        <small class="text-muted">Calculated: <span id="calculated_price">0</span> <span id="sale_currency_display"></span></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sale_sold_to" class="form-label">Sold To</label>
+                        <input type="text" class="form-control" id="sale_sold_to" name="sold_to" placeholder="Customer name or ID">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sale_date" class="form-label">Sale Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="sale_date" name="usage_date" required>
+                    </div>
+
+                    <input type="hidden" name="currency" id="sale_currency_hidden">
+                    <input type="hidden" name="country" id="sale_country" value="Uganda">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i> Record Sale
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentUnitPrice = 0;
+
+function openSaleModal(drugId, drugName, unitPrice, currency, availableQty) {
+    // Set drug information
+    document.getElementById('sale_drug_id').value = drugId;
+    document.getElementById('sale_drug_name').textContent = drugName;
+    document.getElementById('sale_available_qty').textContent = availableQty;
+    document.getElementById('sale_unit_price').textContent = unitPrice;
+    document.getElementById('sale_currency').textContent = currency;
+    document.getElementById('sale_currency_display').textContent = currency;
+    document.getElementById('sale_currency_hidden').value = currency;
+    
+    // Set current unit price for calculation
+    currentUnitPrice = parseFloat(unitPrice);
+    
+    // Set max quantity
+    document.getElementById('sale_quantity').max = availableQty;
+    
+    // Set today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('sale_date').value = today;
+    
+    // Reset form
+    document.getElementById('quickSaleForm').reset();
+    document.getElementById('sale_drug_id').value = drugId;
+    document.getElementById('sale_currency_hidden').value = currency;
+    document.getElementById('sale_date').value = today;
+    
+    // Open modal
+    const modal = new bootstrap.Modal(document.getElementById('quickSaleModal'));
+    modal.show();
+}
+
+// Auto-calculate total price
+document.getElementById('sale_quantity').addEventListener('input', function() {
+    const quantity = parseFloat(this.value) || 0;
+    const totalPrice = (quantity * currentUnitPrice).toFixed(2);
+    document.getElementById('calculated_price').textContent = totalPrice;
+    document.getElementById('sale_price').value = totalPrice;
+});
+
+// Handle form submission
+document.getElementById('quickSaleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch('{% url "inventory:record_usage" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Sale recorded successfully!');
+            location.reload();
+        } else {
+            let errorMsg = 'Error recording sale:\n';
+            for (let field in data.errors) {
+                errorMsg += `${field}: ${data.errors[field]}\n`;
+            }
+            alert(errorMsg);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while recording the sale.');
+    });
+});
+</script>
+
+<style>
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.btn-group .btn {
+    margin: 0 2px;
+}
+
+#quickSaleModal .alert-info {
+    background-color: #e3f2fd;
+    border-color: #90caf9;
+    color: #1565c0;
+}
+</style>
+{% endblock %}

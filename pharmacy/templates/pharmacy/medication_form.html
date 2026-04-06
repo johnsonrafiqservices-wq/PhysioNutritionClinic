@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-capsule me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ title }}</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:medication_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Medications</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-info-circle text-primary me-1"></i>Medication Information</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <h6 class="text-primary mb-2 small"><i class="bi bi-info-circle me-1"></i>Basic Information</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.name.id_for_label }}" class="form-label small">Medication Name <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.generic_name.id_for_label }}" class="form-label small">Generic Name <span class="text-danger">*</span></label>
+                            {{ form.generic_name }}
+                            {% if form.generic_name.errors %}<div class="invalid-feedback d-block">{{ form.generic_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.category.id_for_label }}" class="form-label small">Category <span class="text-danger">*</span></label>
+                            {{ form.category }}
+                            {% if form.category.errors %}<div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.dosage_form.id_for_label }}" class="form-label small">Dosage Form <span class="text-danger">*</span></label>
+                            {{ form.dosage_form }}
+                            {% if form.dosage_form.errors %}<div class="invalid-feedback d-block">{{ form.dosage_form.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.strength.id_for_label }}" class="form-label small">Strength</label>
+                            {{ form.strength }}
+                            {% if form.strength.errors %}<div class="invalid-feedback d-block">{{ form.strength.errors.0 }}</div>{% endif %}
+                            <small class="form-text text-muted">e.g., 500mg, 10ml</small>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.manufacturer.id_for_label }}" class="form-label small">Manufacturer</label>
+                            {{ form.manufacturer }}
+                            {% if form.manufacturer.errors %}<div class="invalid-feedback d-block">{{ form.manufacturer.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <h6 class="text-primary mb-2 small"><i class="bi bi-cash-coin me-1"></i>Pricing & Stock</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.unit_price.id_for_label }}" class="form-label small">Unit Price (UGX) <span class="text-danger">*</span></label>
+                            {{ form.unit_price }}
+                            {% if form.unit_price.errors %}<div class="invalid-feedback d-block">{{ form.unit_price.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.reorder_level.id_for_label }}" class="form-label small">Reorder Level <span class="text-danger">*</span></label>
+                            {{ form.reorder_level }}
+                            {% if form.reorder_level.errors %}<div class="invalid-feedback d-block">{{ form.reorder_level.errors.0 }}</div>{% endif %}
+                            <small class="form-text text-muted">Alert when stock falls below this level</small>
+                        </div>
+                    </div>
+
+                    <h6 class="text-primary mb-2 small"><i class="bi bi-thermometer-half me-1"></i>Storage & Additional Info</h6>
+                    <div class="row mb-3">
+                        <div class="col-12 mb-2">
+                            <label for="{{ form.storage_conditions.id_for_label }}" class="form-label small">Storage Conditions</label>
+                            {{ form.storage_conditions }}
+                            {% if form.storage_conditions.errors %}<div class="invalid-feedback d-block">{{ form.storage_conditions.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label for="{{ form.description.id_for_label }}" class="form-label small">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label small" for="{{ form.is_active.id_for_label }}">Active</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'pharmacy:medication_list' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle me-1"></i>Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle me-1"></i>Save Medication</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

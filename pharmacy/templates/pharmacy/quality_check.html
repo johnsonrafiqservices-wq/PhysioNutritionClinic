@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-clipboard2-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ title }}</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:batch_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Batches</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-boxes text-primary me-1"></i>Batch Information</h6>
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-2" style="font-size:.85rem;">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Medication</label>
+                        <p class="mb-0 fw-medium">{{ batch.medication.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Batch Number</label>
+                        <p class="mb-0 fw-medium">{{ batch.batch_number }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Current Stock</label>
+                        <p class="mb-0 fw-medium">{{ batch.quantity_remaining }} units</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Expiry Date</label>
+                        <p class="mb-0 fw-medium">{{ batch.expiry_date }}</p>
+                    </div>
+                    {% if batch.last_quality_check %}
+                    <div class="col-12">
+                        <label class="text-muted small">Last Quality Check</label>
+                        <p class="mb-0 fw-medium">{{ batch.last_quality_check }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-clipboard2-check text-primary me-1"></i>Quality Check Form</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger py-2 small">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Physical Condition</label>
+                        <div class="btn-group-vertical w-100" role="group">
+                            {% for value, text in form.physical_condition.field.choices %}
+                            <input type="radio" class="btn-check" name="{{ form.physical_condition.name }}"
+                                id="condition_{{ value }}" value="{{ value }}"
+                                {% if form.physical_condition.value == value %}checked{% endif %}
+                                autocomplete="off">
+                            <label class="btn btn-outline-primary btn-sm text-start" for="condition_{{ value }}">{{ text }}</label>
+                            {% endfor %}
+                        </div>
+                        {% if form.physical_condition.errors %}<div class="invalid-feedback d-block">{{ form.physical_condition.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check mb-1">
+                            {{ form.packaging_integrity }}
+                            <label class="form-check-label small" for="{{ form.packaging_integrity.id_for_label }}">{{ form.packaging_integrity.label }}</label>
+                        </div>
+                        <div class="form-check mb-1">
+                            {{ form.storage_conditions }}
+                            <label class="form-check-label small" for="{{ form.storage_conditions.id_for_label }}">{{ form.storage_conditions.label }}</label>
+                        </div>
+                        <div class="form-check mb-1">
+                            {{ form.visual_inspection }}
+                            <label class="form-check-label small" for="{{ form.visual_inspection.id_for_label }}">{{ form.visual_inspection.label }}</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label small">Notes {% if form.notes.help_text %}<small class="text-muted">({{ form.notes.help_text }})</small>{% endif %}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.action_required }}
+                            <label class="form-check-label small" for="{{ form.action_required.id_for_label }}">{{ form.action_required.label }}</label>
+                            {% if form.action_required.help_text %}<small class="form-text text-muted d-block">{{ form.action_required.help_text }}</small>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="recommendedActionSection" style="display: none;">
+                        <label for="{{ form.recommended_action.id_for_label }}" class="form-label small">Recommended Action {% if form.recommended_action.help_text %}<small class="text-muted">({{ form.recommended_action.help_text }})</small>{% endif %}</label>
+                        {{ form.recommended_action }}
+                        {% if form.recommended_action.errors %}<div class="invalid-feedback d-block">{{ form.recommended_action.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'pharmacy:batch_list' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle me-1"></i>Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle me-1"></i>Complete Quality Check</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-lightbulb text-warning me-1"></i>Quality Check Guidelines</h6>
+            </div>
+            <div class="card-body py-2 small">
+                <div class="alert alert-info py-2 mb-2">
+                    <strong class="small">Physical Condition</strong>
+                    <ul class="mb-0 ps-3 mt-1"><li>Check for damage/deterioration</li><li>Verify color & consistency</li><li>Look for unusual characteristics</li></ul>
+                </div>
+                <div class="alert alert-info py-2 mb-2">
+                    <strong class="small">Packaging</strong>
+                    <ul class="mb-0 ps-3 mt-1"><li>Ensure seals are intact</li><li>Check for tampering</li><li>Verify label information</li></ul>
+                </div>
+                <div class="alert alert-info py-2 mb-0">
+                    <strong class="small">Storage</strong>
+                    <ul class="mb-0 ps-3 mt-1"><li>Verify temperature compliance</li><li>Check humidity conditions</li><li>Ensure proper placement</li></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-check:checked + .btn-outline-primary { background-color: #0d6efd; color: white; }
+    .btn-check + .btn-outline-primary { width: 100%; margin-bottom: 0.25rem; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+            form.classList.add('was-validated');
+        }, false);
+    });
+
+    const actionRequired = document.getElementById('{{ form.action_required.id_for_label }}');
+    const recommendedActionSection = document.getElementById('recommendedActionSection');
+    function toggleRecommendedAction() {
+        recommendedActionSection.style.display = actionRequired.checked ? 'block' : 'none';
+    }
+    actionRequired.addEventListener('change', toggleRecommendedAction);
+    toggleRecommendedAction();
+
+    const conditionRadios = document.querySelectorAll('[name="{{ form.physical_condition.name }}"]');
+    conditionRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value !== 'good') { actionRequired.checked = true; toggleRecommendedAction(); }
+        });
+    });
+});
+</script>
+{% endblock %}

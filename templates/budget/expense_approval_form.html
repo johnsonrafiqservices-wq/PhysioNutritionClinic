@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% load humanize %}
+
+{% block title %}Approve Expense - {{ clinic_settings.clinic_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-check-circle me-2"></i>Approve/Reject Expense</h2>
+                <a href="{% url 'budget:expense_detail' expense.pk %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back
+                </a>
+            </div>
+
+            <!-- Expense Details -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Expense Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Description</strong>
+                            <p class="mb-0">{{ expense.description }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Amount</strong>
+                            <h4 class="mb-0 text-danger">{{ expense.currency }} {{ expense.amount|floatformat:0|intcomma }}</h4>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Category</strong>
+                            <span class="fw-semibold text-{{ expense.category.color }} bg-opacity-10 text-{{ expense.category.color }}">
+                                <i class="bi {{ expense.category.icon }}"></i> {{ expense.category.name }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Date</strong>
+                            <p class="mb-0">{{ expense.expense_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Submitted By</strong>
+                            <p class="mb-0">{{ expense.submitted_by.get_full_name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted d-block small">Vendor</strong>
+                            <p class="mb-0">{{ expense.vendor_name|default:"-" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Form -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Approval Decision</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                Decision <span class="text-danger">*</span>
+                            </label>
+                            {{ form.status|add_class:"form-select form-select-lg" }}
+                            {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.approval_notes.id_for_label }}" class="form-label">
+                                Notes <span class="text-danger">*</span>
+                            </label>
+                            {{ form.approval_notes|add_class:"form-control" }}
+                            <small class="form-text text-muted">Provide reason for approval or rejection</small>
+                            {% if form.approval_notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.approval_notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between pt-3 border-top">
+                            <a href="{% url 'budget:expense_detail' expense.pk %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle me-1"></i> Submit Decision
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

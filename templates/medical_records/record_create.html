@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create Medical Record - {{ patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-file-medical-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Create Medical Record - {{ patient.get_full_name }}</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    New Medical Record for {{ patient.get_full_name }}
+                    <span class="fw-semibold text-primary ms-2">{{ patient.patient_id }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Record Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Record Information</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.record_type|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.appointment|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.title|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Record Content</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.content|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'medical_records:record_list' patient.patient_id %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Records
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-file-medical"></i> Create Record
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Patient Summary -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Summary</h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ patient.get_full_name }}</h6>
+                <p class="text-muted mb-2">{{ patient.patient_id }}</p>
+                <div class="row">
+                    <div class="col-6">
+                        <small><strong>Age:</strong> {{ patient.get_age }}</small>
+                    </div>
+                    <div class="col-6">
+                        <small><strong>Gender:</strong> {{ patient.get_gender_display }}</small>
+                    </div>
+                </div>
+                {% if patient.allergies %}
+                <div class="alert alert-warning mt-2">
+                    <small><strong>Allergies:</strong> {{ patient.allergies }}</small>
+                </div>
+                {% endif %}
+                {% if patient.current_medications %}
+                <div class="alert alert-info mt-2">
+                    <small><strong>Current Medications:</strong> {{ patient.current_medications }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Record Type Guidelines -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Record Type Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="fw-semibold text-danger me-2">Diagnosis</span>
+                    <small>Medical conditions, diseases, or disorders identified</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-success me-2">Treatment</span>
+                    <small>Therapeutic interventions, procedures, or treatments provided</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-info me-2">Assessment</span>
+                    <small>Clinical evaluations, examinations, or assessments</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-warning me-2">Progress Note</span>
+                    <small>Updates on patient progress and response to treatment</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-secondary me-2">Other</span>
+                    <small>Miscellaneous medical information or notes</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Records -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Records</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_records %}
+                    {% for record in recent_records %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <small class="text-muted">{{ record.record_date|date:"M d, Y" }}</small>
+                                <p class="mb-1"><strong>{{ record.title|truncatechars:30 }}</strong></p>
+                            </div>
+                            <span class="fw-semibold text-{% if record.record_type == 'diagnosis' %}danger{% elif record.record_type == 'treatment' %}success{% elif record.record_type == 'assessment' %}info{% else %}secondary{% endif %}">
+                                {{ record.get_record_type_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No previous records.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default record date to today
+    const recordDate = document.getElementById('id_record_date');
+    if (recordDate && !recordDate.value) {
+        const today = new Date();
+        recordDate.value = today.toISOString().split('T')[0];
+    }
+    
+    // Follow-up required checkbox handler
+    const followUpRequired = document.getElementById('id_follow_up_required');
+    const followUpDate = document.getElementById('id_follow_up_date');
+    const followUpNotes = document.getElementById('id_follow_up_notes');
+    
+    if (followUpRequired) {
+        followUpRequired.addEventListener('change', function() {
+            const followUpFields = [followUpDate, followUpNotes];
+            followUpFields.forEach(field => {
+                if (field) {
+                    field.closest('.form-group').style.display = this.checked ? 'block' : 'none';
+                    if (!this.checked) {
+                        field.value = '';
+                    }
+                }
+            });
+        });
+        
+        // Initial state
+        followUpRequired.dispatchEvent(new Event('change'));
+    }
+    
+    // Record type change handler for dynamic suggestions
+    const recordType = document.getElementById('id_record_type');
+    if (recordType) {
+        recordType.addEventListener('change', function() {
+            const type = this.value;
+            const titleField = document.getElementById('id_title');
+            
+            // Provide suggestions based on record type
+            switch(type) {
+                case 'diagnosis':
+                    if (!titleField.value) {
+                        titleField.placeholder = 'e.g., Lower back pain diagnosis';
+                    }
+                    break;
+                case 'treatment':
+                    if (!titleField.value) {
+                        titleField.placeholder = 'e.g., Physical therapy session';
+                    }
+                    break;
+                case 'assessment':
+                    if (!titleField.value) {
+                        titleField.placeholder = 'e.g., Initial physiotherapy assessment';
+                    }
+                    break;
+                case 'progress_note':
+                    if (!titleField.value) {
+                        titleField.placeholder = 'e.g., Progress update - Week 3';
+                    }
+                    break;
+                default:
+                    titleField.placeholder = 'Enter record title';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

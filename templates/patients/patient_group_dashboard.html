@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Patient Group Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-speedometer2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Group Management Dashboard</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'patients:patient_group_list' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> Manage Groups
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .group-list-item { cursor: pointer; transition: all 0.2s ease; }
+    .group-list-item:hover { background: #f8fafc; }
+    .group-list-item.active { background: var(--alafia-gradient); color: white; }
+    .group-list-item.active .text-muted,
+    .group-list-item.active .badge { color: white !important; background: rgba(255,255,255,0.2) !important; }
+    .price-badge { padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.9rem; }
+    .price-default { background: #f1f5f9; color: #64748b; }
+    .price-custom { background: #dcfce7; color: #166534; }
+    .discount-badge { background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .pgd-kpi { border-left: 3px solid transparent; transition: border-color .2s; }
+    .pgd-kpi:hover { border-left-color: var(--kpi-accent, #0d6efd); }
+    .pgd-kpi .kpi-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .pgd-kpi .kpi-val { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+    .pgd-kpi .kpi-lbl { font-size: .7rem; color: #6c757d; margin: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Stats -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm pgd-kpi" style="--kpi-accent:var(--alafia-primary);">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#e8f0fe;color:var(--alafia-primary);"><i class="bi bi-people"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:var(--alafia-primary);">{{ overall_stats.total_groups }}</div>
+                    <p class="kpi-lbl">Total Groups</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm pgd-kpi" style="--kpi-accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-person-check"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#198754;">{{ overall_stats.total_patients_in_groups }}</div>
+                    <p class="kpi-lbl">In Groups</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm pgd-kpi" style="--kpi-accent:#e67e22;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-grid-3x3-gap"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#e67e22;">{{ overall_stats.total_services }}</div>
+                    <p class="kpi-lbl">Services</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm pgd-kpi" style="--kpi-accent:#0891b2;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#cffafe;color:#0891b2;"><i class="bi bi-droplet"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#0891b2;">{{ overall_stats.total_lab_tests }}</div>
+                    <p class="kpi-lbl">Lab Tests</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<style>
+.group-qa .alafia-action-btn{padding:8px 6px;min-height:0;flex:1;min-width:80px;}
+.group-qa .alafia-action-btn i{font-size:1.15rem;margin-bottom:4px;}
+.group-qa .alafia-action-btn span{font-size:.73rem;}
+</style>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Actions
+            </div>
+            <div class="card-body py-2 group-qa">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'patients:patient_group_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>Manage Groups</span>
+                    </a>
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#servicePricingModal">
+                        <i class="bi bi-currency-dollar"></i>
+                        <span>Service Pricing</span>
+                    </button>
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#labTestPricingModal">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>Lab Test Pricing</span>
+                    </button>
+                    <a href="{% url 'appointments:service_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                        <span>Manage Services</span>
+                    </a>
+                    <a href="{% url 'laboratory:labtest_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-clipboard-data"></i>
+                        <span>Manage Lab Tests</span>
+                    </a>
+                    <a href="{% url 'patients:patient_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-people"></i>
+                        <span>View Patients</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    
+<div class="row">
+    <!-- Group Selector -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-list-ul"></i> Patient Groups
+            </div>
+            <div class="card-body">
+                {% if patient_groups %}
+                    <div class="list-group list-group-flush">
+                        {% for group in patient_groups %}
+                        <a href="{% url 'patients:patient_group_dashboard' group.id %}" 
+                           class="list-group-item list-group-item-action group-list-item {% if selected_group and selected_group.id == group.id %}active{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ group.name }}</h6>
+                                    {% if group.description %}
+                                    <small class="text-muted d-block">{{ group.description|truncatewords:6 }}</small>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-primary rounded-pill">{{ group.patient_count }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: var(--alafia-secondary);"></i>
+                        <p class="text-muted mt-3">No groups yet</p>
+                        <a href="{% url 'patients:patient_group_list' %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create Group
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+        
+    <!-- Group Details - Compact Header with Stats and Actions -->
+    <div class="col-lg-8 mb-4">
+        {% if selected_group %}
+            <!-- Group Header Card -->
+            <div class="card mb-4">
+                <div class="card-header py-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-diagram-3 fs-4"></i>
+                            <span class="fw-semibold fs-5">{{ selected_group.name }}</span>
+                            {% if selected_group.description %}
+                            <small class="text-muted d-none d-md-inline">| {{ selected_group.description|truncatewords:6 }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'patients:patient_group_detail' selected_group.id %}" class="btn btn-primary">
+                                <i class="bi bi-eye"></i> View Full Details
+                            </a>
+                            <a href="{% url 'patients:patient_group_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body py-3">
+                    <!-- Stats Row -->
+                    <div class="row g-3">
+                        <div class="col-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-primary">{{ group_stats.total_patients }}</div>
+                                <small class="text-muted">Total Patients</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-success">{{ group_stats.active_patients }}</div>
+                                <small class="text-muted">Active</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-warning">{{ group_stats.service_prices_set }}</div>
+                                <small class="text-muted">Services</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-info">{{ group_stats.lab_test_prices_set }}</div>
+                                <small class="text-muted">Lab Tests</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lab Test Pricing - Full Width -->
+            <div class="card">
+                <div class="card-header py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><i class="bi bi-cash-coin"></i> Lab Test Pricing</div>
+                        <a href="{% url 'laboratory:lab_test_price_group_list' %}" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Edit Prices
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    {% if lab_test_prices %}
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="py-3 px-3">Lab Test</th>
+                                <th class="py-3 px-3 text-end">Default Price</th>
+                                <th class="py-3 px-3 text-end">Group Price</th>
+                                <th class="py-3 px-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in lab_test_prices %}
+                            <tr>
+                                <td class="py-3 px-3">
+                                    <strong>{{ item.lab_test.name }}</strong>
+                                    <br><small class="text-muted">{{ item.lab_test.get_category_display }}</small>
+                                </td>
+                                <td class="py-3 px-3 text-end">
+                                    <span class="price-badge price-default">{{ item.lab_test.currency }} {{ item.default_price }}</span>
+                                </td>
+                                <td class="py-3 px-3 text-end">
+                                    <span class="price-badge {% if item.has_custom %}price-custom{% else %}price-default{% endif %}">
+                                        {{ item.lab_test.currency }} {{ item.price }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-3 text-center">
+                                    {% if item.has_custom %}
+                                        <span class="badge bg-success">Custom</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Default</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: var(--alafia-secondary);"></i>
+                        <p class="text-muted mt-3">No lab tests available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center py-5">
+                        <i class="bi bi-arrow-left-circle" style="font-size: 4rem; color: var(--alafia-secondary);"></i>
+                        <h4 class="mt-3">Select a Patient Group</h4>
+                        <p class="text-muted">Choose a group from the list to view pricing details</p>
+                        <a href="{% url 'patients:patient_group_list' %}" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle"></i> Create New Group
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Include Pricing Modals -->
+{% include 'laboratory/lab_test_pricing_modal.html' %}
+{% include 'appointments/service_pricing_modal.html' %}
+
+{% endblock %}

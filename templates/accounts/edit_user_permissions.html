@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Permissions — {{ target_user.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-shield-lock-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Edit Permissions</span>
+    </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ep-hero {
+        background: linear-gradient(135deg, #1B5E96 0%, #2980b9 50%, #1B5E96 100%);
+        border-radius: 14px;
+        padding: 28px 32px;
+        color: #fff;
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+    }
+    .ep-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%; right: -25%;
+        width: 300px; height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .ep-hero-content { position: relative; z-index: 1; }
+    .ep-hero h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px 0; }
+    .ep-hero p { font-size: 13px; opacity: 0.85; margin: 0; }
+    .ep-hero .user-badge {
+        display: inline-block;
+        background: rgba(255,255,255,0.2);
+        padding: 4px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 8px;
+    }
+
+    .ep-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e8edf2;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .ep-card-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .ep-card-header h3 {
+        font-size: 15px; font-weight: 700; color: #1e293b; margin: 0;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .ep-card-header h3 i { color: var(--alafia-primary, #1B5E96); }
+    .ep-card-body { padding: 0; }
+
+    .app-perm-row {
+        display: flex;
+        align-items: center;
+        padding: 16px 24px;
+        border-bottom: 1px solid #f8fafc;
+        gap: 16px;
+        transition: background 0.1s;
+    }
+    .app-perm-row:last-child { border-bottom: none; }
+    .app-perm-row:hover { background: #f8fafc; }
+
+    .app-icon-box {
+        width: 42px; height: 42px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    .app-icon-box.patients { background: #dbeafe; color: #2563eb; }
+    .app-icon-box.appointments { background: #ede9fe; color: #7c3aed; }
+    .app-icon-box.billing { background: #d1fae5; color: #059669; }
+    .app-icon-box.medical_records { background: #fef3c7; color: #d97706; }
+    .app-icon-box.laboratory { background: #e0e7ff; color: #4338ca; }
+    .app-icon-box.pharmacy { background: #fce7f3; color: #db2777; }
+    .app-icon-box.reports { background: #ccfbf1; color: #0d9488; }
+    .app-icon-box.staff_management { background: #f3e8ff; color: #9333ea; }
+    .app-icon-box.budget { background: #fef9c3; color: #ca8a04; }
+    .app-icon-box.clinic_settings { background: #f1f5f9; color: #475569; }
+
+    .app-info { flex: 1; min-width: 0; }
+    .app-name { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .app-role-default { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .role-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .role-badge.allowed { background: #d1fae5; color: #166534; }
+    .role-badge.limited { background: #fef3c7; color: #92400e; }
+    .role-badge.blocked { background: #fee2e2; color: #991b1b; }
+
+    .perm-toggle {
+        display: flex;
+        gap: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+    .perm-toggle label {
+        padding: 7px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        border-right: 1px solid #e2e8f0;
+        color: #64748b;
+        background: #fff;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .perm-toggle label:last-child { border-right: none; }
+    .perm-toggle input { display: none; }
+    .perm-toggle input:checked + label.opt-default { background: #f1f5f9; color: #1e293b; }
+    .perm-toggle input:checked + label.opt-allow { background: #d1fae5; color: #166534; }
+    .perm-toggle input:checked + label.opt-block { background: #fee2e2; color: #991b1b; }
+
+    .btn-save {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 12px 28px;
+        background: linear-gradient(135deg, #1B5E96, #2980b9);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(27,94,150,0.3);
+    }
+    .btn-save:hover { background: linear-gradient(135deg, #154a7a, #1B5E96); transform: translateY(-1px); }
+
+    .legend-box {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e8edf2;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .legend-box h4 { font-size: 13px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0; }
+    .legend-item { font-size: 12px; color: #475569; padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+    .legend-dot {
+        width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+    }
+    .legend-dot.green { background: #22c55e; }
+    .legend-dot.yellow { background: #eab308; }
+    .legend-dot.red { background: #ef4444; }
+    .legend-dot.gray { background: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ep-hero">
+    <div class="ep-hero-content d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <h2><i class="bi bi-person-gear me-2"></i>{{ target_user.get_full_name|default:target_user.username }}</h2>
+            <p>Configure which apps this user can access — overrides role defaults</p>
+            <span class="user-badge"><i class="bi bi-person-badge me-1"></i>{{ role_display }}</span>
+        </div>
+        <a href="{% url 'accounts:manage_permissions' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;">
+            <i class="bi bi-arrow-left me-1"></i> All Users
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" style="border-radius:10px;">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post">
+            {% csrf_token %}
+            <div class="ep-card">
+                <div class="ep-card-header">
+                    <h3><i class="bi bi-grid"></i> App Access</h3>
+                    <span style="font-size:12px; color:#64748b;">{{ app_states|length }} apps</span>
+                </div>
+                <div class="ep-card-body">
+                    {% for app in app_states %}
+                    <div class="app-perm-row">
+                        <div class="app-icon-box {{ app.code }}">
+                            {% if app.code == 'patients' %}<i class="bi bi-people-fill"></i>
+                            {% elif app.code == 'appointments' %}<i class="bi bi-calendar-check-fill"></i>
+                            {% elif app.code == 'billing' %}<i class="bi bi-receipt-cutoff"></i>
+                            {% elif app.code == 'medical_records' %}<i class="bi bi-file-earmark-medical-fill"></i>
+                            {% elif app.code == 'laboratory' %}<i class="bi bi-droplet-fill"></i>
+                            {% elif app.code == 'pharmacy' %}<i class="bi bi-capsule"></i>
+                            {% elif app.code == 'reports' %}<i class="bi bi-bar-chart-fill"></i>
+                            {% elif app.code == 'staff_management' %}<i class="bi bi-person-lines-fill"></i>
+                            {% elif app.code == 'budget' %}<i class="bi bi-wallet-fill"></i>
+                            {% elif app.code == 'clinic_settings' %}<i class="bi bi-gear-fill"></i>
+                            {% else %}<i class="bi bi-app"></i>
+                            {% endif %}
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">{{ app.label }}</div>
+                            <div class="app-role-default">
+                                Role default:
+                                {% if app.role_default == 'allowed' %}
+                                    <span class="role-badge allowed">Full Access</span>
+                                {% elif app.role_default == 'limited' %}
+                                    <span class="role-badge limited">Limited</span>
+                                {% else %}
+                                    <span class="role-badge blocked">No Access</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="perm-toggle">
+                            <input type="radio" name="app_{{ app.code }}" value="default" id="def_{{ app.code }}" {% if app.current == 'default' %}checked{% endif %}>
+                            <label for="def_{{ app.code }}" class="opt-default"><i class="bi bi-dash-circle"></i> Default</label>
+
+                            <input type="radio" name="app_{{ app.code }}" value="allow" id="allow_{{ app.code }}" {% if app.current == 'allow' %}checked{% endif %}>
+                            <label for="allow_{{ app.code }}" class="opt-allow"><i class="bi bi-check-circle"></i> Allow</label>
+
+                            <input type="radio" name="app_{{ app.code }}" value="block" id="block_{{ app.code }}" {% if app.current == 'block' %}checked{% endif %}>
+                            <label for="block_{{ app.code }}" class="opt-block"><i class="bi bi-x-circle"></i> Block</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center" style="margin-bottom:30px;">
+                <a href="{% url 'accounts:manage_permissions' %}" class="btn btn-outline-secondary" style="border-radius:8px;">
+                    <i class="bi bi-arrow-left me-1"></i> Cancel
+                </a>
+                <button type="submit" class="btn-save">
+                    <i class="bi bi-check-circle"></i> Save Permissions
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- User Info -->
+        <div class="legend-box" style="margin-bottom:20px;">
+            <h4><i class="bi bi-person me-1" style="color:var(--alafia-primary);"></i> User Info</h4>
+            <div class="legend-item"><strong>Name:</strong>&nbsp; {{ target_user.get_full_name }}</div>
+            <div class="legend-item"><strong>Username:</strong>&nbsp; {{ target_user.username }}</div>
+            <div class="legend-item"><strong>Role:</strong>&nbsp; {{ role_display }}</div>
+            <div class="legend-item"><strong>Email:</strong>&nbsp; {{ target_user.email|default:"—" }}</div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-box">
+            <h4><i class="bi bi-info-circle me-1" style="color:var(--alafia-primary);"></i> How it works</h4>
+            <div class="legend-item">
+                <span class="legend-dot gray"></span>
+                <span><strong>Default</strong> — Uses the role's built-in access rules</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot green"></span>
+                <span><strong>Allow</strong> — Force-grant access even if the role doesn't have it</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot red"></span>
+                <span><strong>Block</strong> — Revoke access even if the role normally allows it</span>
+            </div>
+            <hr style="margin:12px 0;">
+            <p style="font-size:12px; color:#64748b; margin:0; line-height:1.6;">
+                Overrides take priority over role defaults. Superusers always have full access regardless of overrides.
+            </p>
+        </div>
+
+        <!-- Role Defaults -->
+        <div class="legend-box">
+            <h4><i class="bi bi-shield me-1" style="color:var(--alafia-primary);"></i> Role Defaults for {{ role_display }}</h4>
+            {% for app in app_states %}
+            <div class="legend-item">
+                {% if app.role_default == 'allowed' %}
+                    <span class="legend-dot green"></span>
+                {% elif app.role_default == 'limited' %}
+                    <span class="legend-dot yellow"></span>
+                {% else %}
+                    <span class="legend-dot red"></span>
+                {% endif %}
+                <span>{{ app.label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

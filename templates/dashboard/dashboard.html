@@ -1,0 +1,676 @@
+{% extends 'base.html' %}
+
+{% block title %}Clinical Dashboard - Alafia Point Wellness Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-activity text-primary me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Clinical Dashboard</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<!-- Tab Navigation -->
+<div class="row mb-4">
+    <div class="col-12">
+        <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'overview' %}active{% endif %}" 
+                        id="overview-tab" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#overview" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="overview" 
+                        aria-selected="{% if active_tab == 'overview' %}true{% else %}false{% endif %}">
+                    <i class="bi bi-speedometer2 me-2"></i>Overview
+                </button>
+            </li>
+            <!-- <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'patients' %}active{% endif %}" 
+                        id="patients-tab" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#patients" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="patients" 
+                        aria-selected="{% if active_tab == 'patients' %}true{% else %}false{% endif %}">
+                    <i class="bi bi-people me-2"></i>Patients
+                </button>
+            </li> -->
+            {% if user.role not in 'doctor,nutritionist' %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'patients' %}active{% endif %}" 
+                        id="patients-tab" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#patients" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="patients" 
+                        aria-selected="{% if active_tab == 'patients' %}true{% else %}false{% endif %}">
+                    <i class="bi bi-people me-2"></i> <a href="http://172.16.61.154:8000/admin/">Admin</a> 
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<!-- Tab Content -->
+<div class="tab-content" id="dashboardTabsContent">
+    <!-- Overview Tab -->
+    <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" 
+         id="overview" 
+         role="tabpanel" 
+         aria-labelledby="overview-tab">
+        <!-- Clinical Metrics Overview -->
+<div class="row g-4 mb-4">
+    <!-- Patient Census -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-4 h-100" style="border-left-color: var(--alafia-primary) !important;">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="metric-label">Patient Census</div>
+                        <div class="metric-value" style="color: var(--alafia-primary);">{{ total_patients }}</div>
+                        <div class="metric-subtitle">Total Registered</div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="bi bi-people-fill" style="color: var(--alafia-primary);"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Schedule -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-4 h-100" style="border-left-color: var(--alafia-success) !important;">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="metric-label">Today's Schedule</div>
+                        <div class="metric-value" style="color: var(--alafia-success);">
+                            {% if appointments_today %}{{ appointments_today.count }}{% else %}0{% endif %}
+                        </div>
+                        <div class="metric-subtitle">Appointments</div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="bi bi-calendar2-check-fill" style="color: var(--alafia-success);"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Triage Queue -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-4 h-100" style="border-left-color: var(--alafia-warning) !important;">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="metric-label">Triage Queue</div>
+                        <div class="
+Clinical Dashboard
+" style="color: var(--alafia-warning);">{{ pending_triage.count }}</div>
+                        <div class="metric-subtitle">Pending Assessment</div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="bi bi-exclamation-triangle-fill" style="color: var(--alafia-warning);"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Role -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-start border-4 h-100" style="border-left-color: var(--alafia-info) !important;">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="metric-label">Current Role</div>
+                        <div class="metric-value" style="color: var(--alafia-info);">{{ user.get_role_display }}</div>
+                        <div class="metric-subtitle">{{ user.get_full_name|default:user.username }}</div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="bi bi-person-badge-fill" style="color: var(--alafia-info);"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clinical Data Tables -->
+<div class="row g-4 mb-4">
+    <!-- Recent Patient Admissions -->
+    <div class="col-md-12">
+        <div class="card hospital-data-card h-100">
+            <div class="card-header hospital-card-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-plus-fill me-2" style="color: var(--alafia-primary);"></i>
+                        <h6 class="mb-0 fw-semibold">Recent Patient Admissions</h6>
+                    </div>
+                    <a href="{% url 'patients:patient_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-arrow-right me-1"></i>View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_patients %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 hospital-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 fw-semibold">Patient ID</th>
+                                    <th class="border-0 fw-semibold">Patient Name</th>
+                                    <th class="border-0 fw-semibold">Admission Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in recent_patients %}
+                                <tr class="hospital-table-row">
+                                    <td class="fw-medium" style="color: var(--alafia-secondary);">{{ patient.patient_id }}</td>
+                                    <td>
+                                        <a href="{% url 'patients:patient_detail' patient.patient_id %}" 
+                                           class="text-decoration-none text-hospital-dark fw-medium">
+                                            {{ patient.get_full_name }}
+                                        </a>
+                                    </td>
+                                    <td class="text-muted">{{ patient.registration_date|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center">
+                        <i class="bi bi-inbox text-muted mb-2" style="font-size: 2rem;"></i>
+                        <p class="text-muted mb-0">No recent patient admissions</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Priority Triage Queue -->
+    <!-- <div class="col-lg-6">
+        <div class="card hospital-data-card h-100">
+            <div class="card-header hospital-card-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-2" style="color: var(--alafia-warning);"></i>
+                        <h6 class="mb-0 fw-semibold">Priority Triage Queue</h6>
+                    </div>
+                    <a href="{% url 'appointments:appointment_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-arrow-right me-1"></i>View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if pending_triage %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 hospital-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 fw-semibold">Patient</th>
+                                    <th class="border-0 fw-semibold">Priority</th>
+                                    <th class="border-0 fw-semibold">Chief Complaint</th>
+                                    <th class="border-0 fw-semibold">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for triage in pending_triage %}
+                                <tr class="hospital-table-row">
+                                    <td>
+                                        <a href="{% url 'patients:patient_detail' triage.patient.patient_id %}" 
+                                           class="text-decoration-none text-hospital-dark fw-medium">
+                                            {{ triage.patient.get_full_name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if triage.priority_level == '1' %}danger{% elif triage.priority_level == '2' %}warning{% else %}info{% endif %}">
+                                            {{ triage.get_priority_level_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">{{ triage.chief_complaint|truncatechars:25 }}</td>
+                                    <td class="text-muted fw-medium">{{ triage.assessment_date|time:"H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center">
+                        <i class="bi bi-check-circle mb-2" style="font-size: 2rem; color: var(--alafia-success);"></i>
+                        <p class="text-muted mb-0">No pending triage assessments</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div> -->
+</div>
+
+    </div> <!-- End of Overview Tab -->
+    
+    <!-- Patients Tab -->
+    <div class="tab-pane fade {% if active_tab == 'patients' %}show active{% endif %}" 
+         id="patients" 
+         role="tabpanel" 
+         aria-labelledby="patients-tab">
+        
+        <!-- Patient List with Barcodes -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Patient Directory</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_patients %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient ID</th>
+                                            <th>Name</th>
+                                            <th>Barcode</th>
+                                            <th>Contact</th>
+                                            <th>Last Visit</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in recent_patients %}
+                                        <tr>
+                                            <td>{{ patient.patient_id }}</td>
+                                            <td>
+                                                <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="text-decoration-none">
+                                                    {{ patient.get_full_name }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                {% if patient.barcode_data %}
+                                                <div class="d-flex align-items-center">
+                                                    <img src="data:image/png;base64,{{ patient.barcode_data }}" 
+                                                         alt="Barcode for {{ patient.patient_id }}" 
+                                                         style="height: 30px; width: auto;">
+                                                </div>
+                                                {% else %}
+                                                    <span class="text-muted">No barcode</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ patient.phone }}<br>
+                                                <small class="text-muted">{{ patient.email|default:"No email" }}</small>
+                                            </td>
+                                            <td>{{ patient.registration_date|date:"M d, Y" }}</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'patients:patient_detail' patient.patient_id %}" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </a>
+                                                    <a href="{% url 'appointments:appointment_create' %}?patient_id={{ patient.id }}" 
+                                                       class="btn btn-outline-success btn-sm">
+                                                        <i class="bi bi-calendar-plus"></i> Appt
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                                <p class="text-muted mt-2">No patients found</p>
+                                <button type="button" class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#patientRegistrationModal">
+                                    <i class="bi bi-person-plus"></i> Register New Patient
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End of Patients Tab -->
+</div>
+
+<!-- Clinical Workflow Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);">
+            <div class="card-header hospital-card-header">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-lightning-charge-fill me-2" style="color: var(--alafia-primary);"></i>
+                    <h6 class="mb-0 fw-semibold">Clinical Workflow Actions</h6>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% if user.role in 'admin,receptionist,nurse' %}
+                    <div class="col-xl-3 col-md-6">
+                        <button type="button" class="alafia-action-btn w-100 h-100 d-flex flex-column align-items-center justify-content-center border-0" style="background: var(--alafia-gradient); color: white;" data-bs-toggle="modal" data-bs-target="#patientRegistrationModal">
+                            <i class="bi bi-person-plus-fill mb-2" style="font-size: 1.5rem;"></i>
+                            <span class="fw-semibold">Register Patient</span>
+                            <small class="text-muted mt-1">New admission</small>
+                        </button>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.role in 'admin,receptionist' %}
+                    <div class="col-xl-3 col-md-6">
+                        <a href="{% url 'appointments:appointment_create' %}" class="alafia-action-btn w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--alafia-success) 0%, var(--alafia-accent) 100%); color: white; text-decoration: none;">
+                            <i class="bi bi-calendar-plus-fill mb-2" style="font-size: 1.5rem;"></i>
+                            <span class="fw-semibold">Schedule Appointment</span>
+                            <small class="text-muted mt-1">Book consultation</small>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.role in 'admin,billing,receptionist' %}
+                    <div class="col-xl-3 col-md-6">
+                        <a href="{% url 'billing:invoice_create' %}" class="alafia-action-btn w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--alafia-info) 0%, var(--alafia-primary) 100%); color: white; text-decoration: none;">
+                            <i class="bi bi-receipt-cutoff mb-2" style="font-size: 1.5rem;"></i>
+                            <span class="fw-semibold">Create Invoice</span>
+                            <small class="text-muted mt-1">Billing & charges</small>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="col-xl-3 col-md-6">
+                        <a href="{% url 'patients:patient_list' %}" class="alafia-action-btn w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--alafia-secondary) 0%, var(--alafia-secondary-dark) 100%); color: white; text-decoration: none;">
+                            <i class="bi bi-search mb-2" style="font-size: 1.5rem;"></i>
+                            <span class="fw-semibold">Search Patients</span>
+                            <small class="text-muted mt-1">Find records</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Registration Modal -->
+{% load crispy_forms_tags %}
+<div class="modal fade" id="patientRegistrationModal" tabindex="-1" aria-labelledby="patientRegistrationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="patientRegistrationModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Register New Patient
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'patients:patient_register' %}" id="patientRegistrationForm">
+                    {% csrf_token %}
+                    
+                    <!-- Personal Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Personal Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="first_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="last_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" name="date_of_birth">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" name="gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                    <option value="O">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" name="phone" placeholder="+1234567890">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Identification Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Identification Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Type</label>
+                                <select class="form-select" name="id_type">
+                                    <option value="">Select ID Type</option>
+                                    <option value="NATIONAL">National ID</option>
+                                    <option value="DRIVERS">Driver's License</option>
+                                    <option value="PASSPORT">Passport</option>
+                                    <option value="VOTER">Voter's ID</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Number</label>
+                                <input type="text" class="form-control" name="id_number" placeholder="Enter ID number">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visit Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Visit Information</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Visit</label>
+                                <select class="form-select" name="reason_for_visit">
+                                    <option value="">Select Reason</option>
+                                    <option value="CONSULTATION">General Consultation</option>
+                                    <option value="CHECKUP">Routine Checkup</option>
+                                    <option value="EMERGENCY">Emergency</option>
+                                    <option value="FOLLOWUP">Follow-up Visit</option>
+                                    <option value="REFERRAL">Referral</option>
+                                    <option value="TREATMENT">Treatment</option>
+                                    <option value="SCREENING">Screening</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                                <small class="text-muted">Select the primary reason for this visit</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Address Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Address Line 1</label>
+                                <input type="text" class="form-control" name="address_line1">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Address Line 2</label>
+                                <input type="text" class="form-control" name="address_line2">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" name="city">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">State/Province</label>
+                                <input type="text" class="form-control" name="state">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Postal Code</label>
+                                <input type="text" class="form-control" name="postal_code">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Country</label>
+                                <input type="text" class="form-control" name="country" value="Uganda">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Emergency Contact</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Emergency Contact Name</label>
+                                <input type="text" class="form-control" name="emergency_contact_name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Emergency Contact Phone</label>
+                                <input type="tel" class="form-control" name="emergency_contact_phone">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Relationship</label>
+                                <input type="text" class="form-control" name="emergency_contact_relationship" placeholder="e.g., Spouse, Parent, Sibling">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Medical Information</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Blood Type</label>
+                                <select class="form-select" name="blood_type">
+                                    <option value="">Select Blood Type</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Allergies</label>
+                                <textarea class="form-control" name="allergies" rows="2" placeholder="List any known allergies"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Medical History</label>
+                                <textarea class="form-control" name="medical_history" rows="2" placeholder="Previous conditions, surgeries, etc."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Current Medications</label>
+                                <textarea class="form-control" name="current_medications" rows="2" placeholder="List current medications"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insurance Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Insurance Information</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Insurance Provider</label>
+                                <input type="text" class="form-control" name="insurance_provider">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Policy Number</label>
+                                <input type="text" class="form-control" name="insurance_policy_number">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Group Number</label>
+                                <input type="text" class="form-control" name="insurance_group_number">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Group -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Patient Group</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Patient Group (for Pricing)</label>
+                                <select class="form-select" name="patient_group">
+                                    <option value="">Default Pricing</option>
+                                    {% for group in patient_groups %}
+                                    <option value="{{ group.id }}">{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Assign patient to a group for differential pricing (e.g., Corporate, Insurance, VIP)</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="submit" form="patientRegistrationForm" class="btn btn-primary">
+                    <i class="bi bi-person-plus"></i> Register Patient
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

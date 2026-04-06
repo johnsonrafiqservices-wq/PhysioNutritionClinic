@@ -1,0 +1,818 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-cart-check me-3" style="font-size: 1.5rem; color: var(--alafia-success);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Sales Dashboard</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:pharmacy_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#recordSaleModal"><i class="bi bi-plus-circle"></i> Record Sale</button>
+<a href="{% url 'pharmacy:sales_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-list-ul"></i> All Sales</a>
+<a href="{% url 'pharmacy:sales_report' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> Report</a>
+{% endblock %}
+
+{% block content %}
+<style>
+.kpi{border-left:3px solid transparent;transition:border-color .2s;}
+.kpi:hover{border-left-color:var(--accent,#0d6efd);}
+.kpi .kpi-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.kpi .kpi-val{font-size:1.2rem;font-weight:700;line-height:1.2;}
+.kpi .kpi-lbl{font-size:.7rem;color:#6c757d;margin:0;}
+.qa-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid #dee2e6;color:#495057;background:#fff;transition:all .15s;}
+.qa-btn:hover{background:var(--alafia-primary);color:#fff;border-color:var(--alafia-primary);}
+</style>
+
+<!-- Sales KPIs -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:var(--alafia-primary);">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:var(--alafia-primary-light,#e8f0fe);color:var(--alafia-primary);"><i class="bi bi-cart-check"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:var(--alafia-primary);">{{ total_sales|intcomma }}</div>
+                    <p class="kpi-lbl">Total Sales</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-calendar-check"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#198754;">{{ today_sales|intcomma }}</div>
+                    <p class="kpi-lbl">Today's Sales</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#0891b2;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#cffafe;color:#0891b2;"><i class="bi bi-calendar-week"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#0891b2;">{{ week_sales|intcomma }}</div>
+                    <p class="kpi-lbl">This Week</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#e67e22;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-calendar-month"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#e67e22;">{{ month_sales|intcomma }}</div>
+                    <p class="kpi-lbl">This Month</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revenue KPIs -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-currency-exchange"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#198754;font-size:1rem;">UGX {{ total_revenue|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">Total Revenue</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:var(--alafia-primary);">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:var(--alafia-primary-light,#e8f0fe);color:var(--alafia-primary);"><i class="bi bi-cash-coin"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:var(--alafia-primary);font-size:1rem;">UGX {{ today_revenue|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">Today's Revenue</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#0891b2;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#cffafe;color:#0891b2;"><i class="bi bi-graph-up"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#0891b2;font-size:1rem;">UGX {{ week_revenue|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">Week Revenue</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#e67e22;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-cash-stack"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#e67e22;font-size:1rem;">UGX {{ month_revenue|floatformat:0|intcomma }}</div>
+                    <p class="kpi-lbl">Month Revenue</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<style>
+.sales-qa .alafia-action-btn{padding:8px 6px;min-height:0;flex:1;min-width:80px;}
+.sales-qa .alafia-action-btn i{font-size:1.15rem;margin-bottom:4px;}
+.sales-qa .alafia-action-btn span{font-size:.73rem;}
+</style>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Actions
+            </div>
+            <div class="card-body py-2 sales-qa">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#recordSaleModal">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Record Sale</span>
+                    </button>
+                    <a href="{% url 'pharmacy:sales_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-list-ul"></i>
+                        <span>All Sales</span>
+                    </a>
+                    <a href="{% url 'pharmacy:sales_report' %}" class="alafia-action-btn">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Sales Report</span>
+                    </a>
+                    <a href="{% url 'pharmacy:medication_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-capsule"></i>
+                        <span>Medications</span>
+                    </a>
+                    <a href="{% url 'pharmacy:batch_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-boxes"></i>
+                        <span>Batches</span>
+                    </a>
+                    <a href="{% url 'pharmacy:prescription_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-prescription2"></i>
+                        <span>Prescriptions</span>
+                    </a>
+                    <a href="{% url 'pharmacy:supplier_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-truck"></i>
+                        <span>Suppliers</span>
+                    </a>
+                    <a href="{% url 'pharmacy:stock_movement_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Stock Movements</span>
+                    </a>
+                    <a href="{% url 'pharmacy:expiry_alerts' %}" class="alafia-action-btn">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span>Expiry Alerts</span>
+                    </a>
+                    <a href="{% url 'pharmacy:low_stock_alerts' %}" class="alafia-action-btn">
+                        <i class="bi bi-box-arrow-down"></i>
+                        <span>Low Stock</span>
+                    </a>
+                    <a href="{% url 'pharmacy:analytics' %}" class="alafia-action-btn">
+                        <i class="bi bi-bar-chart"></i>
+                        <span>Analytics</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-3 mb-3">
+    <!-- Top Selling Drugs -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up-arrow text-success me-1"></i>Top Selling Medications</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if top_drugs %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Medication</th>
+                                <th class="border-0 text-center">Qty Sold</th>
+                                <th class="border-0 text-center">Sales #</th>
+                                <th class="border-0 text-end pe-3">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for drug in top_drugs %}
+                            <tr>
+                                <td class="ps-3 fw-medium">{{ drug.batch__medication__name }}</td>
+                                <td class="text-center"><span class="badge bg-primary">{{ drug.total_quantity }}</span></td>
+                                <td class="text-center text-muted">{{ drug.sales_count }}</td>
+                                <td class="text-end pe-3 text-success fw-medium">UGX {{ drug.total_revenue|floatformat:0|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox text-muted" style="font-size:2rem;"></i>
+                    <p class="text-muted mt-1 mb-0 small">No sales data available yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sales -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-clock-history text-info me-1"></i>Recent Sales</h6>
+                <a href="{% url 'pharmacy:sales_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_sales %}
+                <div class="list-group list-group-flush">
+                    {% for sale in recent_sales %}
+                    <div class="list-group-item px-3 py-2" style="font-size:.8rem;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="fw-medium">{{ sale.batch.medication.name }}</span>
+                                <br><small class="text-muted"><i class="bi bi-person"></i> {{ sale.reference|default:"Walk-in" }} &middot; {{ sale.created_at|date:"d M H:i" }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary-subtle text-primary">{{ sale.quantity }} units</span>
+                                <br><small class="text-success fw-medium">UGX {{ sale.revenue|floatformat:0|intcomma }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox text-muted" style="font-size:2rem;"></i>
+                    <p class="text-muted mt-1 mb-0 small">No recent sales</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Record Sale Modal -->
+<div class="modal fade" id="recordSaleModal" tabindex="-1" aria-labelledby="recordSaleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2" style="background: var(--alafia-gradient);">
+                <h6 class="modal-title text-white mb-0" id="recordSaleModalLabel">
+                    <i class="bi bi-plus-circle me-1"></i>Record Sale / Dispense Medication
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="recordSaleForm">
+                    {% csrf_token %}
+                    
+                    <!-- Sale Type -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small"><i class="bi bi-tag text-primary"></i> Sale Type</label>
+                        <div class="btn-group w-100 btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="sale_type" id="saleTypeWalkin" value="walkin" checked>
+                            <label class="btn btn-outline-primary" for="saleTypeWalkin"><i class="bi bi-person-walking"></i> Walk-in</label>
+                            <input type="radio" class="btn-check" name="sale_type" id="saleTypePatient" value="patient">
+                            <label class="btn btn-outline-success" for="saleTypePatient"><i class="bi bi-person-badge"></i> Patient</label>
+                            <input type="radio" class="btn-check" name="sale_type" id="saleTypePrescription" value="prescription">
+                            <label class="btn btn-outline-info" for="saleTypePrescription"><i class="bi bi-file-medical"></i> Prescription</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Walk-in Section -->
+                    <div id="walkinSection" class="sale-type-section">
+                        <div class="mb-3">
+                            <label for="customer_name" class="form-label small"><i class="bi bi-person text-info"></i> Customer Name</label>
+                            <input type="text" class="form-control form-control-sm" id="customer_name" name="customer_name" placeholder="Walk-in Customer">
+                        </div>
+                    </div>
+                    
+                    <!-- Patient Section -->
+                    <div id="patientSection" class="sale-type-section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="patient_id" class="form-label small"><i class="bi bi-person-badge text-success"></i> Select Patient <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="patient_id" name="patient_id">
+                                <option value="">-- Select Patient --</option>
+                                {% if patients %}{% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.patient_id }} - {{ patient.get_full_name }}{% if patient.phone %} ({{ patient.phone }}){% endif %}</option>
+                                {% endfor %}{% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Prescription Section -->
+                    <div id="prescriptionSection" class="sale-type-section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="prescription_id" class="form-label small"><i class="bi bi-file-medical text-info"></i> Select Prescription <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="prescription_id" name="prescription_id">
+                                <option value="">-- Select Pending Prescription --</option>
+                                {% if pending_prescriptions %}{% for prescription in pending_prescriptions %}
+                                <option value="{{ prescription.id }}" 
+                                        {% if prescription.medication %}data-medication-id="{{ prescription.medication.id }}"{% endif %}
+                                        {% if prescription.quantity %}data-quantity="{{ prescription.quantity }}"{% endif %}
+                                        data-patient-id="{% if prescription.patient %}{{ prescription.patient.id }}{% endif %}"
+                                        data-patient-name="{% if prescription.patient %}{{ prescription.patient.get_full_name }}{% else %}Unknown{% endif %}"
+                                        data-is-multi="{% if prescription.items.count > 0 %}true{% else %}false{% endif %}">
+                                    {% if prescription.patient %}{{ prescription.patient.patient_id }}{% else %}N/A{% endif %} - 
+                                    {% if prescription.patient %}{{ prescription.patient.get_full_name }}{% else %}Unknown{% endif %} - 
+                                    {% if prescription.items.count > 0 %}{{ prescription.items.count }} Medications
+                                    {% elif prescription.medication %}{{ prescription.medication.name }} (Qty: {{ prescription.quantity }})
+                                    {% else %}Unknown Medication{% endif %}
+                                    - {{ prescription.prescribed_date|date:"Y-m-d" }}
+                                </option>
+                                {% endfor %}{% endif %}
+                            </select>
+                            <div class="form-text"><span id="prescriptionInfo" class="text-muted"></span></div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <!-- Medication & Batch -->
+                    <div class="mb-3" id="medicationSelectionDiv">
+                        <label for="medication_batch_combo" class="form-label small">
+                            <i class="bi bi-capsule text-primary"></i> Select Medication <span class="text-danger">*</span>
+                            <span class="badge bg-success ms-1" id="autoPopulatedBadge" style="display:none;font-size:.6rem;"><i class="bi bi-check-circle"></i> Auto</span>
+                        </label>
+                        <select class="form-select form-select-sm" id="medication_batch_combo" name="medication_batch_combo" required>
+                            <option value="">-- Select Medication & Batch --</option>
+                        </select>
+                        <div class="form-text" id="batchInfoDashboard">
+                            <span class="text-muted small">Select medication with available batch</span>
+                            <div id="selectedBatchDetails" style="display:none;" class="mt-1">
+                                <span class="badge bg-info-subtle text-info me-1" style="font-size:.65rem;">Stock: <span id="batchStockDashboard">-</span></span>
+                                <span class="badge bg-warning-subtle text-warning me-1" style="font-size:.65rem;">Exp: <span id="batchExpiryDashboard">-</span></span>
+                                <span class="badge bg-success-subtle text-success" style="font-size:.65rem;">Price: UGX <span id="batchPriceDashboard">-</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="medication_id" name="medication_id">
+                    <input type="hidden" id="batch_id" name="batch_id">
+                    
+                    <!-- Quantity -->
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label small"><i class="bi bi-123 text-success"></i> Quantity <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control form-control-sm" id="quantity" name="quantity" min="1" required>
+                        <div class="form-text small">
+                            Available: <span id="availableStock">-</span> units
+                            <span id="prescribedQtyInfo" style="display: none;"> | Prescribed: <span id="prescribedQty">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Dispensing Instructions -->
+                    <div id="dispensingInstructionsSection" style="display: none;">
+                        <div class="mb-3">
+                            <label for="dispensing_instructions" class="form-label small"><i class="bi bi-clipboard-pulse text-info"></i> Instructions</label>
+                            <textarea class="form-control form-control-sm" id="dispensing_instructions" name="dispensing_instructions" rows="2" readonly></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label small"><i class="bi bi-sticky text-warning"></i> Notes</label>
+                        <textarea class="form-control form-control-sm" id="notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+                    </div>
+                    
+                    <!-- Revenue Preview -->
+                    <div class="alert alert-success py-2 mb-0 small">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <i class="bi bi-currency-exchange"></i> <strong>Total:</strong> 
+                                <span id="estimatedRevenue" class="fw-bold">UGX 0</span>
+                            </div>
+                            <div class="col-md-6" id="prescriptionStatusDiv" style="display: none;">
+                                <i class="bi bi-check-circle"></i> <span class="badge bg-info" style="font-size:.65rem;">Dispensing Prescription</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-circle"></i> Cancel</button>
+                <button type="button" class="btn btn-success btn-sm" id="submitSaleBtn"><i class="bi bi-check-circle"></i> <span id="submitBtnText">Record Sale</span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const medicationBatchCombo = document.getElementById('medication_batch_combo');
+    const medicationIdInput = document.getElementById('medication_id');
+    const batchIdInput = document.getElementById('batch_id');
+    const quantityInput = document.getElementById('quantity');
+    const availableStockSpan = document.getElementById('availableStock');
+    const estimatedRevenueSpan = document.getElementById('estimatedRevenue');
+    const submitBtn = document.getElementById('submitSaleBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const recordSaleForm = document.getElementById('recordSaleForm');
+    const selectedBatchDetails = document.getElementById('selectedBatchDetails');
+    const batchStockDashboard = document.getElementById('batchStockDashboard');
+    const batchExpiryDashboard = document.getElementById('batchExpiryDashboard');
+    const batchPriceDashboard = document.getElementById('batchPriceDashboard');
+    const saleTypeWalkin = document.getElementById('saleTypeWalkin');
+    const saleTypePatient = document.getElementById('saleTypePatient');
+    const saleTypePrescription = document.getElementById('saleTypePrescription');
+    const walkinSection = document.getElementById('walkinSection');
+    const patientSection = document.getElementById('patientSection');
+    const prescriptionSection = document.getElementById('prescriptionSection');
+    const dispensingInstructionsSection = document.getElementById('dispensingInstructionsSection');
+    const prescriptionStatusDiv = document.getElementById('prescriptionStatusDiv');
+    const prescribedQtyInfo = document.getElementById('prescribedQtyInfo');
+    const prescriptionSelect = document.getElementById('prescription_id');
+    const prescriptionInfo = document.getElementById('prescriptionInfo');
+    const dispensingInstructions = document.getElementById('dispensing_instructions');
+    const prescribedQty = document.getElementById('prescribedQty');
+    let medicationsLoaded = false;
+
+    document.getElementById('recordSaleModal').addEventListener('shown.bs.modal', function() {
+        loadMedicationsWithBatches();
+    });
+
+    function loadMedicationsWithBatches() {
+        medicationsLoaded = false;
+        const combo = document.getElementById('medication_batch_combo');
+        if (!combo) return;
+        combo.innerHTML = '<option value="">Loading medications...</option>';
+        combo.disabled = true;
+        fetch('{% url "pharmacy:get_medications_ajax" %}')
+            .then(response => { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
+            .then(data => {
+                combo.innerHTML = '<option value="">-- Select Medication & Batch --</option>';
+                if (data.success && data.medications && data.medications.length > 0) {
+                    const promises = data.medications.map(med =>
+                        fetch('{% url "pharmacy:get_batches_ajax" %}?medication_id=' + med.id)
+                            .then(res => res.json())
+                            .then(batchData => ({ medication: med, batches: batchData.batches || [] }))
+                            .catch(() => ({ medication: med, batches: [] }))
+                    );
+                    Promise.all(promises).then(results => {
+                        let totalOptions = 0;
+                        results.forEach(({ medication, batches }) => {
+                            batches.forEach(batch => {
+                                const option = document.createElement('option');
+                                option.value = medication.id + '|' + batch.id;
+                                option.textContent = medication.name + ' - Batch: ' + batch.batch_number + ' (Stock: ' + batch.current_stock + ', Exp: ' + batch.expiry_date + ')';
+                                option.dataset.medicationId = medication.id;
+                                option.dataset.batchId = batch.id;
+                                option.dataset.stock = batch.current_stock;
+                                option.dataset.expiry = batch.expiry_date;
+                                option.dataset.price = batch.selling_price;
+                                combo.appendChild(option);
+                                totalOptions++;
+                            });
+                        });
+                        if (totalOptions === 0) {
+                            combo.innerHTML = '<option value="">No medications with stock available</option>';
+                            combo.disabled = true;
+                        } else {
+                            combo.disabled = false;
+                            medicationsLoaded = true;
+                            attachComboChangeHandler();
+                        }
+                    });
+                } else {
+                    combo.innerHTML = '<option value="">No medications available</option>';
+                    combo.disabled = true;
+                }
+            })
+            .catch(error => {
+                combo.innerHTML = '<option value="">Error loading medications</option>';
+                combo.disabled = true;
+            });
+    }
+
+    function handleComboChange(e) {
+        const combo = e.target;
+        const selectedOption = combo.options[combo.selectedIndex];
+        if (combo.value && selectedOption) {
+            const [medId, bId] = combo.value.split('|');
+            const medInput = document.getElementById('medication_id');
+            const batchInput = document.getElementById('batch_id');
+            if (medInput) medInput.value = medId;
+            if (batchInput) batchInput.value = bId;
+            const stock = selectedOption.dataset.stock;
+            const expiry = selectedOption.dataset.expiry;
+            const price = selectedOption.dataset.price;
+            if (batchStockDashboard) batchStockDashboard.textContent = stock;
+            if (batchExpiryDashboard) batchExpiryDashboard.textContent = expiry;
+            if (batchPriceDashboard) batchPriceDashboard.textContent = parseFloat(price).toLocaleString();
+            if (selectedBatchDetails) selectedBatchDetails.style.display = 'block';
+            if (availableStockSpan) availableStockSpan.textContent = stock;
+            updateCalculations();
+        } else {
+            const medInput = document.getElementById('medication_id');
+            const batchInput = document.getElementById('batch_id');
+            if (medInput) medInput.value = '';
+            if (batchInput) batchInput.value = '';
+            if (selectedBatchDetails) selectedBatchDetails.style.display = 'none';
+            if (availableStockSpan) availableStockSpan.textContent = '-';
+            if (estimatedRevenueSpan) estimatedRevenueSpan.textContent = 'UGX 0';
+            if (quantityInput) quantityInput.value = '';
+        }
+    }
+
+    function attachComboChangeHandler() {
+        const combo = document.getElementById('medication_batch_combo');
+        if (!combo) return;
+        combo.removeEventListener('change', handleComboChange);
+        combo.addEventListener('change', handleComboChange);
+        combo.onchange = handleComboChange;
+    }
+    attachComboChangeHandler();
+
+    function handleSaleTypeChange() {
+        const saleType = document.querySelector('input[name="sale_type"]:checked').value;
+        walkinSection.style.display = 'none';
+        patientSection.style.display = 'none';
+        prescriptionSection.style.display = 'none';
+        dispensingInstructionsSection.style.display = 'none';
+        prescriptionStatusDiv.style.display = 'none';
+        prescribedQtyInfo.style.display = 'none';
+        const badge = document.getElementById('autoPopulatedBadge');
+        if (badge) badge.style.display = 'none';
+
+        if (saleType === 'walkin') {
+            walkinSection.style.display = 'block';
+            submitBtnText.textContent = 'Record Sale';
+            showFields(true);
+        } else if (saleType === 'patient') {
+            patientSection.style.display = 'block';
+            submitBtnText.textContent = 'Record Sale';
+            showFields(true);
+        } else if (saleType === 'prescription') {
+            prescriptionSection.style.display = 'block';
+            prescriptionStatusDiv.style.display = 'block';
+            prescribedQtyInfo.style.display = 'inline';
+            submitBtnText.textContent = 'Dispense Medication';
+            showFields(false);
+        }
+        prescriptionSelect.value = '';
+        const pInput = document.getElementById('patient_id');
+        const qInput = document.getElementById('quantity');
+        const combo = document.getElementById('medication_batch_combo');
+        const medInput = document.getElementById('medication_id');
+        const bInput = document.getElementById('batch_id');
+        const details = document.getElementById('selectedBatchDetails');
+        if (pInput) pInput.value = '';
+        if (qInput) qInput.value = '';
+        if (combo) combo.value = '';
+        if (medInput) medInput.value = '';
+        if (bInput) bInput.value = '';
+        if (details) details.style.display = 'none';
+        updateCalculations();
+    }
+
+    function showFields(show) {
+        const medicationDiv = document.getElementById('medicationSelectionDiv');
+        const quantityDiv = quantityInput ? quantityInput.closest('.mb-3') : null;
+        const notesDiv = document.querySelector('textarea#notes')?.closest('.mb-3');
+        if (medicationDiv) medicationDiv.style.display = show ? 'block' : 'none';
+        if (quantityDiv) quantityDiv.style.display = show ? 'block' : 'none';
+        if (notesDiv) notesDiv.style.display = show ? 'block' : 'none';
+    }
+
+    saleTypeWalkin.addEventListener('change', handleSaleTypeChange);
+    saleTypePatient.addEventListener('change', handleSaleTypeChange);
+    saleTypePrescription.addEventListener('change', handleSaleTypeChange);
+
+    // Handle prescription selection
+    prescriptionSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+            const medicationId = selectedOption.dataset.medicationId;
+            const quantity = selectedOption.dataset.quantity;
+            const patientName = selectedOption.dataset.patientName;
+            const isMulti = selectedOption.dataset.isMulti === 'true';
+            let medicationCount = 1;
+            const countMatch = selectedOption.textContent.match(/(\d+)\s+Medications/);
+            if (countMatch) medicationCount = parseInt(countMatch[1]);
+
+            prescriptionInfo.innerHTML = '<i class="bi bi-hourglass-split text-info"></i> Calculating total...';
+
+            fetch('/pharmacy/ajax/prescription/' + selectedOption.value + '/total/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const totalAmount = data.total_amount;
+                    const formattedTotal = 'UGX ' + totalAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                    const revenueSpan = document.getElementById('estimatedRevenue');
+                    if (revenueSpan) revenueSpan.textContent = formattedTotal;
+                    const medCountText = medicationCount === 1 ? '1 medication' : medicationCount + ' medications';
+                    if (isMulti) {
+                        prescriptionInfo.innerHTML = '<i class="bi bi-info-circle-fill text-info"></i> <strong>Multi-Medication</strong><br>Patient: <strong>' + patientName + '</strong><br>Medications: <strong>' + medCountText + '</strong><br><strong class="text-primary">' + formattedTotal + '</strong><br><small class="text-warning">Use Dispense button in prescription list for multi-med prescriptions</small>';
+                    } else {
+                        prescriptionInfo.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> <strong>Ready to Dispense</strong><br>Patient: <strong>' + patientName + '</strong><br><strong class="text-primary">' + formattedTotal + '</strong><br><small class="text-success">Click "Dispense Medication" to complete</small>';
+                    }
+                } else {
+                    prescriptionInfo.innerHTML = '<i class="bi bi-exclamation-triangle text-warning"></i> Error: ' + (data.message || 'Unknown');
+                    const revenueSpan = document.getElementById('estimatedRevenue');
+                    if (revenueSpan) revenueSpan.textContent = 'UGX 0';
+                }
+            })
+            .catch(err => {
+                prescriptionInfo.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Error calculating total';
+                const revenueSpan = document.getElementById('estimatedRevenue');
+                if (revenueSpan) revenueSpan.textContent = 'UGX 0';
+            });
+
+            showFields(false);
+            const qty = parseInt(quantity) || 1;
+            quantityInput.value = qty;
+            quantityInput.removeAttribute('required');
+            prescribedQty.textContent = qty;
+            dispensingInstructions.value = 'Prescription for ' + patientName;
+
+            // Auto-select medication in dropdown
+            const attemptAutoSelection = () => {
+                const combo = document.getElementById('medication_batch_combo');
+                if (!combo || !medicationId) return false;
+                if (combo.options.length <= 1) return false;
+                combo.style.backgroundColor = '#e9ecef';
+                combo.style.pointerEvents = 'none';
+                for (let i = 0; i < combo.options.length; i++) {
+                    if (combo.options[i].dataset.medicationId === medicationId) {
+                        combo.selectedIndex = i;
+                        combo.value = combo.options[i].value;
+                        const badge = document.getElementById('autoPopulatedBadge');
+                        if (badge) badge.style.display = 'inline-block';
+                        handleComboChange({ target: combo });
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            if (medicationsLoaded) {
+                attemptAutoSelection();
+            } else {
+                const checkInterval = setInterval(() => {
+                    if (medicationsLoaded) { clearInterval(checkInterval); attemptAutoSelection(); }
+                }, 500);
+                setTimeout(() => clearInterval(checkInterval), 10000);
+            }
+        } else {
+            const revenueSpan = document.getElementById('estimatedRevenue');
+            if (revenueSpan) revenueSpan.textContent = 'UGX 0';
+            quantityInput.value = '';
+            quantityInput.readOnly = false;
+            prescribedQty.textContent = '0';
+            dispensingInstructions.value = '';
+            prescriptionInfo.textContent = '';
+            showFields(true);
+            const combo = document.getElementById('medication_batch_combo');
+            if (combo) { combo.style.backgroundColor = ''; combo.style.pointerEvents = ''; }
+            const badge = document.getElementById('autoPopulatedBadge');
+            if (badge) badge.style.display = 'none';
+        }
+    });
+
+    function updateCalculations() {
+        const saleTypeChecked = document.querySelector('input[name="sale_type"]:checked');
+        if (saleTypeChecked && saleTypeChecked.value === 'prescription') return;
+        const combo = document.getElementById('medication_batch_combo');
+        const qtyInput = document.getElementById('quantity');
+        const revenueSpan = document.getElementById('estimatedRevenue');
+        if (!combo || !qtyInput || !revenueSpan) return;
+        const selectedOption = combo.options[combo.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            const stock = parseInt(selectedOption.dataset.stock);
+            const price = parseFloat(selectedOption.dataset.price);
+            const qty = parseInt(qtyInput.value) || 0;
+            if (qty > 0 && price > 0) {
+                revenueSpan.textContent = 'UGX ' + (qty * price).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            } else {
+                revenueSpan.textContent = 'UGX 0';
+            }
+            qtyInput.max = stock;
+        } else {
+            revenueSpan.textContent = 'UGX 0';
+            qtyInput.max = '';
+        }
+    }
+    if (quantityInput) quantityInput.addEventListener('input', updateCalculations);
+
+    // Submit sale
+    submitBtn.addEventListener('click', function() {
+        const formData = new FormData(recordSaleForm);
+        const saleType = formData.get('sale_type');
+
+        if (saleType === 'prescription') {
+            const qtyVal = quantityInput.value;
+            if (!qtyVal || qtyVal === '0') { quantityInput.value = '1'; formData.set('quantity', '1'); }
+        }
+
+        if (saleType !== 'prescription') {
+            let batchId = formData.get('batch_id');
+            let medicationId = formData.get('medication_id');
+            const comboValue = formData.get('medication_batch_combo');
+            if (!batchId && comboValue && comboValue.includes('|')) {
+                const [mId, bId] = comboValue.split('|');
+                medicationId = mId; batchId = bId;
+                const medInput = document.getElementById('medication_id');
+                const batchInput = document.getElementById('batch_id');
+                if (medInput) medInput.value = medicationId;
+                if (batchInput) batchInput.value = batchId;
+                formData.set('medication_id', medicationId);
+                formData.set('batch_id', batchId);
+            }
+            if (!batchId) { alert('Please select a medication with batch'); return; }
+            if (!formData.get('quantity') || parseInt(formData.get('quantity')) <= 0) { alert('Please enter a valid quantity'); return; }
+        }
+        if (saleType === 'patient' && !formData.get('patient_id')) { alert('Please select a patient'); return; }
+        if (saleType === 'prescription' && !formData.get('prescription_id')) { alert('Please select a prescription'); return; }
+
+        const selectedOption = medicationBatchCombo.options[medicationBatchCombo.selectedIndex];
+        if (selectedOption && selectedOption.dataset.stock) {
+            if (parseInt(formData.get('quantity')) > parseInt(selectedOption.dataset.stock)) {
+                alert('Insufficient stock! Only ' + selectedOption.dataset.stock + ' units available.');
+                return;
+            }
+        }
+
+        submitBtn.disabled = true;
+        const originalBtnContent = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing...';
+
+        fetch('{% url "pharmacy:record_sale_ajax" %}', {
+            method: 'POST', body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken'), 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let message = data.message;
+                if (data.prescription_dispensed) message += '\nPrescription marked as dispensed.';
+                const modal = bootstrap.Modal.getInstance(document.getElementById('recordSaleModal'));
+                modal.hide();
+                recordSaleForm.reset();
+                const combo = document.getElementById('medication_batch_combo');
+                const medInput = document.getElementById('medication_id');
+                const bInput = document.getElementById('batch_id');
+                const details = document.getElementById('selectedBatchDetails');
+                if (combo) combo.value = '';
+                if (medInput) medInput.value = '';
+                if (bInput) bInput.value = '';
+                if (details) details.style.display = 'none';
+                handleSaleTypeChange();
+                updateCalculations();
+
+                if (data.data && data.data.patient_id && data.data.stock_movement_id) {
+                    const addToInvoice = confirm(message + '\n\nAdd this sale to patient invoice?');
+                    if (addToInvoice) {
+                        const invoiceFormData = new FormData();
+                        invoiceFormData.append('csrfmiddlewaretoken', formData.get('csrfmiddlewaretoken'));
+                        invoiceFormData.append('stock_movement_id', data.data.stock_movement_id);
+                        invoiceFormData.append('patient_id', data.data.patient_id);
+                        fetch('{% url "pharmacy:add_sale_to_invoice_ajax" %}', {
+                            method: 'POST', body: invoiceFormData,
+                            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken'), 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(res => res.json())
+                        .then(invoiceData => {
+                            if (invoiceData.success) alert('Sale added to invoice ' + invoiceData.data.invoice_number);
+                            else alert('Could not add to invoice: ' + invoiceData.message);
+                            location.reload();
+                        })
+                        .catch(() => { alert('Error adding to invoice. Sale recorded.'); location.reload(); });
+                    } else { location.reload(); }
+                } else { alert(message); location.reload(); }
+            } else { alert('Error: ' + data.message); }
+        })
+        .catch(error => { alert('Error recording sale: ' + error.message); })
+        .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnContent; });
+    });
+
+    document.getElementById('recordSaleModal').addEventListener('hidden.bs.modal', function() {
+        recordSaleForm.reset();
+        const combo = document.getElementById('medication_batch_combo');
+        const medInput = document.getElementById('medication_id');
+        const bInput = document.getElementById('batch_id');
+        const details = document.getElementById('selectedBatchDetails');
+        if (combo) combo.value = '';
+        if (medInput) medInput.value = '';
+        if (bInput) bInput.value = '';
+        if (details) details.style.display = 'none';
+        handleSaleTypeChange();
+        updateCalculations();
+    });
+});
+</script>
+
+{% include 'pharmacy/modals/all_pharmacy_modals.html' %}
+{% endblock %}

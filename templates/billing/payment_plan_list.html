@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Plans - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar2-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Payment Plans</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-primary">
+    <i class="bi bi-receipt"></i> View Invoices
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Controls -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Filter Payment Plans</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary d-block w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Payment Plans List -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Payment Plans</h6>
+    </div>
+    <div class="card-body">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Plan ID</th>
+                            <th>Patient</th>
+                            <th>Invoice</th>
+                            <th>Total Amount</th>
+                            <th>Monthly Payment</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'billing:payment_plan_detail' plan.pk %}" class="text-decoration-none">
+                                    {{ plan.plan_id }}
+                                </a>
+                            </td>
+                            <td>{{ plan.patient.get_full_name }}</td>
+                            <td>
+                                <a href="{% url 'billing:invoice_detail' plan.invoice.pk %}" class="text-decoration-none">
+                                    {{ plan.invoice.invoice_number }}
+                                </a>
+                            </td>
+                            <td>UGX {{ plan.total_amount }}</td>
+                            <td>UGX {{ plan.monthly_payment }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    {% widthratio plan.payments_made plan.number_of_payments 100 as progress_percent %}
+                                    <div class="progress-bar" style="width: {{ progress_percent }}%">
+                                        {{ plan.payments_made }}/{{ plan.number_of_payments }}
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    Remaining: UGX {{ plan.remaining_balance }}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-{% if plan.status == 'active' %}success{% elif plan.status == 'completed' %}primary{% elif plan.status == 'defaulted' %}danger{% else %}secondary{% endif %}">
+                                    {{ plan.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'billing:payment_plan_detail' plan.pk %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Payment plans pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if selected_status %}&status={{ selected_status }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-calendar-check text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-2">No payment plans found.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

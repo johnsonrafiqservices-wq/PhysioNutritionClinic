@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Patient Triage - {{ patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-clipboard2-pulse-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Patient Triage - {{ patient.get_full_name }}</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    Patient Triage for {{ patient.get_full_name }} 
+                    <span class="fw-semibold text-primary">{{ patient.patient_id }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Chief Complaint -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Chief Complaint</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.chief_complaint|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Symptoms and Pain Assessment -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Symptoms & Pain Assessment</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.symptoms|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.pain_scale|as_crispy_field }}
+                            <small class="text-muted">Rate pain from 0 (no pain) to 10 (severe pain)</small>
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.onset|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.duration|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Priority and Department Assignment -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Priority Assessment & Department Routing</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.priority_level|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.assigned_department|as_crispy_field }}
+                            <small class="text-muted">Select the appropriate department for this patient</small>
+                        </div>
+                    </div>
+
+                    <!-- Triage Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Triage Notes</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Patient
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-clipboard-check"></i> Complete Triage
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Priority Guidelines -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Priority Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="fw-semibold text-danger me-2">Priority 1</span>
+                    <small><strong>Critical:</strong> Life-threatening conditions requiring immediate attention</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-warning me-2">Priority 2</span>
+                    <small><strong>High:</strong> Serious conditions requiring care within 15 minutes</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-info me-2">Priority 3</span>
+                    <small><strong>Medium:</strong> Stable conditions that can wait 30 minutes</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-success me-2">Priority 4</span>
+                    <small><strong>Low:</strong> Minor conditions that can wait 60 minutes</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-secondary me-2">Priority 5</span>
+                    <small><strong>Non-urgent:</strong> Routine conditions that can wait 2 hours</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Department Guidelines -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Department Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="fw-semibold text-primary me-2">Physiotherapy</span>
+                    <small><strong>Physical conditions:</strong> Musculoskeletal injuries, mobility issues, pain management, rehabilitation</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-success me-2">Nutrition</span>
+                    <small><strong>Dietary concerns:</strong> Weight management, eating disorders, diabetes, food allergies, nutritional counseling</small>
+                </div>
+                <div class="mb-3">
+                    <span class="fw-semibold text-secondary me-2">General Medicine</span>
+                    <small><strong>General health:</strong> Routine checkups, general symptoms, referrals to specialists</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pain Scale Reference -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Pain Scale Reference</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-success">0-2</span>
+                            <small>Mild</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-warning">3-5</span>
+                            <small>Moderate</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-orange">6-7</span>
+                            <small>Severe</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold text-danger">8-10</span>
+                            <small>Very Severe</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previous Triage Records -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Previous Triage Records</h6>
+            </div>
+            <div class="card-body">
+                {% if previous_triages %}
+                    {% for triage in previous_triages %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <small class="text-muted">{{ triage.triage_date|date:"M d, Y" }}</small>
+                                <p class="mb-1"><strong>{{ triage.chief_complaint|truncatechars:50 }}</strong></p>
+                                <small class="text-muted">Dept: {{ triage.get_assigned_department_display }}</small>
+                            </div>
+                            <span class="fw-semibold text-{% if triage.priority_level == '1' %}danger{% elif triage.priority_level == '2' %}warning{% elif triage.priority_level == '3' %}info{% elif triage.priority_level == '4' %}success{% else %}secondary{% endif %}">
+                                P{{ triage.priority_level }}
+                            </span>
+                        </div>
+                        {% if triage.pain_scale %}
+                            <small class="text-muted">Pain: {{ triage.pain_scale }}/10</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No previous triage records.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-orange {
+    background-color: #fd7e14 !important;
+}
+</style>
+{% endblock %}

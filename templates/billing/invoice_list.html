@@ -1,0 +1,879 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoices - Alafia Point Wellness Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-receipt-cutoff me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Invoice Management</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <button type="button" class="btn btn-primary" onclick="openFullInvoiceCreateModal()">
+        <i class="bi bi-receipt"></i> Create Invoice
+    </button>
+    <button type="button" class="btn btn-info" onclick="openInvoiceForPatientModal()">
+        <i class="bi bi-person-plus"></i> New Invoice for Patient
+    </button>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'billing:invoice_export_csv' %}?status={{ selected_status }}&date_from={{ date_from }}&date_to={{ date_to }}&search={{ search_query }}&amount_min={{ amount_min }}&amount_max={{ amount_max }}"><i class="bi bi-file-earmark-spreadsheet"></i> Export to CSV</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportInvoicesToExcel()"><i class="bi bi-file-earmark-excel"></i> Export to Excel</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportInvoicesToPDF()"><i class="bi bi-file-earmark-pdf"></i> Export to PDF</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{% url 'billing:billing_reports' %}"><i class="bi bi-bar-chart-line"></i> Billing Reports</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Invoice Statistics Cards -->
+<div class="row mb-4">
+    <!-- Total Invoices -->
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: var(--alafia-primary);">
+                            Total Invoices
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_invoices }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-receipt fa-2x" style="color: var(--alafia-primary); opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Amount -->
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: var(--alafia-info);">
+                            Total Amount
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ stats.total_amount|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cash-stack fa-2x" style="color: var(--alafia-info); opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paid Amount -->
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: var(--alafia-success);">
+                            Paid Amount
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ stats.paid_amount|floatformat:0 }}</div>
+                        <small class="text-muted">{{ stats.paid_count }} paid invoices</small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle fa-2x" style="color: var(--alafia-success); opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outstanding Amount -->
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: var(--alafia-warning);">
+                            Outstanding Amount
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">UGX {{ stats.outstanding_amount|floatformat:0 }}</div>
+                        <small class="text-muted">{{ stats.sent_count|add:stats.overdue_count }} pending</small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-hourglass-split fa-2x" style="color: var(--alafia-warning); opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Breakdown Row -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <!-- <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Invoice Status Breakdown</h6>
+            </div> -->
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="status-card-clickable border rounded p-3" data-status="draft">
+                            <i class="bi bi-file-earmark fa-2x mb-2" style="color: var(--alafia-secondary);"></i>
+                            <h4 class="mb-0">{{ stats.draft_count }}</h4>
+                            <small class="text-muted">Draft</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="status-card-clickable border rounded p-3" data-status="sent">
+                            <i class="bi bi-send fa-2x mb-2" style="color: var(--alafia-info);"></i>
+                            <h4 class="mb-0">{{ stats.sent_count }}</h4>
+                            <small class="text-muted">Sent</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="status-card-clickable border rounded p-3" data-status="paid">
+                            <i class="bi bi-check-circle fa-2x mb-2" style="color: var(--alafia-success);"></i>
+                            <h4 class="mb-0">{{ stats.paid_count }}</h4>
+                            <small class="text-muted">Paid</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="status-card-clickable border rounded p-3" data-status="overdue">
+                            <i class="bi bi-exclamation-triangle fa-2x mb-2" style="color: var(--alafia-danger);"></i>
+                            <h4 class="mb-0">{{ stats.overdue_count }}</h4>
+                            <small class="text-muted">Overdue</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="status-card-clickable border rounded p-3" data-status="cancelled">
+                            <i class="bi bi-x-circle fa-2x mb-2" style="color: var(--alafia-secondary);"></i>
+                            <h4 class="mb-0">{{ stats.cancelled_count }}</h4>
+                            <small class="text-muted">Cancelled</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="status-card-clickable border rounded p-3" data-status="all" style="background: var(--alafia-gradient-light);">
+                            <i class="bi bi-graph-up fa-2x mb-2" style="color: var(--alafia-primary);"></i>
+                            <h4 class="mb-0">{{ stats.total_invoices }}</h4>
+                            <small class="text-muted">Total</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simple Search Bar -->
+<div class="card mb-3" style="border: 1px solid #e3e6f0;">
+    <div class="card-body py-2">
+        <div class="row align-items-center g-2">
+            <div class="col-md-3">
+                <input type="text" class="form-control form-control-sm" id="globalInvoiceSearch" placeholder="Search invoices..." style="border: 1px solid var(--alafia-primary);" onkeyup="filterInvoices()">
+            </div>
+            <div class="col-md-2">
+                <input type="date" class="form-control form-control-sm" id="dateFromFilter" name="date_from" value="{{ date_from }}" placeholder="From" onchange="filterInvoices()">
+            </div>
+            <div class="col-md-2">
+                <input type="date" class="form-control form-control-sm" id="dateToFilter" name="date_to" value="{{ date_to }}" placeholder="To" onchange="filterInvoices()">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="statusFilter" name="status" onchange="filterInvoices()">
+                    <option value="">All Status</option>
+                    <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="sent" {% if status == 'sent' %}selected{% endif %}>Sent</option>
+                    <option value="paid" {% if status == 'paid' %}selected{% endif %}>Paid</option>
+                    <option value="overdue" {% if status == 'overdue' %}selected{% endif %}>Overdue</option>
+                    <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control form-control-sm" id="amountFilter" name="amount_min" placeholder="Min amount" value="{{ amount_min }}" onkeyup="filterInvoices()">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFilters()" title="Clear Filters">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invoices Table -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Invoices 
+            {% if date_from or date_to or status or search_query %}
+                - Filtered Results
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body">
+        <!-- Column Filters (Hidden by default) -->
+        <div id="invoiceColumnFilters" class="card mb-3" style="display: none; border: 2px solid var(--alafia-success); border-radius: 10px;">
+            <div class="card-header" style="background: var(--alafia-success-gradient); color: white;">
+                <h6 class="mb-0"><i class="bi bi-funnel-fill me-2"></i>Column-Specific Filters</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-1">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Invoice #..." onkeyup="filterInvoiceColumn(0, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Patient..." onkeyup="filterInvoiceColumn(1, this.value)">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Date..." onkeyup="filterInvoiceColumn(2, this.value)">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Due..." onkeyup="filterInvoiceColumn(3, this.value)">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Amount..." onkeyup="filterInvoiceColumn(4, this.value)">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Paid..." onkeyup="filterInvoiceColumn(5, this.value)">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Balance..." onkeyup="filterInvoiceColumn(6, this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filter Status..." onkeyup="filterInvoiceColumn(7, this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm" id="invoicesTable" style="border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <thead style="background: var(--alafia-gradient); color: white;">
+                        <tr>
+                            <th onclick="sortInvoiceTable(0)" style="cursor: pointer; user-select: none;">
+                                Invoice # <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortInvoiceTable(1)" style="cursor: pointer; user-select: none;">
+                                Patient <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortInvoiceTable(2)" style="cursor: pointer; user-select: none;">
+                                Date <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortInvoiceTable(3)" style="cursor: pointer; user-select: none;">
+                                Due Date <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortInvoiceTable(4)" style="cursor: pointer; user-select: none;">
+                                Amount <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortInvoiceTable(5)" style="cursor: pointer; user-select: none;">
+                                Paid <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortInvoiceTable(6)" style="cursor: pointer; user-select: none;">
+                                Balance <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th onclick="sortInvoiceTable(7)" style="cursor: pointer; user-select: none;">
+                                Status <i class="bi bi-arrow-down-up text-light"></i>
+                            </th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr class="{% if invoice.status == 'overdue' %}table-warning{% elif invoice.status == 'paid' %}table-success{% endif %}">
+                            <td>
+                                <a href="{% url 'billing:invoice_detail' invoice.id %}" class="text-decoration-none">
+                                    <strong>{{ invoice.invoice_number }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'patients:patient_detail' invoice.patient.patient_id %}" class="text-decoration-none">
+                                    {{ invoice.patient.get_full_name }}
+                                </a><br>
+                                <small class="text-muted">{{ invoice.patient.patient_id }}</small>
+                            </td>
+                            <td>{{ invoice.issue_date|date:"M d, Y" }}</td>
+                            <td>
+                                {{ invoice.due_date|date:"M d, Y" }}
+                                {% if invoice.status == 'overdue' %}
+                                    <br><small class="text-danger">{{ invoice.due_date|timesince }} overdue</small>
+                                {% endif %}
+                            </td>
+                            <td>UGX {{ invoice.total_amount|floatformat:0 }}</td>
+                            <td>UGX {{ invoice.get_total_paid|floatformat:0 }}</td>
+                            <td>
+                                <strong class="{% if invoice.get_balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                                    UGX {{ invoice.get_balance_due|floatformat:0 }}
+                                </strong>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'sent' %}primary{% elif invoice.status == 'draft' %}secondary{% else %}warning{% endif %}">
+                                    {{ invoice.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-center" style="width: 120px; padding: 0.25rem;">
+                                <a href="{% url 'billing:invoice_detail' invoice.id %}" class="btn btn-sm btn-link text-muted p-1" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'billing:invoice_pdf' invoice.id %}" class="btn btn-sm btn-link text-muted p-1" title="PDF" target="_blank">
+                                    <i class="bi bi-file-pdf"></i>
+                                </a>
+                                {% if invoice.status != 'paid' %}
+                                    <button type="button" class="btn btn-sm btn-link text-success p-1" title="Pay"
+                                            onclick="openPaymentModal({{ invoice.id }}, '{{ invoice.invoice_number }}', {{ invoice.get_balance_due|floatformat:0 }}, {{ invoice.patient.pk }})">
+                                        <i class="bi bi-credit-card"></i>
+                                    </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-link text-primary p-1" title="Send Email" onclick="sendInvoiceEmail({{ invoice.id }})">
+                                    <i class="bi bi-envelope"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Summary Row -->
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <strong>Total Invoices:</strong> {{ page_obj.paginator.count }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Total Amount:</strong> UGX {{ total_amount|floatformat:0 }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Total Paid:</strong> UGX {{ total_paid|floatformat:0 }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Outstanding:</strong> UGX {{ total_outstanding|floatformat:0 }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pagination with Page Size Selector -->
+            {% include 'includes/pagination_with_size.html' %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-receipt text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No Invoices Found</h4>
+                {% if date_from or date_to or status or search_query %}
+                    <p class="text-muted">No invoices match your filter criteria.</p>
+                    <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-primary">Clear Filters</a>
+                {% else %}
+                    <p class="text-muted">Start by creating your first invoice.</p>
+                    <button type="button" class="btn btn-primary" onclick="openFullInvoiceCreateModal()">
+                        <i class="bi bi-receipt"></i> Create First Invoice
+                    </button>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Invoice Statistics Cards -->
+
+
+
+
+<!-- CSS for Status Breakdown Click Effects -->
+<style>
+/* Status Card Clickable - Base Styles */
+.status-card-clickable {
+    cursor: pointer;
+    transition: all 0.4s ease-in-out;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Hover Effect */
+.status-card-clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    border-color: var(--alafia-primary) !important;
+}
+
+/* Active/Click Effect - Ease In */
+.status-card-clickable:active {
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) inset;
+    transition: all 0.15s ease-in;
+}
+
+/* Click Animation Class */
+.status-card-clicked {
+    animation: clickPulse 0.6s ease-in-out;
+}
+
+/* Ripple Effect on Click */
+.status-card-clickable::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(27, 94, 150, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease-out, height 0.6s ease-out, opacity 0.6s ease-out;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.status-card-clickable.ripple-active::after {
+    width: 300px;
+    height: 300px;
+    opacity: 1;
+    transition: width 0.6s ease-in-out, height 0.6s ease-in-out, opacity 0.3s ease-in;
+}
+
+.status-card-clickable.ripple-fade::after {
+    opacity: 0;
+    transition: opacity 0.4s ease-out;
+}
+
+/* Icon Animation on Click */
+.status-card-clickable:active i {
+    transform: scale(0.9) rotate(-5deg);
+    transition: transform 0.15s ease-in;
+}
+
+.status-card-clickable i {
+    transition: transform 0.4s ease-out;
+}
+
+/* Number Scale Animation on Click */
+.status-card-clickable:active h4 {
+    transform: scale(1.05);
+    transition: transform 0.15s ease-in;
+}
+
+.status-card-clickable h4 {
+    transition: transform 0.4s ease-out;
+}
+
+/* Keyframe for Click Pulse */
+@keyframes clickPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(27, 94, 150, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(27, 94, 150, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(27, 94, 150, 0);
+    }
+}
+
+/* Selected State */
+.status-card-clickable.selected {
+    background: linear-gradient(135deg, var(--alafia-primary-light), rgba(27, 94, 150, 0.1)) !important;
+    border-color: var(--alafia-primary) !important;
+    border-width: 2px !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(27, 94, 150, 0.25);
+}
+
+.status-card-clickable.selected h4 {
+    color: var(--alafia-primary) !important;
+}
+
+/* Mobile Touch Optimization */
+@media (max-width: 768px) {
+    .status-card-clickable:active {
+        transform: scale(0.97) translateY(0);
+    }
+}
+</style>
+
+<!-- JavaScript for Click Effects -->
+<script>
+// Add click event listeners to all status cards
+document.addEventListener('DOMContentLoaded', function() {
+    const statusCards = document.querySelectorAll('.status-card-clickable');
+    
+    statusCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            const status = this.getAttribute('data-status');
+            
+            // Remove selected class from all cards
+            statusCards.forEach(c => c.classList.remove('selected'));
+            
+            // Add selected class to clicked card
+            this.classList.add('selected');
+            
+            // Add ripple effect
+            this.classList.add('ripple-active');
+            
+            // Add pulse animation
+            this.classList.add('status-card-clicked');
+            
+            // Remove ripple after animation
+            setTimeout(() => {
+                this.classList.remove('ripple-active');
+                this.classList.add('ripple-fade');
+            }, 300);
+            
+            setTimeout(() => {
+                this.classList.remove('ripple-fade');
+            }, 700);
+            
+            // Remove pulse animation
+            setTimeout(() => {
+                this.classList.remove('status-card-clicked');
+            }, 600);
+            
+            // Optional: Filter invoices by status
+            if (status && status !== 'all') {
+                console.log('Filtering by status:', status);
+                // You can add code here to filter the invoice table
+                const statusFilter = document.getElementById('statusFilter');
+                if (statusFilter) {
+                    statusFilter.value = status;
+                    filterInvoices();
+                }
+            } else if (status === 'all') {
+                // Clear filter
+                const statusFilter = document.getElementById('statusFilter');
+                if (statusFilter) {
+                    statusFilter.value = '';
+                    filterInvoices();
+                }
+            }
+        });
+        
+        // Add hover sound effect (optional)
+        card.addEventListener('mouseenter', function() {
+            this.style.transition = 'all 0.3s ease-out';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transition = 'all 0.4s ease-in-out';
+        });
+    });
+});
+</script>
+
+<!-- JavaScript for Advanced Table Features -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// Toggle column filters
+function toggleInvoiceColumnFilters() {
+    const filters = document.getElementById('invoiceColumnFilters');
+    filters.style.display = filters.style.display === 'none' ? 'block' : 'none';
+}
+
+// Toggle column visibility
+function toggleInvoiceColumnVisibility() {
+    // Implementation for column visibility toggle
+    alert('Column visibility toggle - to be implemented');
+}
+
+// Filter table columns
+function filterInvoiceColumn(columnIndex, filterValue) {
+    const table = document.getElementById('invoicesTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const cell = rows[i].getElementsByTagName('td')[columnIndex];
+        if (cell) {
+            const cellText = cell.textContent || cell.innerText;
+            if (cellText.toLowerCase().indexOf(filterValue.toLowerCase()) > -1) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    }
+}
+
+// Sort table
+let invoiceSortDirection = {};
+function sortInvoiceTable(columnIndex) {
+    const table = document.getElementById('invoicesTable');
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = Array.from(tbody.getElementsByTagName('tr'));
+    
+    const isAscending = invoiceSortDirection[columnIndex] !== 'asc';
+    invoiceSortDirection[columnIndex] = isAscending ? 'asc' : 'desc';
+    
+    rows.sort((a, b) => {
+        const aText = a.getElementsByTagName('td')[columnIndex].textContent.trim();
+        const bText = b.getElementsByTagName('td')[columnIndex].textContent.trim();
+        
+        if (isAscending) {
+            return aText.localeCompare(bText, undefined, {numeric: true});
+        } else {
+            return bText.localeCompare(aText, undefined, {numeric: true});
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort indicators
+    const headers = table.getElementsByTagName('th');
+    for (let i = 0; i < headers.length; i++) {
+        const icon = headers[i].querySelector('i');
+        if (icon) {
+            if (i === columnIndex) {
+                icon.className = isAscending ? 'bi bi-arrow-up text-light' : 'bi bi-arrow-down text-light';
+            } else {
+                icon.className = 'bi bi-arrow-down-up text-light';
+            }
+        }
+    }
+}
+
+// Export to Excel
+function exportInvoicesToExcel() {
+    const table = document.getElementById('invoicesTable');
+    const wb = XLSX.utils.table_to_book(table, {sheet: 'Invoices'});
+    const filename = `Alafia_Point_Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
+// Export to PDF
+function exportInvoicesToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Add header
+    doc.setFontSize(16);
+    doc.text('Alafia Point Wellness Clinic', 20, 20);
+    doc.setFontSize(12);
+    doc.text('Invoice List Report', 20, 30);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 40);
+    
+    // Get table data
+    const table = document.getElementById('invoicesTable');
+    const headers = [];
+    const data = [];
+    
+    // Extract headers
+    const headerCells = table.querySelectorAll('thead th');
+    headerCells.forEach((cell, index) => {
+        if (index < headerCells.length - 1) { // Exclude Actions column
+            headers.push(cell.textContent.replace(/\s+/g, ' ').trim());
+        }
+    });
+    
+    // Extract data
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const rowData = [];
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, index) => {
+            if (index < cells.length - 1) { // Exclude Actions column
+                rowData.push(cell.textContent.replace(/\s+/g, ' ').trim());
+            }
+        });
+        data.push(rowData);
+    });
+    
+    // Add table
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 50,
+        theme: 'striped',
+        headStyles: { fillColor: [27, 94, 150] },
+        styles: { fontSize: 8 }
+    });
+    
+    const filename = `Alafia_Point_Invoices_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+}
+
+// Advanced search function
+function filterInvoices() {
+    const globalSearch = document.getElementById('globalInvoiceSearch').value.toLowerCase();
+    const dateFrom = document.getElementById('dateFromFilter').value;
+    const dateTo = document.getElementById('dateToFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+    const amountFilter = parseFloat(document.getElementById('amountFilter').value) || 0;
+    
+    const table = document.getElementById('invoicesTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let showRow = true;
+        
+        // Global search across all columns
+        if (globalSearch) {
+            let found = false;
+            for (let j = 0; j < cells.length - 1; j++) { // Exclude actions column
+                const cellText = (cells[j].textContent || cells[j].innerText).toLowerCase();
+                if (cellText.indexOf(globalSearch) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) showRow = false;
+        }
+        
+        // Date range filter (assuming date is in column 2)
+        if (showRow && (dateFrom || dateTo)) {
+            const dateCell = cells[2];
+            if (dateCell) {
+                const cellDate = new Date(dateCell.textContent.trim());
+                if (dateFrom && cellDate < new Date(dateFrom)) showRow = false;
+                if (dateTo && cellDate > new Date(dateTo)) showRow = false;
+            }
+        }
+        
+        // Status filter (assuming status is in column 7)
+        if (showRow && statusFilter) {
+            const statusCell = cells[7];
+            if (statusCell) {
+                const cellStatus = (statusCell.textContent || statusCell.innerText).toLowerCase();
+                if (cellStatus.indexOf(statusFilter) === -1) showRow = false;
+            }
+        }
+        
+        // Amount filter (assuming amount is in column 4)
+        if (showRow && amountFilter > 0) {
+            const amountCell = cells[4];
+            if (amountCell) {
+                const cellAmount = parseFloat(amountCell.textContent.replace('UGX', '').replace(',', '')) || 0;
+                if (cellAmount < amountFilter) showRow = false;
+            }
+        }
+        
+        rows[i].style.display = showRow ? '' : 'none';
+    }
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('globalInvoiceSearch').value = '';
+    document.getElementById('dateFromFilter').value = '';
+    document.getElementById('dateToFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('amountFilter').value = '';
+    filterInvoices();
+}
+
+// Real-time search
+document.getElementById('globalInvoiceSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('invoicesTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+        
+        for (let j = 0; j < cells.length - 1; j++) { // Exclude Actions column
+            const cellText = cells[j].textContent.toLowerCase();
+            if (cellText.indexOf(searchTerm) > -1) {
+                found = true;
+                break;
+            }
+        }
+        
+        row.style.display = found ? '' : 'none';
+    }
+});
+
+// Send invoice email
+function sendInvoiceEmail(invoiceId) {
+    if (!confirm('Send this invoice to the patient\'s email?')) return;
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
+
+    const csrfFromInput = document.querySelector('input[name=csrfmiddlewaretoken]')?.value;
+    const csrftoken = csrfFromInput || getCookie('csrftoken');
+
+    fetch(`/billing/invoices/${invoiceId}/send-email/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': csrftoken || '',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        },
+        body: '{}'
+    })
+    .then(async (response) => {
+        const ct = response.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Unexpected response (status ${response.status}): ${text.substring(0, 200)}`);
+        }
+        return response.json();
+    })
+    .then((data) => {
+        if (data.success) {
+            alert('Invoice sent successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch((error) => alert('Error sending invoice: ' + error));
+}
+</script>
+
+<!-- JavaScript for Initializing Bootstrap Dropdowns -->
+<script>
+// Initialize Bootstrap dropdowns
+(function() {
+    // Initialize all dropdowns
+    const dropdowns = document.querySelectorAll('.dropdown-toggle');
+    dropdowns.forEach(dropdown => {
+        dropdown.addEventListener('click', function(e) {
+            const dropdownMenu = this.nextElementSibling;
+            dropdownMenu.classList.toggle('show');
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.matches('.dropdown-toggle')) {
+            const openMenus = document.querySelectorAll('.dropdown-menu.show');
+            openMenus.forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
+})();
+</script>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid var(--alafia-primary) !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid var(--alafia-success) !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid var(--alafia-warning) !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid var(--alafia-danger) !important;
+}
+</style>
+{% endblock %}

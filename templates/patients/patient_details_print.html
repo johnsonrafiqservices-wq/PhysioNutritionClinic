@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Profile - {{ patient.get_full_name }}</title>
+    <style>
+        @page { size: A4; margin: 8mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; line-height: 1.3; color: #000; background: #fff; }
+
+        .certificate-container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 8mm; padding-bottom: 40mm; background: white; border: 1px solid #000; position: relative; }
+
+        /* === HEADER === */
+        .header { position: relative; margin-bottom: 20px; }
+        .header-top { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 10px; margin-bottom: -40px; position: relative; z-index: 10; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .logo-circle { width: 90px; height: 90px; border: 3px solid #8B0000; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: white; flex-shrink: 0; position: relative; z-index: 15; margin-top: 9px; }
+        .logo-icon { font-size: 34pt; line-height: 1; }
+        .clinic-name-block h1 { font-size: 15pt; font-weight: bold; color: #0099CC; margin: 0; line-height: 1.2; font-family: Arial, Helvetica, sans-serif; white-space: nowrap; }
+        .clinic-tagline { font-size: 8.5pt; color: #8B0000; font-style: italic; margin-top: 2px; font-family: Arial, sans-serif; white-space: nowrap; }
+        .header-right { display: grid; grid-template-columns: auto 1fr; gap: 3px 5px; font-size: 7.5pt; line-height: 1.3; color: #333; font-family: Arial, sans-serif; flex-shrink: 0; align-items: center; }
+        .contact-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; background: #444; border-radius: 50%; color: white; font-size: 6pt; flex-shrink: 0; }
+        .contact-text { text-align: left; }
+        .heartbeat-line { width: 100%; height: 24px; position: relative; z-index: 5; }
+        .heartbeat-line svg { width: 100%; height: 24px; display: block; }
+
+        /* === BODY LAYOUT === */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+        .full-width { grid-column: 1 / -1; }
+
+        /* Section box */
+        .box { margin-bottom: 5px; }
+        .box-bordered { border-bottom: 1px solid #333; }
+        .box-header { color: #000; padding: 3px 5px; font-size: 10pt; font-weight: bold; text-align: left; border-bottom: 2px solid #000; margin-top: 10px; }
+
+        .box-body { padding: 5px 3px; }
+
+        /* Row item: label + value */
+        .row-item { display: flex; justify-content: space-between; padding: 3px 4px; font-size: 9pt; }
+        .row-item label { font-weight: bold; white-space: nowrap; margin-right: 4px; }
+
+        /* Lab category */
+        .lab-cat { margin-bottom: 4px; }
+        .lab-cat-header { background: #0099CC; color: white; padding: 2px 4px; font-size: 8.5pt; font-weight: bold; }
+        .lab-cat-body { padding: 2px; }
+        .lab-row { display: flex; justify-content: space-between; padding: 2px 3px; font-size: 8.5pt; border-bottom: 1px dotted #ddd; }
+        .lab-row:last-child { border-bottom: none; }
+        .lab-row label { font-weight: 500; }
+
+        /* Vital signs table */
+        .vitals-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+        .vitals-table th { background: #0099CC; color: white; border: 1px solid #ccc; padding: 3px 4px; font-size: 8pt; text-align: left; }
+        .vitals-table td { border: 1px solid #ccc; padding: 3px 4px; font-size: 8.5pt; }
+        .vitals-table tr:nth-child(even) { background: #f9f9f9; }
+
+        /* Assessment items */
+        .assessment-item { border-left: 3px solid #0099CC; padding: 6px 8px; margin-bottom: 6px; background: #f8f9fa; font-size: 8.5pt; }
+        .assessment-priority-1 { border-left-color: #dc2626; }
+        .assessment-priority-2 { border-left-color: #d97706; }
+        .priority-badge { background: #0099CC; color: white; padding: 1px 6px; border-radius: 10px; font-size: 7pt; font-weight: bold; float: right; }
+        .priority-1 { background: #dc2626; }
+        .priority-2 { background: #d97706; }
+
+        .text-muted { color: #999; font-style: italic; font-size: 8.5pt; }
+
+        /* Info block for multi-line text */
+        .info-block { padding: 4px 6px; font-size: 8.5pt; line-height: 1.4; }
+        .info-block-label { font-weight: bold; font-size: 8.5pt; margin-bottom: 2px; }
+
+        /* Signature rows */
+        .sig-row { display: flex; justify-content: space-between; margin-top: 10px; }
+        .sig-block { width: 45%; text-align: center; }
+        .sig-line { border-top: 1px solid #333; padding-top: 4px; font-size: 8pt; margin-top: 20px; }
+
+        /* Footer */
+        .services-footer { background: linear-gradient(135deg, #0099CC 0%, #0077AA 100%); color: white; padding: 6px 10px; font-size: 6.5pt; line-height: 1.4; text-align: center; border-radius: 3px; position: absolute; bottom: 8mm; left: 8mm; right: 8mm; }
+
+        .print-button { position: fixed; top: 10px; right: 10px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12pt; z-index: 1000; }
+        .print-button:hover { background: #0056b3; }
+        .back-button { position: fixed; top: 10px; right: 160px; padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12pt; z-index: 1000; text-decoration: none; }
+        .back-button:hover { background: #5a6268; }
+
+        @media print {
+            body { margin: 0; padding: 0; }
+            .certificate-container { border: none; margin: 0; padding: 8mm; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">Print Profile</button>
+    <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="back-button no-print">&larr; Back</a>
+
+    <div class="certificate-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left">
+                    <div class="logo-circle">
+                        {% if clinic_settings and clinic_settings.logo %}
+                            <img src="{{ clinic_settings.logo.url }}" alt="Clinic Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        {% else %}
+                            <div class="logo-icon">&#x1F3E5;</div>
+                        {% endif %}
+                    </div>
+                    <div class="clinic-name-block">
+                        <h1>{% if clinic_settings and clinic_settings.clinic_name %}{{ clinic_settings.clinic_name }}{% else %}Medical Centre{% endif %}</h1>
+                        <div class="clinic-tagline">"Your Partner in Preventive health &amp; Wellness."</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <span class="contact-icon">@</span>
+                    <div class="contact-text">{% if clinic_settings and clinic_settings.address_line1 %}{{ clinic_settings.address_line1 }}{% else %}Kampala - Uganda{% endif %}</div>
+
+                    <span class="contact-icon">&#9742;</span>
+                    <div class="contact-text">{% if clinic_settings and clinic_settings.phone_number %}{{ clinic_settings.phone_number }}{% else %}—{% endif %}</div>
+
+                    <span class="contact-icon">&#9993;</span>
+                    <div class="contact-text">{% if clinic_settings and clinic_settings.email %}{{ clinic_settings.email }}{% else %}—{% endif %}</div>
+                </div>
+            </div>
+
+            <!-- Heartbeat line -->
+            <div class="heartbeat-line">
+                <svg viewBox="0 0 680 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="0" y1="12" x2="290" y2="12" stroke="#8B0000" stroke-width="2"/>
+                    <polyline points="290,12 300,12 308,2 316,22 324,6 332,18 340,12 350,12"
+                              fill="none" stroke="#8B0000" stroke-width="2"/>
+                    <line x1="350" y1="12" x2="668" y2="12" stroke="#8B0000" stroke-width="2"/>
+                    <circle cx="672" cy="12" r="6" fill="#8B0000"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
+            <h2 style="font-size: 14pt; font-weight: bold; color: #000; margin: 0; text-transform: uppercase; letter-spacing: 1px;">Patient Profile</h2>
+        </div>
+
+        <!-- ============ Patient Information ============ -->
+        <div class="box">
+            <div class="box-header">Patient Information</div>
+            <div class="box-body">
+                <div class="three-col">
+                    <div class="row-item"><label>Patient Name:</label><span>{{ patient.get_full_name|upper }}</span></div>
+                    <div class="row-item"><label>Patient ID:</label><span>{{ patient.patient_id }}</span></div>
+                    <div class="row-item"><label>Age:</label><span>{{ patient.age }} years</span></div>
+                    <div class="row-item"><label>Gender:</label><span>{{ patient.get_gender_display }}</span></div>
+                    <div class="row-item"><label>Date of Birth:</label><span>{% if patient.date_of_birth %}{{ patient.date_of_birth|date:"d/m/Y" }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Blood Type:</label><span>{% if patient.blood_type %}{{ patient.blood_type }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Phone:</label><span>{% if patient.phone %}{{ patient.phone }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Email:</label><span>{% if patient.email %}{{ patient.email }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Registration:</label><span>{{ patient.registration_date|date:"d/m/Y" }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Contact & Address ============ -->
+        <div class="box">
+            <div class="box-header">Contact &amp; Address</div>
+            <div class="box-body">
+                <div class="three-col">
+                    <div class="row-item"><label>Address Line 1:</label><span>{% if patient.address_line1 %}{{ patient.address_line1 }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Address Line 2:</label><span>{% if patient.address_line2 %}{{ patient.address_line2 }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>City:</label><span>{% if patient.city %}{{ patient.city }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>State/Province:</label><span>{% if patient.state %}{{ patient.state }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Postal Code:</label><span>{% if patient.postal_code %}{{ patient.postal_code }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Country:</label><span>{% if patient.country %}{{ patient.country }}{% else %}Uganda{% endif %}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Emergency Contact ============ -->
+        <div class="box">
+            <div class="box-header">Emergency Contact</div>
+            <div class="box-body">
+                <div class="three-col">
+                    <div class="row-item"><label>Contact Name:</label><span>{% if patient.emergency_contact_name %}{{ patient.emergency_contact_name }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Phone:</label><span>{% if patient.emergency_contact_phone %}{{ patient.emergency_contact_phone }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Relationship:</label><span>{% if patient.emergency_contact_relationship %}{{ patient.emergency_contact_relationship }}{% else %}—{% endif %}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Medical Information ============ -->
+        <div class="box box-bordered">
+            <div class="box-header">Medical Information</div>
+            <div class="box-body">
+                <div class="three-col">
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Allergies</div>
+                        <div class="lab-cat-body">
+                            <div class="info-block">{% if patient.allergies %}{{ patient.allergies }}{% else %}<span class="text-muted">No known allergies</span>{% endif %}</div>
+                        </div>
+                    </div>
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Medical History</div>
+                        <div class="lab-cat-body">
+                            <div class="info-block">{% if patient.medical_history %}{{ patient.medical_history }}{% else %}<span class="text-muted">No medical history recorded</span>{% endif %}</div>
+                        </div>
+                    </div>
+                    <div class="lab-cat">
+                        <div class="lab-cat-header">Current Medications</div>
+                        <div class="lab-cat-body">
+                            <div class="info-block">{% if patient.current_medications %}{{ patient.current_medications }}{% else %}<span class="text-muted">No current medications</span>{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Insurance Information ============ -->
+        <div class="box">
+            <div class="box-header">Insurance Information</div>
+            <div class="box-body">
+                <div class="three-col">
+                    <div class="row-item"><label>Provider:</label><span>{% if patient.insurance_provider %}{{ patient.insurance_provider }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Policy Number:</label><span>{% if patient.insurance_policy_number %}{{ patient.insurance_policy_number }}{% else %}—{% endif %}</span></div>
+                    <div class="row-item"><label>Group Number:</label><span>{% if patient.insurance_group_number %}{{ patient.insurance_group_number }}{% else %}—{% endif %}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Recent Vital Signs ============ -->
+        <div class="box box-bordered">
+            <div class="box-header">Recent Vital Signs</div>
+            <div class="box-body">
+                {% if vital_signs %}
+                <table class="vitals-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Height (cm)</th>
+                            <th>Weight (kg)</th>
+                            <th>BMI</th>
+                            <th>Blood Pressure</th>
+                            <th>Heart Rate</th>
+                            <th>Temp (&deg;C)</th>
+                            <th>Recorded By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vital in vital_signs|slice:":5" %}
+                        <tr>
+                            <td>{{ vital.recorded_date|date:"d/m/Y" }}</td>
+                            <td>{{ vital.height }}</td>
+                            <td>{{ vital.weight }}</td>
+                            <td>{{ vital.bmi|floatformat:1 }}</td>
+                            <td>{{ vital.blood_pressure_systolic }}/{{ vital.blood_pressure_diastolic }}</td>
+                            <td>{{ vital.heart_rate }} bpm</td>
+                            <td>{{ vital.temperature }}</td>
+                            <td>{{ vital.recorded_by.get_full_name }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="padding: 8px; text-align: center;"><span class="text-muted">No vital signs recorded</span></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ============ Recent Triage Assessments ============ -->
+        <div class="box">
+            <div class="box-header">Recent Triage Assessments</div>
+            <div class="box-body">
+                {% if triage_assessments %}
+                    {% for assessment in triage_assessments|slice:":3" %}
+                    <div class="assessment-item assessment-priority-{{ assessment.priority_level }}">
+                        <span class="priority-badge priority-{{ assessment.priority_level }}">
+                            Priority {{ assessment.priority_level }}
+                        </span>
+                        <div>
+                            <strong>{{ assessment.chief_complaint }}</strong><br>
+                            <small class="text-muted">{{ assessment.assessment_date|date:"d/m/Y H:i" }} by {{ assessment.assessed_by.get_full_name }}</small>
+                        </div>
+                        {% if assessment.pain_scale %}
+                        <div style="margin-top: 4px;"><strong>Pain Level:</strong> {{ assessment.pain_scale }}/10</div>
+                        {% endif %}
+                        <div style="margin-top: 4px;"><strong>Symptoms:</strong> {{ assessment.symptoms }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div style="padding: 8px; text-align: center;"><span class="text-muted">No triage assessments recorded</span></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="two-col" style="margin-top: 6px; font-size: 7pt;">
+            <div>
+                <strong>Approved By:</strong> Medical Center Name: {% if clinic_settings and clinic_settings.clinic_name %}{{ clinic_settings.clinic_name }}{% else %}NDUNAT Diagnostics Wellness Centre{% endif %}<br>
+                <strong>Medical Date:</strong> {{ "now"|date:"Y/m/d" }}
+            </div>
+            <div style="text-align: right;">
+                <em>This is a computer-generated report.</em>
+            </div>
+        </div>
+
+        <div class="sig-row">
+            <div class="sig-block">
+                <div class="sig-line">
+                    <strong>Prepared By</strong><br>
+                    ________________<br>
+                    <small>Medical Staff</small>
+                </div>
+            </div>
+            <div class="sig-block">
+                <div class="sig-line">
+                    <strong>Verified By</strong><br>
+                    ________________<br>
+                    <small>Medical Officer</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="services-footer">
+            <strong>Our Services:</strong> General Laboratory Diagnostic Services, Wellness and Preventive Health Packages, Specialized Diagnostic Services,
+            Home-Based and Community Outreach Services, Counseling and Health Advisory Services, Corporate and Institutional Health Programs
+        </div>
+    </div>
+</body>
+</html>

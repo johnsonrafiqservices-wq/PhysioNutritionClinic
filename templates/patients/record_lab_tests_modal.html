@@ -1,0 +1,313 @@
+<!-- Record Lab Tests Modal -->
+<div class="modal fade" id="recordLabTestsModal" tabindex="-1" aria-labelledby="recordLabTestsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recordLabTestsModalLabel">
+                    <i class="bi bi-clipboard2-pulse-fill me-2"></i>Record Laboratory Tests - {{ patient.get_full_name }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="alert alert-info mb-4">
+                    <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Laboratory Test Guidelines</h6>
+                    <ul class="mb-0 small">
+                        <li>Record all test results accurately as reported by the laboratory</li>
+                        <li>Use standard units and terminology for consistency</li>
+                        <li>Enter "NIL" or "Negative" for normal/negative results</li>
+                        <li>Document any abnormal findings with specific values</li>
+                        <li>Leave fields blank if test was not performed</li>
+                    </ul>
+                </div>
+                
+                <form id="labTestsForm" method="post" action="{% url 'patients:record_lab_tests' patient.patient_id %}">
+                    {% csrf_token %}
+                    
+                    <!-- Urine Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Urine Tests</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_urine_sugar" class="form-label">Sugar</label>
+                                <select class="form-select" id="id_urine_sugar" name="urine_sugar">
+                                    <option value="">Select result</option>
+                                    <option value="NIL">NIL</option>
+                                    <option value="Trace">Trace</option>
+                                    <option value="+">+ (Positive)</option>
+                                    <option value="++">++ (Moderate)</option>
+                                    <option value="+++">+++ (High)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_urine_albumin" class="form-label">Albumin</label>
+                                <select class="form-select" id="id_urine_albumin" name="urine_albumin">
+                                    <option value="">Select result</option>
+                                    <option value="NIL">NIL</option>
+                                    <option value="Trace">Trace</option>
+                                    <option value="+">+ (Positive)</option>
+                                    <option value="++">++ (Moderate)</option>
+                                    <option value="+++">+++ (High)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_urine_bilharziasis" class="form-label">Bilharziasis</label>
+                                <select class="form-select" id="id_urine_bilharziasis" name="urine_bilharziasis">
+                                    <option value="">Select result</option>
+                                    <option value="NIL">NIL</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Negative">Negative</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stool/Routine Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Stool / Routine Tests</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_stool_helminthes" class="form-label">Helminthes</label>
+                                <select class="form-select" id="id_stool_helminthes" name="stool_helminthes">
+                                    <option value="">Select result</option>
+                                    <option value="NIL">NIL</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Ascaris">Ascaris</option>
+                                    <option value="Hookworm">Hookworm</option>
+                                    <option value="Trichuris">Trichuris</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_stool_giardia" class="form-label">Giardia</label>
+                                <select class="form-select" id="id_stool_giardia" name="stool_giardia">
+                                    <option value="">Select result</option>
+                                    <option value="NIL">NIL</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Negative">Negative</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_stool_bilharziasis" class="form-label">Bilharziasis</label>
+                                <select class="form-select" id="id_stool_bilharziasis" name="stool_bilharziasis">
+                                    <option value="">Select result</option>
+                                    <option value="NIL">NIL</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Negative">Negative</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="id_stool_culture_salmonella" class="form-label">Culture Salmonella/Shigella</label>
+                                <select class="form-select" id="id_stool_culture_salmonella" name="stool_culture_salmonella">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Salmonella">Salmonella Detected</option>
+                                    <option value="Shigella">Shigella Detected</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="id_stool_v_cholerae" class="form-label">V. Cholerae</label>
+                                <select class="form-select" id="id_stool_v_cholerae" name="stool_v_cholerae">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Blood Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Blood Tests</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_blood_haemoglobin" class="form-label">Haemoglobin</label>
+                                <input type="text" class="form-control" id="id_blood_haemoglobin" name="blood_haemoglobin" placeholder="e.g., 13.8 g/dl">
+                                <small class="text-muted">Enter value with unit (e.g., 13.8 g/dl)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_blood_malaria" class="form-label">Thick film Malaria</label>
+                                <select class="form-select" id="id_blood_malaria" name="blood_malaria">
+                                    <option value="">Select result</option>
+                                    <option value="No Parasites Seen">No Parasites Seen</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="P. falciparum">P. falciparum</option>
+                                    <option value="P. vivax">P. vivax</option>
+                                    <option value="P. malariae">P. malariae</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_blood_micro_filaria" class="form-label">Micro Filaria</label>
+                                <select class="form-select" id="id_blood_micro_filaria" name="blood_micro_filaria">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Not Seen">Not Seen</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chemistry Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Chemistry Tests</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_chemistry_fbs" class="form-label">F.B.S (Fasting Blood Sugar)</label>
+                                <input type="text" class="form-control" id="id_chemistry_fbs" name="chemistry_fbs" placeholder="e.g., 3.9 mmol/L">
+                                <small class="text-muted">Enter value with unit (e.g., 3.9 mmol/L or 70 mg/dl)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_chemistry_lfts" class="form-label">L.F.T.S (Liver Function Tests)</label>
+                                <input type="text" class="form-control" id="id_chemistry_lfts" name="chemistry_lfts" placeholder="e.g., Normal Range">
+                                <small class="text-muted">Enter result or detailed values</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_chemistry_kfts" class="form-label">KFTS (Kidney Function Tests)</label>
+                                <input type="text" class="form-control" id="id_chemistry_kfts" name="chemistry_kfts" placeholder="e.g., Normal Range">
+                                <small class="text-muted">Enter result or detailed values</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Elisa Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Elisa Tests</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_elisa_hcv_ab" class="form-label">HCV Ab</label>
+                                <select class="form-select" id="id_elisa_hcv_ab" name="elisa_hcv_ab">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Reactive">Reactive</option>
+                                    <option value="Non-Reactive">Non-Reactive</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_elisa_hbs_ag" class="form-label">Hbs Ag</label>
+                                <select class="form-select" id="id_elisa_hbs_ag" name="elisa_hbs_ag">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Reactive">Reactive</option>
+                                    <option value="Non-Reactive">Non-Reactive</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_elisa_hiv" class="form-label">HIV 1/2 Test</label>
+                                <select class="form-select" id="id_elisa_hiv" name="elisa_hiv">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Reactive">Reactive</option>
+                                    <option value="Non-Reactive">Non-Reactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Other Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Other Tests</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_other_blood_group" class="form-label">Blood Group</label>
+                                <select class="form-select" id="id_other_blood_group" name="other_blood_group">
+                                    <option value="">Select blood group</option>
+                                    <option value="A Rhesus Positive">A Rhesus Positive (A+)</option>
+                                    <option value="A Rhesus Negative">A Rhesus Negative (A-)</option>
+                                    <option value="B Rhesus Positive">B Rhesus Positive (B+)</option>
+                                    <option value="B Rhesus Negative">B Rhesus Negative (B-)</option>
+                                    <option value="AB Rhesus Positive">AB Rhesus Positive (AB+)</option>
+                                    <option value="AB Rhesus Negative">AB Rhesus Negative (AB-)</option>
+                                    <option value="O Rhesus Positive">O Rhesus Positive (O+)</option>
+                                    <option value="O Rhesus Negative">O Rhesus Negative (O-)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_other_pregnancy_test" class="form-label">Pregnancy Test</label>
+                                <select class="form-select" id="id_other_pregnancy_test" name="other_pregnancy_test">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Not Applicable">Not Applicable</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="id_other_vdrl_tpha" class="form-label">VDRL / TPHA</label>
+                                <select class="form-select" id="id_other_vdrl_tpha" name="other_vdrl_tpha">
+                                    <option value="">Select result</option>
+                                    <option value="Negative">Negative</option>
+                                    <option value="Positive">Positive</option>
+                                    <option value="Reactive">Reactive</option>
+                                    <option value="Non-Reactive">Non-Reactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Additional Information</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="id_lab_notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="id_lab_notes" name="notes" rows="3" placeholder="Additional laboratory notes or observations"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" onclick="submitLabTestsForm()">
+                    <i class="bi bi-clipboard2-pulse"></i> Record Lab Tests
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

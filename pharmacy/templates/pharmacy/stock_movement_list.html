@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Stock Movements{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-arrow-left-right me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Stock Movements</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:pharmacy_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+<a href="{% url 'pharmacy:add_stock' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle"></i> Record Movement</a>
+{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-clock-history text-primary me-1"></i>Movement History</h6>
+        <span class="badge bg-primary-subtle text-primary" style="font-size:.7rem;">{{ movements.count }} records</span>
+    </div>
+    <div class="card-body p-0">
+        {% if movements %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 ps-3">Date</th>
+                        <th class="border-0">Batch</th>
+                        <th class="border-0">Medication</th>
+                        <th class="border-0 text-center">Type</th>
+                        <th class="border-0 text-center">Qty</th>
+                        <th class="border-0 text-center">Balance</th>
+                        <th class="border-0">Reason</th>
+                        <th class="border-0">By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements %}
+                    <tr>
+                        <td class="ps-3">
+                            <span class="fw-medium">{{ movement.created_at|date:"d M Y" }}</span>
+                            <br><small class="text-muted">{{ movement.created_at|time:"H:i" }}</small>
+                        </td>
+                        <td class="text-muted">{{ movement.batch.batch_number }}</td>
+                        <td>
+                            <a href="{% url 'pharmacy:medication_detail' movement.batch.medication.pk %}" class="text-decoration-none fw-medium">{{ movement.batch.medication.name }}</a>
+                        </td>
+                        <td class="text-center">
+                            {% if movement.movement_type == 'in' %}
+                                <span class="badge bg-success" style="font-size:.65rem;"><i class="bi bi-arrow-down-circle me-1"></i>In</span>
+                            {% elif movement.movement_type == 'out' %}
+                                <span class="badge bg-danger" style="font-size:.65rem;"><i class="bi bi-arrow-up-circle me-1"></i>Out</span>
+                            {% elif movement.movement_type == 'adjustment' %}
+                                <span class="badge bg-warning text-dark" style="font-size:.65rem;"><i class="bi bi-arrow-repeat me-1"></i>Adj</span>
+                            {% elif movement.movement_type == 'return' %}
+                                <span class="badge bg-info" style="font-size:.65rem;"><i class="bi bi-arrow-return-left me-1"></i>Return</span>
+                            {% else %}
+                                <span class="badge bg-secondary" style="font-size:.65rem;">{{ movement.movement_type|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if movement.movement_type == 'in' or movement.movement_type == 'return' %}
+                                <span class="text-success fw-bold">+{{ movement.quantity }}</span>
+                            {% else %}
+                                <span class="text-danger fw-bold">-{{ movement.quantity }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center fw-medium">{{ movement.balance_after }}</td>
+                        <td class="text-muted">{% if movement.reason %}{{ movement.reason|truncatewords:6 }}{% else %}-{% endif %}</td>
+                        <td class="text-muted">{{ movement.recorded_by.get_full_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-arrow-left-right text-muted" style="font-size:2rem;"></i>
+            <p class="text-muted mt-1 mb-2 small">No stock movements recorded</p>
+            <a href="{% url 'pharmacy:add_stock' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Record First Movement</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

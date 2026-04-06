@@ -1,0 +1,2298 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard - EXCELLENCE MED CARE{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Date Range Picker -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<!-- Modern Dashboard Styles -->
+<style>
+    :root {
+        /* Medical Design System Colors */
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --primary-light: #3b82f6;
+        --secondary: #0d9488;
+        --secondary-dark: #115e59;
+        --secondary-light: #14b8a6;
+        --accent: #16a34a;
+        --accent-dark: #15803d;
+        --accent-light: #22c55e;
+        --danger: #dc2626;
+        --warning: #d97706;
+        --success: #16a34a;
+        --info: #0d9488;
+
+        /* Neutral Colors */
+        --neutral-50: #f8fafc;
+        --neutral-100: #f1f5f9;
+        --neutral-200: #e2e8f0;
+        --neutral-300: #cbd5e1;
+        --neutral-400: #94a3b8;
+        --neutral-500: #64748b;
+        --neutral-600: #475569;
+        --neutral-700: #334155;
+        --neutral-800: #1e293b;
+        --neutral-900: #0f172a;
+
+        /* Dashboard Specific Colors */
+        --card-bg: #FFFFFF;
+        --card-border: #e2e8f0;
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+
+        /* Medical Gradient Backgrounds */
+        --gradient-primary: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        --gradient-secondary: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        --gradient-accent: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+        --gradient-medical: linear-gradient(135deg, #2563eb 0%, #0d9488 50%, #16a34a 100%);
+        --gradient-success: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+        --gradient-warning: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        --gradient-danger: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        --gradient-info: linear-gradient(135deg, #0d9488 0%, #06b6d4 100%);
+        --gradient-purple: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    }
+
+    /* Dark Mode Support */
+    [data-theme="dark"] {
+        --card-bg: #1E293B;
+        --card-border: #334155;
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+        --text-primary: #F8FAFC;
+        --text-secondary: #CBD5E1;
+        --text-muted: #94A3B8;
+    }
+
+    /* Modern Dashboard Components */
+    .dashboard-header {
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--card-border);
+        padding: 1.5rem 0;
+        margin-bottom: 2rem;
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+    }
+
+    .welcome-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .welcome-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .welcome-subtitle {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin: 0.5rem 0 0 0;
+    }
+
+    .current-datetime {
+        text-align: right;
+        color: var(--text-secondary);
+    }
+
+    .current-date {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .current-time {
+        font-size: 0.9rem;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: 16px 16px 0 0;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .stat-card.patients::before {
+        background: var(--gradient-primary);
+    }
+
+    .stat-card.appointments::before {
+        background: var(--gradient-accent);
+    }
+
+    .stat-card.claims::before {
+        background: var(--gradient-warning);
+    }
+
+    .stat-card.revenue::before {
+        background: var(--gradient-secondary);
+    }
+
+    .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .stat-title {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        line-height: 1;
+        margin: 0;
+    }
+
+    .stat-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    .stat-trend {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        margin-top: 0.5rem;
+    }
+
+    .stat-trend.positive {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-green);
+    }
+
+    .stat-trend.negative {
+        background: rgba(239, 68, 68, 0.1);
+        color: #EF4444;
+    }
+
+    /* Charts Section */
+    .charts-section {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+    }
+
+    .chart-card:hover {
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .chart-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin: 0;
+    }
+
+    /* Activity Section */
+    .activity-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .activity-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+    }
+
+    .activity-card:hover {
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .activity-header {
+        padding: 1.5rem 1.5rem 0 1.5rem;
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    .activity-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .activity-badge {
+        background: var(--primary-teal);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        margin-left: 0.75rem;
+    }
+
+    .activity-body {
+        padding: 1.5rem;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .quick-actions-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+    }
+
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .action-card {
+        background: var(--neutral-50);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .action-card:hover {
+        background: var(--primary-teal);
+        color: hsl(180, 22%, 96%);
+        transform: translateY(-2px);
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .action-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        background: var(--primary-teal);
+        color: rgb(62, 152, 226);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin: 0 auto 0.75rem;
+    }
+
+    .action-card:hover .action-icon {
+        background: rgb(36, 179, 8);
+        color: var(--primary-teal);
+    }
+
+    .action-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Feature Widgets */
+    .widgets-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .widget-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+    }
+
+    .widget-card:hover {
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .widget-header {
+        padding: 1.5rem 1.5rem 0 1.5rem;
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    .widget-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .widget-badge {
+        background: var(--accent-orange);
+        color: rgb(13, 125, 230);
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        margin-left: 0.75rem;
+    }
+
+    .widget-body {
+        padding: 1.5rem;
+    }
+
+    /* Activity Items */
+    .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--gradient-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-name {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .activity-details {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin: 0.25rem 0 0 0;
+    }
+
+    .activity-time {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        background: var(--neutral-100);
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        margin-left: auto;
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .status-confirmed {
+        background: var(--accent-green);
+    }
+
+    .status-pending {
+        background: var(--accent-orange);
+    }
+
+    .status-completed {
+        background: var(--primary-teal);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--card-shadow-hover);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+
+    .theme-toggle:hover {
+        transform: scale(1.1);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+        .charts-section {
+            grid-template-columns: 1fr;
+        }
+
+        .activity-section {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .welcome-section {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .current-datetime {
+            text-align: left;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .widgets-section {
+            grid-template-columns: 1fr;
+        }
+
+        .action-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+    }
+
+    /* Animations */
+    .fade-in-up {
+        animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-in-right {
+        animation: slideInRight 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Loading States */
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% block extra_scripts %}
+<script>
+// Modern Dashboard JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme Toggle Functionality
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+    }
+
+    // Initialize Charts
+    initializeCharts();
+
+    // Real-time Updates
+    initializeRealTimeUpdates();
+
+    // Enhanced Animations
+    initializeAnimations();
+});
+
+function initializeCharts() {
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx && typeof Chart !== 'undefined') {
+        // Default data if Django variables are not available
+        const defaultRevenueLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const defaultRevenueValues = [65000, 59000, 80000, 81000, 56000, 55000];
+
+        // Use default data for now - Django variables will be passed through data attributes
+        const revenueLabels = defaultRevenueLabels;
+        const revenueValues = defaultRevenueValues;
+
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: revenueLabels,
+                datasets: [{
+                    label: 'Revenue ({{ currency_symbol|default:"UGX" }})',
+                    data: revenueValues,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#2563eb',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#2DD4BF',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return '{{ currency_symbol|default:"UGX" }} ' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#64748B',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#E2E8F0',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#64748B',
+                            font: {
+                                size: 12
+                            },
+                            callback: function(value) {
+                                return '{{ currency_symbol|default:"UGX" }} ' + (value / 1000).toFixed(0) + 'k';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+    }
+
+    // Appointment Trends Chart
+    const appointmentCtx = document.getElementById('appointmentTrendsChart');
+    if (appointmentCtx && typeof Chart !== 'undefined') {
+        // Default data if Django variables are not available
+        const defaultAppointmentLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const defaultAppointmentData = [12, 19, 15, 25, 22, 8, 5];
+
+        // Use default data for now - Django variables will be passed through data attributes
+        const appointmentLabels = defaultAppointmentLabels;
+        const appointmentData = defaultAppointmentData;
+
+        new Chart(appointmentCtx, {
+            type: 'bar',
+            data: {
+                labels: appointmentLabels,
+                datasets: [{
+                    label: 'Appointments',
+                    data: appointmentData,
+                    backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                    borderColor: '#2563eb',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        cornerRadius: 8,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#64748B',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#E2E8F0',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#64748B',
+                            font: {
+                                size: 12
+                            },
+                            stepSize: 5
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Claims Status Chart
+    const claimsCtx = document.getElementById('claimsStatusChart');
+    if (claimsCtx && typeof Chart !== 'undefined') {
+        new Chart(claimsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Approved', 'Pending', 'Rejected'],
+                datasets: [{
+                    data: [65, 25, 10],
+                    backgroundColor: [
+                        '#16a34a',
+                        '#d97706',
+                        '#dc2626'
+                    ],
+                    borderColor: [
+                        '#ffffff',
+                        '#ffffff',
+                        '#ffffff'
+                    ],
+                    borderWidth: 2,
+                    cutout: '70%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            color: '#64748B',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((context.parsed * 100) / total);
+                                return context.label + ': ' + percentage + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function initializeRealTimeUpdates() {
+    // Simulate real-time updates for demo purposes
+    setInterval(function() {
+        // Update time display
+        const timeElement = document.querySelector('.current-time');
+        if (timeElement) {
+            const now = new Date();
+            timeElement.textContent = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // Add subtle pulse animation to notification badges
+        const badges = document.querySelectorAll('.notification-badge');
+        badges.forEach(badge => {
+            badge.style.animation = 'pulse 2s infinite';
+        });
+    }, 1000);
+
+    // Add pulse animation keyframes
+    if (!document.querySelector('#pulse-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'pulse-keyframes';
+        style.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function initializeAnimations() {
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('fade-in-up');
+            }
+        });
+    }, observerOptions);
+
+    // Observe all cards and widgets
+    document.querySelectorAll('.stat-card, .chart-card, .activity-card, .widget-card').forEach(el => {
+        observer.observe(el);
+    });
+}
+
+// Utility Functions
+function formatCurrency(amount) {
+    return '{{ currency_symbol|default:"UGX" }} ' + amount.toLocaleString();
+}
+
+function formatNumber(num) {
+    return num.toLocaleString();
+}
+
+// Quick action handlers
+function handleQuickAction(action) {
+    switch(action) {
+        case 'new_appointment':
+            window.location.href = '{% url "appointments:appointment_create" %}';
+            break;
+        case 'add_patient':
+            window.location.href = '{% url "ehr:patient_create" %}';
+            break;
+        case 'create_claim':
+            window.location.href = '{% url "billing:invoice_create" %}';
+            break;
+        case 'generate_report':
+            window.location.href = '{% url "billing:revenue_report" %}';
+            break;
+    }
+}
+</script>
+{% endblock %}
+<!-- Modern Dashboard Header -->
+<div class="dashboard-header fade-in-up">
+    <div class="welcome-section">
+        <div>
+            <h1 class="welcome-title">
+                Welcome back{% if user.role == 'doctor' %}, Dr.{% endif %} {{ user.first_name }}! 👋
+            </h1>
+            <p class="welcome-subtitle">
+                {% if user.role == 'patient' %}
+                    Here's an overview of your medical care.
+                {% else %}
+                    Here's what's happening at your clinic today.
+                {% endif %}
+            </p>
+        </div>
+        <div class="current-datetime">
+            <div class="current-date">{{ current_date }}</div>
+            <div class="current-time" id="currentTime">{{ current_time }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Stats Cards -->
+<div class="stats-grid fade-in-up" style="animation-delay: 0.1s;">
+    <!-- Total Patients Today -->
+    <div class="stat-card patients">
+        <div class="stat-header">
+            <h3 class="stat-title">Total Patients Today</h3>
+            <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #60A5FA);">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+        <div class="stat-value text-medical-primary" id="totalPatients">{{ patient_count|default:0|intcomma }}</div>
+        <div class="stat-subtitle">
+            <span class="stat-trend positive" style="background: rgba(22, 163, 74, 0.1); color: var(--accent);">
+                <i class="fas fa-arrow-up me-1"></i>
+                +0% from yesterday
+            </span>
+        </div>
+    </div>
+
+    <!-- Pending Appointments -->
+    <div class="stat-card appointments">
+        <div class="stat-header">
+            <h3 class="stat-title">Pending Appointments</h3>
+            <div class="stat-icon" style="background: var(--gradient-accent);">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+        </div>
+        <div class="stat-value text-medical-accent" id="pendingAppointments">{{ appointment_count|default:0 }}</div>
+        <div class="stat-subtitle">
+            <span class="stat-trend negative" style="background: rgba(220, 38, 38, 0.1); color: var(--danger);">
+                <i class="fas fa-arrow-down me-1"></i>
+                3 from yesterday
+            </span>
+        </div>
+    </div>
+
+    <!-- Unprocessed Claims -->
+    <div class="stat-card claims">
+        <div class="stat-header">
+            <h3 class="stat-title">Unprocessed Claims</h3>
+            <div class="stat-icon" style="background: var(--gradient-warning);">
+                <i class="fas fa-file-medical"></i>
+            </div>
+        </div>
+        <div class="stat-value text-medical-warning" id="unprocessedClaims">{{ pending_invoices|default:0 }}</div>
+        <div class="stat-subtitle">
+            <span class="stat-trend positive" style="background: rgba(22, 163, 74, 0.1); color: var(--accent);">
+                <i class="fas fa-arrow-up me-1"></i>
+                +8% from last week
+            </span>
+        </div>
+    </div>
+
+    <!-- Revenue Today -->
+    <div class="stat-card revenue">
+        <div class="stat-header">
+            <h3 class="stat-title">Revenue Today</h3>
+            <div class="stat-icon" style="background: var(--gradient-secondary);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </div>
+        <div class="stat-value text-medical-secondary" id="revenueToday">{{ currency_symbol|default:"UGX" }} {{ total_revenue|default:0|floatformat:0|intcomma }}</div>
+        <div class="stat-subtitle">
+            <span class="stat-trend positive" style="background: rgba(22, 163, 74, 0.1); color: var(--accent);">
+                <i class="fas fa-arrow-up me-1"></i>
+                +15% from yesterday
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Analytics Section -->
+<div class="charts-section fade-in-up" style="animation-delay: 0.2s;">
+    <!-- Revenue Chart -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div>
+                <h2 class="chart-title">Revenue Overview</h2>
+                <p class="chart-subtitle">Monthly revenue trends</p>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-calendar me-2"></i>Last 6 months
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 6 months</a></li>
+                    <li><a class="dropdown-item" href="#">Last year</a></li>
+                </ul>
+            </div>
+        </div>
+        <div style="height: 300px; position: relative;">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Claims Status -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div>
+                <h2 class="chart-title">Claims Status</h2>
+                <p class="chart-subtitle">Current month distribution</p>
+            </div>
+        </div>
+        <div style="height: 300px; position: relative;">
+            <canvas id="claimsStatusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Activity and Recent Section -->
+<div class="activity-section fade-in-up" style="animation-delay: 0.3s;">
+    <!-- Today's Appointments -->
+    <div class="activity-card">
+        <div class="activity-header">
+            <h3 class="activity-title">
+                <i class="fas fa-calendar-day me-2"></i>
+                Today's Appointments
+            </h3>
+            <span class="activity-badge">{{ today_appointments|length|default:0 }}</span>
+        </div>
+        <div class="activity-body">
+            {% if today_appointments %}
+                {% for appointment in today_appointments|slice:":5" %}
+                <div class="activity-item">
+                    <div class="activity-avatar" style="background: var(--gradient-primary);">
+                        {{ appointment.patient.first_name|first }}{{ appointment.patient.last_name|first }}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-name">{{ appointment.patient.get_full_name }}</div>
+                        <div class="activity-details">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ appointment.appointment_date|time:"H:i" }} •
+                            <span class="status-indicator status-{{ appointment.status }}"></span>
+                            {{ appointment.get_status_display }}
+                        </div>
+                    </div>
+                    <div class="activity-time">{{ appointment.appointment_date|time:"H:i" }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No appointments scheduled for today</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="activity-card">
+        <div class="activity-header">
+            <h3 class="activity-title">
+                <i class="fas fa-clock me-2"></i>
+                Recent Activity
+            </h3>
+            <span class="activity-badge">{{ recent_payments|length|default:0 }}</span>
+        </div>
+        <div class="activity-body">
+            {% if recent_payments %}
+                {% for payment in recent_payments|slice:":5" %}
+                <div class="activity-item">
+                    <div class="activity-avatar" style="background: var(--gradient-accent);">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-name">{{ payment.payment_method }} Payment</div>
+                        <div class="activity-details">
+                            <i class="fas fa-user me-1"></i>
+                            {{ payment.invoice.patient.get_full_name|default:"Unknown Patient" }}
+                        </div>
+                    </div>
+                    <div class="activity-time">{{ currency_symbol|default:"UGX" }} {{ payment.amount|floatformat:0|intcomma }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No recent activity</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions fade-in-up" style="animation-delay: 0.4s;">
+    <h2 class="quick-actions-title">Quick Actions</h2>
+    <div class="action-grid">
+        <a href="{% url 'appointments:appointment_create' %}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-calendar-plus"></i>
+            </div>
+            <h4 class="action-title">New Appointment</h4>
+        </a>
+
+        <a href="{% url 'ehr:patient_create' %}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <h4 class="action-title">Add Patient</h4>
+        </a>
+
+        <a href="{% url 'billing:insurance_claim_form' %}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-file-medical"></i>
+            </div>
+            <h4 class="action-title">Create Claim</h4>
+        </a>
+
+        <a href="{% url 'billing:revenue_report' %}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h4 class="action-title">View Reports</h4>
+        </a>
+
+        <a href="{% url 'pharmacy:prescription_create' %}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-prescription"></i>
+            </div>
+            <h4 class="action-title">Write Prescription</h4>
+        </a>
+
+        <a href="{% url 'lab:test_type_list' %}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-flask"></i>
+            </div>
+            <h4 class="action-title">Lab Tests</h4>
+        </a>
+    </div>
+</div>
+
+<!-- Feature Widgets Section -->
+<div class="widgets-section fade-in-up" style="animation-delay: 0.5s;">
+    <!-- Today's Appointments Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h3 class="widget-title">
+                <i class="fas fa-calendar-check me-2"></i>
+                Today's Appointments
+            </h3>
+            <span class="widget-badge">{{ appointment_count|default:0 }}</span>
+        </div>
+        <div class="widget-body">
+            <div class="row g-3">
+                <div class="col-md-4 text-center">
+                    <div style="color: #10B981; font-size: 1.5rem; font-weight: 600;">{{ completed_appointments|default:0 }}</div>
+                    <div style="font-size: 0.875rem; color: #64748B;">Completed</div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div style="color: #F59E0B; font-size: 1.5rem; font-weight: 600;">{{ appointment_count|default:0 }}</div>
+                    <div style="font-size: 0.875rem; color: #64748B;">Pending</div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div style="color: #3B82F6; font-size: 1.5rem; font-weight: 600;">{{ appointment_count|add:5|default:5 }}</div>
+                    <div style="font-size: 0.875rem; color: #64748B;">Scheduled</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Queue Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h3 class="widget-title">
+                <i class="fas fa-users me-2"></i>
+                Patient Queue
+            </h3>
+            <span class="widget-badge">{{ patient_count|default:0 }}</span>
+        </div>
+        <div class="widget-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span style="font-size: 0.875rem; color: #64748B;">Waiting Room</span>
+                <span style="font-size: 0.875rem; color: #10B981; font-weight: 600;">{{ patient_count|default:0 }} patients</span>
+            </div>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="font-size: 0.875rem;">Next in line</span>
+                    <span style="font-size: 0.875rem; color: #64748B;">10:30 AM</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar" style="background: var(--gradient-medical); width: 75%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lab Results Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h3 class="widget-title">
+                <i class="fas fa-flask me-2"></i>
+                Lab Results
+            </h3>
+            <span class="widget-badge">{{ pending_lab_tests|default:0 }}</span>
+        </div>
+        <div class="widget-body">
+            <div class="row g-3">
+                <div class="col-6 text-center">
+                    <div style="color: #10B981; font-size: 1.5rem; font-weight: 600;">{{ pending_results|default:0 }}</div>
+                    <div style="font-size: 0.75rem; color: #64748B;">Completed</div>
+                </div>
+                <div class="col-6 text-center">
+                    <div style="color: #F59E0B; font-size: 1.5rem; font-weight: 600;">{{ pending_lab_tests|default:0 }}</div>
+                    <div style="font-size: 0.75rem; color: #64748B;">Pending Review</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pharmacy Orders Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h3 class="widget-title">
+                <i class="fas fa-pills me-2"></i>
+                Pharmacy Orders
+            </h3>
+            <span class="widget-badge">{{ low_stock_count|default:0 }}</span>
+        </div>
+        <div class="widget-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span style="font-size: 0.875rem; color: #64748B;">Orders to Fill</span>
+                <span style="font-size: 0.875rem; color: #3B82F6; font-weight: 600;">{{ pending_prescriptions|default:0 }} pending</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <small style="color: #10B981;">
+                    <i class="fas fa-check-circle me-1"></i>
+                    {{ active_prescriptions|default:0 }} active prescriptions
+                </small>
+                <small style="color: #F59E0B;">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    {{ low_stock_count|default:0 }} low stock items
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff on Duty Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h3 class="widget-title">
+                <i class="fas fa-user-md me-2"></i>
+                Staff on Duty
+            </h3>
+            <span class="widget-badge">{{ todays_roster|length|default:0 }}</span>
+        </div>
+        <div class="widget-body">
+            {% if todays_roster %}
+                {% for duty in todays_roster|slice:":3" %}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="activity-avatar" style="background: var(--gradient-secondary);">
+                        {{ duty.staff.first_name|first }}{{ duty.staff.last_name|first }}
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div style="font-size: 0.875rem; font-weight: 600;">{{ duty.staff.get_full_name }}</div>
+                        <div style="font-size: 0.75rem; color: #64748B;">{{ duty.shift_start|time:"H:i" }} - {{ duty.shift_end|time:"H:i" }}</div>
+                    </div>
+                    <span class="fw-semibold text-success">On Duty</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-user-clock fa-2x text-muted mb-2"></i>
+                    <p style="font-size: 0.875rem; color: #64748B; margin: 0;">No staff scheduled</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Appointment Trends Chart Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h3 class="widget-title">
+                <i class="fas fa-chart-bar me-2"></i>
+                Appointment Trends
+            </h3>
+        </div>
+        <div class="widget-body">
+            <div style="height: 200px; position: relative;">
+                <canvas id="appointmentTrendsChart"></canvas>
+            </div>
+            <div class="text-center mt-3">
+                <small style="color: #64748B;">Weekly appointment volume</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Theme Toggle Button -->
+<div class="theme-toggle" title="Toggle Dark/Light Mode">
+    <i class="fas fa-moon"></i>
+</div>
+
+    <!-- Billing Overview Section -->
+    {% if user.is_superuser or user.role in 'admin,manager,accountant' %}
+    <div class="row mb-4" data-aos="fade-up">
+        <div class="col-md-4 mb-4 mb-md-0">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Revenue Overview</h5>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-primary mb-1">{{ currency_symbol|default:"UGX" }}{{ total_revenue|floatformat:2|intcomma }}</h3>
+                    <p class="text-muted small mb-3">Total Revenue This Month</p>
+                    <canvas id="revenueChart" width="100%" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4 mb-md-0">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Outstanding Payments</h5>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-warning mb-1">{{ currency_symbol|default:"UGX" }} {{ outstanding_amount|floatformat:0|intcomma }}</h3>
+                    <p class="text-muted small mb-3">Total Outstanding Amount</p>
+                    <div class="list-group list-group-flush">
+                        {% for invoice in pending_invoices %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ invoice.invoice_number }}</h6>
+                                    <small class="text-muted">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</small>
+                                </div>
+                                <span class="text-warning">{{ currency_symbol|default:"UGX" }} {{ invoice.total_amount|floatformat:0|intcomma }}</span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted mb-0">No outstanding payments</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Recent Payments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for payment in recent_payments|slice:":5" %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ payment.payment_method }}</h6>
+                                    <small class="text-muted">{{ payment.created_at|date:"M d, Y" }}</small>
+                                </div>
+                                <span class="text-success">{{ currency_symbol|default:"UGX" }}{{ payment.amount|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted mb-0">No recent payments</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions Section -->
+    {% if user.is_medical_staff or user.is_superuser %}
+    <div class="row mb-4" data-aos="fade-up">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Quick Access</h5>
+                </div>
+                <div class="card-body py-3">
+                    <!-- Responsive Grid for Quick Access Buttons -->
+                    <div class="row g-2">
+                        <!-- Appointments & Schedule Management -->
+                        <div class="col-12 mb-3">
+                            <h6 class="text-muted mb-2 small fw-bold">APPOINTMENTS & SCHEDULING</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{% url 'appointments:appointment_create' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-plus-circle me-2"></i>New Appointment
+                                </a>
+                                {% if user.is_superuser or user.role == 'admin' or user.role == 'billing' %}
+                                <a href="{% url 'billing:invoice_create' %}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-file-invoice me-2"></i>Create Invoice
+                                </a>
+                                <a href="{% url 'billing:payment_create' %}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-money-bill me-2"></i>Record Payment
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'roster:schedule_event_create' %}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-calendar-plus me-2"></i>Schedule Event
+                                </a>
+                                <a href="{% url 'roster:duty_roster_list' %}" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-calendar-alt me-2"></i>Duty Roster
+                                </a>
+                                <a href="{% url 'roster:shift_swap_list' %}" class="btn btn-outline-warning btn-sm position-relative">
+                                    <i class="fas fa-exchange-alt me-2"></i>Shift Swaps
+                                    {% if pending_shift_swaps %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ pending_shift_swaps }}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Clinical Operations -->
+                        <div class="col-12 mb-3">
+                            <h6 class="text-muted mb-2 small fw-bold">CLINICAL OPERATIONS</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{% url 'lab:test_type_list' %}" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-flask me-2"></i>Lab Tests
+                                </a>
+                                <a href="{% url 'pharmacy:medication_list' %}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-pills me-2"></i>Medications
+                                </a>
+                                <a href="{% url 'pharmacy:prescription_list' %}" class="btn btn-outline-primary btn-sm position-relative">
+                                    <i class="fas fa-prescription me-2"></i>Prescriptions
+                                    {% if pending_prescriptions %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning">
+                                        {{ pending_prescriptions }}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'ehr:patient_list' %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-users me-2"></i>Patients
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Administration -->
+                        {% if user.is_superuser or user.role in 'admin,manager' %}
+                        <div class="col-12 mb-3">
+                            <h6 class="text-muted mb-2 small fw-bold">ADMINISTRATION</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{% url 'staff:staff_list' %}" class="btn btn-outline-dark btn-sm">
+                                    <i class="fas fa-user-md me-2"></i>Staff
+                                </a>
+                                <a href="{% url 'branches:branch_list' %}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-hospital me-2"></i>Branches
+                                </a>
+                                <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-info btn-sm position-relative">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i>Invoices
+                                    {% if pending_invoices_count %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ pending_invoices_count }}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'pharmacy:supplier_list' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-truck me-2"></i>Suppliers
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Inventory & Equipment -->
+                        <div class="col-12 mb-3">
+                            <h6 class="text-muted mb-2 small fw-bold">INVENTORY & EQUIPMENT</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{% url 'lab:equipment_list' %}" class="btn btn-outline-warning btn-sm position-relative">
+                                    <i class="fas fa-tools me-2"></i>Lab Equipment
+                                    {% if maintenance_due %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ maintenance_due }}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'pharmacy:inventory' %}" class="btn btn-outline-success btn-sm position-relative">
+                                    <i class="fas fa-boxes me-2"></i>Inventory
+                                    {% if low_stock_count %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning">
+                                        {{ low_stock_count }}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'lab:quality_control_list' %}" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-clipboard-check me-2"></i>Quality Control
+                                </a>
+                                <a href="{% url 'pharmacy:stock_movement_list' %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-exchange-alt me-2"></i>Stock Movement
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Communication -->
+                        <div class="col-12">
+                            <h6 class="text-muted mb-2 small fw-bold">COMMUNICATION & TOOLS</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{% url 'notifications:list' %}" class="btn btn-outline-danger btn-sm position-relative">
+                                    <i class="fas fa-bell me-2"></i>Notifications
+                                    {% if unread_notifications %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ unread_notifications }}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'appointments:calendar' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-calendar me-2"></i>Calendar
+                                </a>
+                                {% if user.is_superuser %}
+                                <a href="{% url 'admin:index' %}" class="btn btn-outline-dark btn-sm">
+                                    <i class="fas fa-cog me-2"></i>Admin Panel
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Patient Quick Actions -->
+    {% if user.role == 'patient' %}
+    <div class="row mb-4" data-aos="fade-up">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Quick Actions</h5>
+                </div>
+                <div class="card-body py-3">
+                    <div class="row g-3">
+                        <div class="col-xl-3 col-md-6">
+                            <a href="{% url 'appointments:appointment_create' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-calendar-plus fa-2x text-primary mb-3"></i>
+                                    <h6 class="card-title mb-2">Book Appointment</h6>
+                                    <p class="card-text text-muted small mb-0">Schedule a visit with your doctor</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            {% if user.patient and user.patient.pk %}
+                            <a href="{% url 'ehr:patient_detail' user.patient.pk %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-file-medical fa-2x text-success mb-3"></i>
+                                    <h6 class="card-title mb-2">Medical Records</h6>
+                                    <p class="card-text text-muted small mb-0">View your medical history</p>
+                                </div>
+                            </a>
+                            {% else %}
+                            <div class="card quick-action-card text-center h-100 border-dashed bg-light">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-file-medical fa-2x text-muted mb-3"></i>
+                                    <h6 class="card-title text-muted mb-2">Medical Records</h6>
+                                    <p class="card-text text-muted small mb-0">Patient profile not found</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <a href="{% url 'pharmacy:prescription_list' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-prescription-bottle fa-2x text-info mb-3"></i>
+                                    <h6 class="card-title mb-2">My Prescriptions</h6>
+                                    <p class="card-text text-muted small mb-0">View medication list</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <a href="{% url 'billing:invoice_list' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-file-invoice-dollar fa-2x text-warning mb-3"></i>
+                                    <h6 class="card-title mb-2">My Bills</h6>
+                                    <p class="card-text text-muted small mb-0">View and pay invoices</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Statistics Overview -->
+    <div class="row mb-4" data-aos="fade-up">
+        {% if user.is_medical_staff or user.is_superuser %}
+        <!-- Staff Dashboard with Modern Cards -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Today's Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Appointments Stats -->
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-card p-3 border rounded bg-light-success">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="text-muted mb-2 small fw-bold">APPOINTMENTS</h6>
+                                        <h2 class="mb-1 fw-bold text-success">{{ appointment_count|default:0 }}</h2>
+                                        <p class="text-muted small mb-0">
+                                            {{ completed_appointments|default:0 }} completed
+                                        </p>
+                                    </div>
+                                    <div class="stat-icon bg-success bg-opacity-10 text-success rounded-circle p-2">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Patients Stats -->
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-card p-3 border rounded bg-light-primary">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="text-muted mb-2 small fw-bold">TOTAL PATIENTS</h6>
+                                        <h2 class="mb-1 fw-bold text-primary">{{ patient_count|intcomma }}</h2>
+                                        <p class="text-muted small mb-0">
+                                            {{ new_patients|default:0 }} new this week
+                                        </p>
+                                    </div>
+                                    <div class="stat-icon bg-primary bg-opacity-10 text-primary rounded-circle p-2">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lab Stats -->
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-card p-3 border rounded bg-light-info">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="text-muted mb-2 small fw-bold">LAB TESTS</h6>
+                                        <h2 class="mb-1 fw-bold text-info">{{ pending_lab_tests|default:0 }}</h2>
+                                        <p class="text-muted small mb-0">
+                                            {{ pending_results|default:0 }} results pending
+                                        </p>
+                                    </div>
+                                    <div class="stat-icon bg-info bg-opacity-10 text-info rounded-circle p-2">
+                                        <i class="fas fa-flask"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Equipment Stats -->
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-card p-3 border rounded bg-light-warning">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="text-muted mb-2 small fw-bold">EQUIPMENT</h6>
+                                        <h2 class="mb-1 fw-bold text-warning">{{ maintenance_due|default:0 }}</h2>
+                                        <p class="text-muted small mb-0">
+                                            Need maintenance
+                                        </p>
+                                    </div>
+                                    <div class="stat-icon bg-warning bg-opacity-10 text-warning rounded-circle p-2">
+                                        <i class="fas fa-tools"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Department Access Cards -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Department Access</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Laboratory Section -->
+                        <div class="col-xl-3 col-md-6">
+                            <a href="{% url 'lab:test_worklist' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-flask fa-2x text-info mb-3"></i>
+                                    <h6 class="card-title mb-1">Laboratory</h6>
+                                    <p class="card-text text-muted small mb-0">Manage tests & results</p>
+                                    {% if pending_lab_tests or pending_results %}
+                                    <span class="fw-semibold text-warning mt-2">{{ pending_lab_tests|add:pending_results }} Pending</span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Pharmacy Section -->
+                        <div class="col-xl-3 col-md-6">
+                            <a href="{% url 'pharmacy:inventory_dashboard' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-pills fa-2x text-success mb-3"></i>
+                                    <h6 class="card-title mb-1">Pharmacy</h6>
+                                    <p class="card-text text-muted small mb-0">Manage medications</p>
+                                    {% if low_stock_count %}
+                                    <span class="fw-semibold text-danger mt-2">{{ low_stock_count }} Low Stock</span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Patient Records -->
+                        <div class="col-xl-3 col-md-6">
+                            <a href="{% url 'ehr:patient_list' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-user-md fa-2x text-primary mb-3"></i>
+                                    <h6 class="card-title mb-1">Patient Records</h6>
+                                    <p class="card-text text-muted small mb-0">View medical records</p>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Appointments -->
+                        <div class="col-xl-3 col-md-6">
+                            <a href="{% url 'appointments:appointment_list' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-calendar-alt fa-2x text-warning mb-3"></i>
+                                    <h6 class="card-title mb-1">Appointments</h6>
+                                    <p class="card-text text-muted small mb-0">Manage schedules</p>
+                                    {% if appointment_count %}
+                                    <span class="fw-semibold text-info mt-2">{{ appointment_count }} Today</span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% elif user.role == 'patient' %}
+            <!-- Patient Statistics -->
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card stat-card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="card-title text-muted mb-2 small fw-bold">MY APPOINTMENTS</h6>
+                                <h2 class="mb-1 fw-bold text-dark">{{ my_appointments|default:0|intcomma }}</h2>
+                                <small class="text-success">{{ upcoming_appointments|default:0 }} upcoming</small>
+                            </div>
+                            <div class="avatar avatar-lg bg-primary bg-opacity-10 rounded-circle p-3">
+                                <i class="fas fa-calendar fa-lg text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card stat-card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="card-title text-muted mb-2 small fw-bold">PRESCRIPTIONS</h6>
+                                <h2 class="mb-1 fw-bold text-dark">{{ prescription_count|default:0|intcomma }}</h2>
+                                <small class="text-muted">{{ active_prescriptions|default:0 }} active</small>
+                            </div>
+                            <div class="avatar avatar-lg bg-success bg-opacity-10 rounded-circle p-3">
+                                <i class="fas fa-prescription-bottle fa-lg text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card stat-card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="card-title text-muted mb-2 small fw-bold">LAB RESULTS</h6>
+                                <h2 class="mb-1 fw-bold text-dark">{{ lab_results_count|default:0|intcomma }}</h2>
+                                <small class="text-info">{{ pending_results|default:0 }} pending</small>
+                            </div>
+                            <div class="avatar avatar-lg bg-info bg-opacity-10 rounded-circle p-3">
+                                <i class="fas fa-flask fa-lg text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="row" data-aos="fade-up" data-aos-delay="100">
+        <!-- Left Column - Main Content -->
+        <div class="col-lg-8">
+            <!-- Analytics Chart -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0 text-dark">Appointment Trends</h5>
+                        <small class="text-muted">Last 7 days</small>
+                    </div>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="appointmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Activities -->
+            <div class="row">
+                <!-- Today's Appointments -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0 text-dark">Today's Appointments</h5>
+                            <span class="fw-semibold text-primary">{{ today_appointments|length|default:0 }}</span>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if today_appointments %}
+                            <div class="list-group list-group-flush">
+                                {% for appointment in today_appointments %}
+                                <div class="list-group-item border-0 py-3">
+                                    <div class="d-flex align-items-center">
+                                        {% if user.is_medical_staff %}
+                                        <a href="{% url 'ehr:patient_detail' appointment.patient.pk %}" class="text-decoration-none d-flex align-items-center flex-grow-1">
+                                        {% else %}
+                                        <div class="d-flex align-items-center flex-grow-1">
+                                        {% endif %}
+                                            <div class="avatar avatar-sm rounded-circle me-3" style="background: var(--gradient-primary); color: white;">
+                                                <span class="avatar-content fw-bold">
+                                                    {{ appointment.patient.first_name|first }}{{ appointment.patient.last_name|first }}
+                                                </span>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1 text-dark">{{ appointment.patient.get_full_name }}</h6>
+                                                <div class="d-flex align-items-center">
+                                                    <small class="text-muted me-2">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ appointment.appointment_date|time:"H:i" }}
+                                                    </small>
+                                                    <span class="fw-semibold text-{% if appointment.status == 'completed' %}success{% elif appointment.status == 'cancelled' %}danger{% else %}warning{% endif %}">
+                                                        {{ appointment.get_status_display }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        {% if user.is_medical_staff %}
+                                        </a>
+                                        {% else %}
+                                        </div>
+                                        {% endif %}
+                                        {% if user.is_medical_staff %}
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-light border-0" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v text-muted"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="{% url 'appointments:appointment_detail' appointment.pk %}">View Details</a></li>
+                                                {% if appointment.status == 'scheduled' or appointment.status == 'confirmed' %}
+                                                <li><a class="dropdown-item" href="#">Start Consultation</a></li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">No appointments scheduled for today</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Panel -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h5 class="card-title mb-0 text-dark">Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                {% if user.is_medical_staff %}
+                                <div class="col-6">
+                                    <a href="{% url 'ehr:patient_create' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-user-plus fa-2x text-primary mb-2"></i>
+                                            <h6 class="card-title mb-1">Add Patient</h6>
+                                            <p class="card-text text-muted small mb-0">Register new patient</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="{% url 'appointments:appointment_create' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-calendar-plus fa-2x text-success mb-2"></i>
+                                            <h6 class="card-title mb-1">New Appointment</h6>
+                                            <p class="card-text text-muted small mb-0">Schedule visit</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="{% url 'pharmacy:prescription_create' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-prescription fa-2x text-info mb-2"></i>
+                                            <h6 class="card-title mb-1">Write Prescription</h6>
+                                            <p class="card-text text-muted small mb-0">Issue medication</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="{% url 'lab:dashboard' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-flask fa-2x text-warning mb-2"></i>
+                                            <h6 class="card-title mb-1">Laboratory</h6>
+                                            <p class="card-text text-muted small mb-0">View lab dashboard</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                {% elif user.role == 'patient' %}
+                                <div class="col-6">
+                                    <a href="{% url 'appointments:appointment_create' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-calendar-plus fa-2x text-primary mb-2"></i>
+                                            <h6 class="card-title mb-1">Book Appointment</h6>
+                                            <p class="card-text text-muted small mb-0">Schedule visit</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    {% if user.patient and user.patient.pk %}
+                                    <a href="{% url 'ehr:patient_detail' user.patient.pk %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-file-medical fa-2x text-success mb-2"></i>
+                                            <h6 class="card-title mb-1">View Records</h6>
+                                            <p class="card-text text-muted small mb-0">Medical history</p>
+                                        </div>
+                                    </a>
+                                    {% else %}
+                                    <div class="card quick-action-card text-center h-100 border-dashed bg-light">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-file-medical fa-2x text-muted mb-2"></i>
+                                            <h6 class="card-title text-muted mb-1">View Records</h6>
+                                            <p class="card-text text-muted small mb-0">Profile not found</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-6">
+                                    <a href="{% url 'pharmacy:prescription_list' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-prescription-bottle fa-2x text-info mb-2"></i>
+                                            <h6 class="card-title mb-1">Prescriptions</h6>
+                                            <p class="card-text text-muted small mb-0">Medication list</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="{% url 'billing:invoice_list' %}" class="card quick-action-card text-decoration-none text-center h-100 border-light shadow-sm">
+                                        <div class="card-body py-3">
+                                            <i class="fas fa-file-invoice-dollar fa-2x text-warning mb-2"></i>
+                                            <h6 class="card-title mb-1">My Bills</h6>
+                                            <p class="card-text text-muted small mb-0">View invoices</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Sidebar -->
+        <div class="col-lg-4">
+            <!-- Today's Duty Roster -->
+            {% if user.is_medical_staff or user.is_superuser %}
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Today's Duty Roster</h5>
+                </div>
+                <div class="card-body">
+                    {% if todays_roster %}
+                        <div class="list-group list-group-flush">
+                            {% for duty in todays_roster %}
+                            <div class="list-group-item border-0 px-0 py-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-sm rounded-circle me-3" style="background: var(--gradient-secondary); color: white;">
+                                        <span class="avatar-content fw-bold">
+                                            {{ duty.staff.first_name|first }}{{ duty.staff.last_name|first }}
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 text-dark">{{ duty.staff.get_full_name }}</h6>
+                                        <div class="d-flex align-items-center">
+                                            <small class="text-muted me-2">{{ duty.branch.name }}</small>
+                                            <span class="fw-semibold text-{% if duty.status == 'scheduled' %}primary{% elif duty.status == 'completed' %}success{% else %}danger{% endif %}">
+                                                {{ duty.get_status_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ duty.shift_start|time:"H:i" }}</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-user-clock fa-2x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No duty roster for today</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Upcoming Schedule -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">Upcoming Schedule</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_schedule %}
+                    <div class="timeline">
+                        {% for schedule in upcoming_schedule %}
+                        <div class="timeline-item mb-3">
+                            <div class="d-flex">
+                                <div class="timeline-marker bg-primary rounded-circle me-3"></div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 text-dark">{{ schedule.title }}</h6>
+                                    <p class="text-muted mb-1 small">{{ schedule.description }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ schedule.time }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-day fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No upcoming schedule</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Modern Card Styles */
+.stat-card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.quick-action-card {
+    transition: all 0.3s ease;
+    border: 1px solid #f8f9fa;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.quick-action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    text-decoration: none;
+}
+
+/* Modern Button Styles */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #2c5aa0, #3498db);
+    color: white;
+    border-color: #2c5aa0;
+}
+
+.btn-outline-success:hover {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border-color: #28a745;
+}
+
+.btn-outline-info:hover {
+    background: linear-gradient(135deg, #17a2b8, #6f42c1);
+    color: white;
+    border-color: #17a2b8;
+}
+
+.btn-outline-warning:hover {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    color: white;
+    border-color: #ffc107;
+}
+
+.btn-outline-danger:hover {
+    background: linear-gradient(135deg, #dc3545, #e83e8c);
+    color: white;
+    border-color: #dc3545;
+}
+
+/* Background Utilities */
+.bg-light-primary { background-color: rgba(44, 90, 160, 0.08) !important; }
+.bg-light-success { background-color: rgba(40, 167, 69, 0.08) !important; }
+.bg-light-info { background-color: rgba(23, 162, 184, 0.08) !important; }
+.bg-light-warning { background-color: rgba(255, 193, 7, 0.08) !important; }
+.bg-light-danger { background-color: rgba(220, 53, 69, 0.08) !important; }
+
+/* Stat Icon Styles */
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+/* Avatar Styles */
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+}
+
+.avatar-lg {
+    width: 60px;
+    height: 60px;
+}
+
+.avatar-content {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Timeline Styles */
+.timeline-marker {
+    width: 10px;
+    height: 10px;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0 !important;
+}
+
+.border-dashed {
+    border: 2px dashed #dee2e6 !important;
+}
+
+/* Card Header Styles */
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-wrap: wrap;
+    }
+    
+    .quick-access-buttons .col-auto {
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Smooth Animations */
+.fade-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Badge Styles */
+.badge {
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+/* Section Headers */
+.section-header {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+}
+</style>
+{% endblock %}

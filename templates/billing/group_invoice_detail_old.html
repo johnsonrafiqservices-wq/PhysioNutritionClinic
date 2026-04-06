@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+
+{% block title %}Group Invoice {{ invoice.invoice_number }} - Excellence Medical Care{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-receipt me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Group Invoice {{ invoice.invoice_number }}</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<style>
+.invoice-detail-container { max-width: 1400px; margin: 0 auto; }
+.info-card-compact {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+}
+.info-row-compact {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 13px;
+}
+.info-row-compact:last-child { border-bottom: none; }
+.info-label-compact { color: #6c757d; font-weight: 500; }
+.info-value-compact { color: #212529; font-weight: 600; }
+.summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+.summary-total {
+    font-size: 24px;
+    font-weight: 700;
+    padding-top: 12px;
+    border-top: 2px solid rgba(255,255,255,0.3);
+    margin-top: 12px;
+}
+.table-compact { font-size: 13px; }
+.table-compact th { font-weight: 600; background: #f8f9fa; padding: 10px 12px; }
+.table-compact td { padding: 10px 12px; }
+.action-btn-sm { padding: 6px 12px; font-size: 13px; font-weight: 500; }
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+.section-header {
+    font-size: 15px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e9ecef;
+}
+</style>
+
+<div class="btn-group">
+    <a href="{% url 'billing:group_invoice_print' invoice.pk %}" class="btn btn-info action-btn-sm" target="_blank">
+        <i class="bi bi-printer me-1"></i> Print
+    </a>
+    <button type="button" class="btn btn-success action-btn-sm" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+        <i class="bi bi-cash me-1"></i> Payment
+    </button>
+    <button type="button" class="btn btn-primary action-btn-sm" data-bs-toggle="modal" data-bs-target="#addItemModal">
+        <i class="bi bi-plus-circle me-1"></i> Add Item
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Invoice Details -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold" style="color: var(--alafia-primary);">Invoice Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Patient Group:</strong></p>
+                        <p class="text-muted">{{ invoice.patient_group.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Invoice Type:</strong></p>
+                        <p class="text-muted">
+                            {% if invoice.invoice_type == 'auto' %}
+                            <span class="badge bg-info">Auto-Generated</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Custom</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if invoice.period_start and invoice.period_end %}
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <p class="mb-1"><strong>Service Period:</strong></p>
+                        <p class="text-muted">{{ invoice.period_start|date:"d/m/Y" }} - {{ invoice.period_end|date:"d/m/Y" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Issue Date:</strong></p>
+                        <p class="text-muted">{{ invoice.issue_date|date:"d/m/Y" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Due Date:</strong></p>
+                        <p class="text-muted">{{ invoice.due_date|date:"d/m/Y" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Status:</strong></p>
+                        <p>
+                            {% if invoice.status == 'draft' %}
+                            <span class="badge bg-secondary">Draft</span>
+                            {% elif invoice.status == 'sent' %}
+                            <span class="badge bg-primary">Sent</span>
+                            {% elif invoice.status == 'paid' %}
+                            <span class="badge bg-success">Paid</span>
+                            {% elif invoice.status == 'partial' %}
+                            <span class="badge bg-warning">Partially Paid</span>
+                            {% elif invoice.status == 'overdue' %}
+                            <span class="badge bg-danger">Overdue</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if invoice.billing_contact_name %}
+                <hr>
+                <h6 class="fw-bold mb-3">Billing Contact</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Name:</strong> {{ invoice.billing_contact_name }}</p>
+                        {% if invoice.billing_contact_email %}
+                        <p class="mb-1"><strong>Email:</strong> {{ invoice.billing_contact_email }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if invoice.billing_contact_phone %}
+                        <p class="mb-1"><strong>Phone:</strong> {{ invoice.billing_contact_phone }}</p>
+                        {% endif %}
+                        {% if invoice.billing_address %}
+                        <p class="mb-1"><strong>Address:</strong> {{ invoice.billing_address }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Invoice Items -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold" style="color: var(--alafia-primary);">Invoice Items</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Patient</th>
+                                <th>Description</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ item.service_date|date:"d/m/Y" }}</td>
+                                <td>{{ item.patient.get_full_name }}</td>
+                                <td>{{ item.description }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>UGX {{ item.unit_price|floatformat:0 }}</td>
+                                <td>UGX {{ item.total_amount|floatformat:0 }}</td>
+                                <td>
+                                    <form method="post" action="{% url 'billing:group_invoice_delete_item' invoice.pk item.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this item?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">No items added yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payments -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold" style="color: var(--alafia-primary);">Payment History</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Payment ID</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.payment_id }}</td>
+                                <td>{{ payment.payment_date|date:"d/m/Y H:i" }}</td>
+                                <td>UGX {{ payment.amount|floatformat:0 }}</td>
+                                <td>{{ payment.get_payment_method_display }}</td>
+                                <td>{{ payment.reference_number|default:"—" }}</td>
+                                <td>
+                                    {% if payment.status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">{{ payment.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No payments recorded</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Summary Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 bg-primary text-white">
+                <h6 class="m-0 font-weight-bold">Invoice Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span class="fw-bold">UGX {{ invoice.subtotal|floatformat:0 }}</span>
+                </div>
+                
+                {% if invoice.tax_rate > 0 %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax ({{ invoice.tax_rate }}%):</span>
+                    <span class="fw-bold">UGX {{ invoice.tax_amount|floatformat:0 }}</span>
+                </div>
+                {% endif %}
+                
+                {% if invoice.discount_amount > 0 %}
+                <div class="d-flex justify-content-between mb-2 text-success">
+                    <span>Discount:</span>
+                    <span class="fw-bold">- UGX {{ invoice.discount_amount|floatformat:0 }}</span>
+                </div>
+                {% endif %}
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="h6">Total Amount:</span>
+                    <span class="h6 fw-bold">UGX {{ invoice.total_amount|floatformat:0 }}</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2 text-success">
+                    <span>Total Paid:</span>
+                    <span class="fw-bold">UGX {{ total_paid|floatformat:0 }}</span>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <span class="h6">Balance Due:</span>
+                    <span class="h6 fw-bold {% if balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                        UGX {{ balance_due|floatformat:0 }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Card -->
+        <div class="card shadow">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Statistics</h6>
+                <p class="mb-2"><i class="bi bi-people text-primary"></i> <strong>{{ invoice.get_patient_count }}</strong> Patients</p>
+                <p class="mb-2"><i class="bi bi-list-check text-info"></i> <strong>{{ invoice.get_service_count }}</strong> Services</p>
+                <p class="mb-0"><i class="bi bi-person text-success"></i> Created by <strong>{{ invoice.created_by.get_full_name }}</strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'billing:group_invoice_add_item' invoice.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Invoice Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Patient <span class="text-danger">*</span></label>
+                        <select name="patient" class="form-select" required>
+                            <option value="">Select Patient</option>
+                            {% for item in items %}
+                            <option value="{{ item.patient.id }}">{{ item.patient.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Service Date <span class="text-danger">*</span></label>
+                        <input type="date" name="service_date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <input type="text" name="description" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                            <input type="number" name="quantity" class="form-control" value="1" min="1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Unit Price <span class="text-danger">*</span></label>
+                            <input type="number" name="unit_price" class="form-control" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Payment Modal -->
+<div class="modal fade" id="addPaymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'billing:group_invoice_add_payment' invoice.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Record Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Amount <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control" step="0.01" max="{{ balance_due }}" value="{{ balance_due }}" required>
+                        <small class="text-muted">Balance due: UGX {{ balance_due|floatformat:0 }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <select name="payment_method" class="form-select" required>
+                            <option value="cash">Cash</option>
+                            <option value="check">Check</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="wire_transfer">Wire Transfer</option>
+                            <option value="credit_card">Credit Card</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reference Number</label>
+                        <input type="text" name="reference_number" class="form-control" placeholder="Transaction/Check number">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

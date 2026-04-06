@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Register Visiting Patient - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-person-plus-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Register Visiting Patient</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'patients:patient_register' %}" class="btn btn-outline-primary">
+    <i class="bi bi-person-plus"></i> Full Patient Registration
+</a>
+<a href="{% url 'patients:patient_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Patient List
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-person-walking me-2"></i>Visiting Patient Registration
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Quick Registration for Visiting Patients</strong><br>
+                    This form is designed for walk-in or visiting patients who need immediate care. 
+                    Only essential information is required. All fields are optional and can be updated later.
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Basic Information (Optional)</h5>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Gender</label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}
+                                    <div class="text-danger">{{ form.gender.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Date of Birth</label>
+                                {{ form.date_of_birth }}
+                                {% if form.date_of_birth.errors %}
+                                    <div class="text-danger">{{ form.date_of_birth.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Helps with age-appropriate care</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Contact Information (Optional)</h5>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                    <div class="text-danger">{{ form.phone.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">For follow-up if needed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email Address</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Identification Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Identification Information (Optional)</h5>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Type</label>
+                                {{ form.id_type }}
+                                {% if form.id_type.errors %}
+                                    <div class="text-danger">{{ form.id_type.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Type of identification document</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Number</label>
+                                {{ form.id_number }}
+                                {% if form.id_number.errors %}
+                                    <div class="text-danger">{{ form.id_number.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Identification document number</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visit Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Visit Information</h5>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Visit</label>
+                                {{ form.reason_for_visit }}
+                                {% if form.reason_for_visit.errors %}
+                                    <div class="text-danger">{{ form.reason_for_visit.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Select the primary reason for this visit</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Medical Information (Optional but Important)</h5>
+                        </div>
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                    Known Allergies
+                                </label>
+                                {{ form.allergies }}
+                                {% if form.allergies.errors %}
+                                    <div class="text-danger">{{ form.allergies.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Critical for safe treatment - list any known allergies</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Medical History</label>
+                                {{ form.medical_history }}
+                                {% if form.medical_history.errors %}
+                                    <div class="text-danger">{{ form.medical_history.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Previous conditions, surgeries, etc.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Current Medications</label>
+                                {{ form.current_medications }}
+                                {% if form.current_medications.errors %}
+                                    <div class="text-danger">{{ form.current_medications.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Current prescriptions and supplements</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Group (for Pricing) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Patient Group</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.patient_group|as_crispy_field }}
+                            <small class="text-muted">Assign patient to a group for differential pricing (e.g., Corporate, Insurance, VIP). Leave blank for default pricing.</small>
+                        </div>
+                    </div>
+
+                    {{ form.is_visiting_patient }}
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{% url 'patients:patient_list' %}" class="btn btn-secondary me-md-2">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Register Visiting Patient
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Information Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title text-info">
+                    <i class="bi bi-lightbulb me-2"></i>About Visiting Patient Registration
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>Quick Process:</strong> All fields are optional for immediate care</li>
+                    <li><strong>Unique ID:</strong> System will assign a VP-XXXXXX ID automatically</li>
+                    <li><strong>Update Later:</strong> Information can be completed during or after visit</li>
+                    <li><strong>Full Registration:</strong> Can be converted to full patient record later</li>
+                    <li><strong>Privacy:</strong> Minimal information protects patient privacy</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Nutrition Consultation - {{ appointment.patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-apple me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Nutrition Consultation - {{ appointment.patient.get_full_name }}</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    Nutrition Consultation Session
+                    <span class="fw-semibold text-success ms-2">{{ appointment.appointment_date|date:"M d, Y" }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Session Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Session Details</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.consultation_date|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.duration_minutes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Dietary Assessment -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Dietary Assessment</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.current_diet_assessment|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.daily_calorie_intake|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.meal_frequency|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.food_allergies_intolerances|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Nutritional Goals -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Nutritional Goals</h5>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.weight_goal|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.target_weight|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.nutritional_goals|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Meal Plan and Recommendations -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Meal Plan & Recommendations</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.meal_plan_provided|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.dietary_recommendations|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.supplements_recommended|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Progress and Follow-up -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Progress & Follow-up</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.progress_notes|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.next_consultation_recommended|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.follow_up_in_weeks|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.additional_notes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'appointments:appointment_detail' appointment.id %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Appointment
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Complete Consultation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Patient Summary -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Summary</h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ appointment.patient.get_full_name }}</h6>
+                <p class="text-muted mb-2">{{ appointment.patient.patient_id }}</p>
+                <div class="row">
+                    <div class="col-6">
+                        <small><strong>Age:</strong> {{ appointment.patient.get_age }}</small>
+                    </div>
+                    <div class="col-6">
+                        <small><strong>Gender:</strong> {{ appointment.patient.get_gender_display }}</small>
+                    </div>
+                </div>
+                {% if appointment.patient.allergies %}
+                <div class="alert alert-warning mt-2">
+                    <small><strong>Allergies:</strong> {{ appointment.patient.allergies }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Current BMI & Vitals -->
+        {% if recent_vitals %}
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Current Measurements</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h4 class="text-primary">BMI: {{ recent_vitals.bmi|floatformat:1 }}</h4>
+                    <p class="text-muted">{{ recent_vitals.weight }} kg / {{ recent_vitals.height }} cm</p>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <small><strong>BP:</strong> {{ recent_vitals.blood_pressure_systolic }}/{{ recent_vitals.blood_pressure_diastolic }}</small><br>
+                        <small><strong>HR:</strong> {{ recent_vitals.heart_rate }} bpm</small>
+                    </div>
+                    <div class="col-6">
+                        <small><strong>Recorded:</strong> {{ recent_vitals.recorded_date|date:"M d" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- BMI Categories -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">BMI Categories</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="fw-semibold text-info me-2">< 18.5</span>
+                    <small>Underweight</small>
+                </div>
+                <div class="mb-2">
+                    <span class="fw-semibold text-success me-2">18.5-24.9</span>
+                    <small>Normal weight</small>
+                </div>
+                <div class="mb-2">
+                    <span class="fw-semibold text-warning me-2">25.0-29.9</span>
+                    <small>Overweight</small>
+                </div>
+                <div class="mb-2">
+                    <span class="fw-semibold text-danger me-2">≥ 30.0</span>
+                    <small>Obese</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nutrition Guidelines -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Consultation Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Assess current dietary habits
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Identify nutritional deficiencies
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Set realistic goals
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Provide practical meal plans
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Schedule regular follow-ups
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#vitalSignsModal" onclick="setVitalSignsPatient('{{ appointment.patient.patient_id }}')">
+                        <i class="bi bi-heart-pulse"></i> Record Vitals
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#appointmentCreateModal" onclick="openAppointmentModal('{{ appointment.patient.id }}')">
+                        <i class="bi bi-calendar-plus"></i> Schedule Follow-up
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="printMealPlan()">
+                        <i class="bi bi-printer"></i> Print Meal Plan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default consultation date to now
+    const consultationDate = document.getElementById('id_consultation_date');
+    if (consultationDate && !consultationDate.value) {
+        const now = new Date();
+        consultationDate.value = now.toISOString().slice(0, 16);
+    }
+    
+    // Set default duration
+    const duration = document.getElementById('id_duration_minutes');
+    if (duration && !duration.value) {
+        duration.value = '60'; // Default nutrition consultation duration
+    }
+    
+    // Calculate BMI category based on current vitals
+    {% if recent_vitals %}
+    const bmi = {{ recent_vitals.bmi }};
+    let category = '';
+    let categoryClass = '';
+    
+    if (bmi < 18.5) {
+        category = 'Underweight';
+        categoryClass = 'info';
+    } else if (bmi < 25) {
+        category = 'Normal weight';
+        categoryClass = 'success';
+    } else if (bmi < 30) {
+        category = 'Overweight';
+        categoryClass = 'warning';
+    } else {
+        category = 'Obese';
+        categoryClass = 'danger';
+    }
+    
+    // Highlight current BMI category
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        if (badge.textContent.includes(category.split(' ')[0])) {
+            badge.classList.add('bg-' + categoryClass);
+            badge.classList.add('text-white');
+        }
+    });
+    {% endif %}
+});
+
+function printMealPlan() {
+    const mealPlan = document.getElementById('id_meal_plan_provided').value;
+    if (mealPlan) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Meal Plan - {{ appointment.patient.get_full_name }}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h1 { color: #4e73df; }
+                        .patient-info { background: #f8f9fc; padding: 10px; border-radius: 5px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Personalized Meal Plan</h1>
+                    <div class="patient-info">
+                        <strong>Patient:</strong> {{ appointment.patient.get_full_name }}<br>
+                        <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
+                        <strong>Nutritionist:</strong> {{ appointment.provider.get_full_name }}
+                    </div>
+                    <h2>Meal Plan</h2>
+                    <div>${mealPlan.replace(/\n/g, '<br>')}</div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    } else {
+        alert('Please complete the meal plan before printing.');
+    }
+}
+</script>
+{% endblock %}

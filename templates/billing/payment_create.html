@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}Record Payment - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-credit-card-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Record Payment</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'billing:payment_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Payments
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    {% if invoice %}
+                        Payment for Invoice {{ invoice.invoice_number }}
+                    {% else %}
+                        Record New Payment
+                    {% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if not invoice %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Patient</label>
+                            {{ form.patient }}
+                            {% if form.patient.errors %}
+                                <div class="text-danger">{{ form.patient.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Invoice (Optional)</label>
+                            {{ form.invoice }}
+                            {% if form.invoice.errors %}
+                                <div class="text-danger">{{ form.invoice.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Hidden fields for invoice-specific payment -->
+                    {{ form.patient }}
+                    {{ form.invoice }}
+                    {% endif %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Amount</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}
+                                <div class="text-danger">{{ form.amount.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Method</label>
+                            {{ form.payment_method }}
+                            {% if form.payment_method.errors %}
+                                <div class="text-danger">{{ form.payment_method.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Transaction Number (Momo / Marchant) (Optional)</label>
+                        {{ form.reference_number }}
+                        {% if form.reference_number.errors %}
+                            <div class="text-danger">{{ form.reference_number.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Check number, transaction ID, or other reference
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <div class="text-danger">{{ form.notes.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'billing:payment_list' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-credit-card"></i> Record Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        {% if invoice %}
+        <!-- Invoice Summary -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Invoice Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-sm-6"><strong>Invoice #:</strong></div>
+                    <div class="col-sm-6">{{ invoice.invoice_number }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-6"><strong>Patient:</strong></div>
+                    <div class="col-sm-6">{{ invoice.patient.get_full_name }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-6"><strong>Total Amount:</strong></div>
+                    <div class="col-sm-6">UGX {{ invoice.total_amount|floatformat:0 }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-6"><strong>Status:</strong></div>
+                    <div class="col-sm-6">
+                        {% if invoice.status == 'draft' %}
+                            <span class="fw-semibold text-secondary">Draft</span>
+                        {% elif invoice.status == 'sent' %}
+                            <span class="fw-semibold text-primary">Sent</span>
+                        {% elif invoice.status == 'paid' %}
+                            <span class="fw-semibold text-success">Paid</span>
+                        {% elif invoice.status == 'overdue' %}
+                            <span class="fw-semibold text-danger">Overdue</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-6"><strong>Due Date:</strong></div>
+                    <div class="col-sm-6">{{ invoice.due_date|date:"M d, Y" }}</div>
+                </div>
+                
+                {% if invoice.payments.exists %}
+                <hr>
+                <h6 class="text-primary">Previous Payments</h6>
+                {% for payment in invoice.payments.all %}
+                <div class="row mb-1">
+                    <div class="col-sm-8">{{ payment.payment_date|date:"M d, Y" }}</div>
+                    <div class="col-sm-4">UGX {{ payment.amount|floatformat:0 }}</div>
+                </div>
+                {% endfor %}
+                <hr>
+                <div class="row">
+                    <div class="col-sm-6"><strong>Remaining:</strong></div>
+                    <div class="col-sm-6"><strong>UGX {{ invoice.get_balance_due|floatformat:0 }}</strong></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Payment Methods Info -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">Accepted Payment Methods:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-credit-card text-primary"></i> Credit/Debit Cards</li>
+                        <li><i class="bi bi-cash text-success"></i> Cash</li>
+                        <li><i class="bi bi-cash text-success"></i> Momo</li>
+                        <li><i class="bi bi-cash text-success"></i> Airtel Machant</li>
+                        <li><i class="bi bi-bank text-info"></i> Check</li>
+                        <li><i class="bi bi-arrow-left-right text-warning"></i> Bank Transfer</li>
+                        <li><i class="bi bi-shield-check text-secondary"></i> Insurance</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Note:</strong> All payments are processed securely. A receipt will be generated automatically upon successful payment recording.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control, .form-select {
+        border-radius: 0.375rem;
+        border: 1px solid #d1d3e2;
+        padding: 0.75rem;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-fill today's date if payment date is empty
+    const paymentDateField = document.querySelector('[name="payment_date"]');
+    if (paymentDateField && !paymentDateField.value) {
+        const today = new Date().toISOString().split('T')[0];
+        paymentDateField.value = today;
+    }
+    
+    // Update amount field when invoice is selected (for standalone payments)
+    const invoiceSelect = document.querySelector('[name="invoice"]');
+    if (invoiceSelect) {
+        invoiceSelect.addEventListener('change', function() {
+            if (this.value) {
+                // In a real implementation, this would fetch invoice amount via AJAX
+                console.log('Invoice selected:', this.value);
+            }
+        });
+    }
+    
+    // Check if we have a warning message about already paid invoice
+    const messages = document.querySelectorAll('.alert');
+    messages.forEach(function(message) {
+        if (message.textContent.includes('already fully paid')) {
+            // Auto-hide the message after 5 seconds
+            setTimeout(function() {
+                if (message.parentNode) {
+                    message.style.transition = 'opacity 0.5s';
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        if (message.parentNode) {
+                            message.remove();
+                        }
+                    }, 500);
+                }
+            }, 5000);
+        }
+    });
+});
+</script>
+{% endblock %}

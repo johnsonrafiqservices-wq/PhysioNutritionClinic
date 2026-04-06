@@ -1,0 +1,1209 @@
+{% load static %}
+<!-- 
+    ALL MODALS TEMPLATE
+    PhysioNutrition Clinic Management System
+    
+    This file contains all modal forms used throughout the system.
+    Include this file in base.html or individual templates as needed.
+-->
+
+<!-- ========== PATIENT REGISTRATION MODAL ========== -->
+
+<div class="modal fade" id="patientRegisterModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-person-plus"></i> Register New Patient</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="patientRegisterForm" action="{% url 'patients:patient_register_ajax' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" name="first_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" name="last_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" name="date_of_birth" id="reg_dob" class="form-control">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Age</label>
+                            <input type="number" id="reg_age" class="form-control" min="0" max="150" placeholder="Yrs">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Gender</label>
+                            <select name="gender" class="form-control">
+                                <option value="">---------</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                                <option value="O">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="text" name="phone" class="form-control" placeholder="+256...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Patient Group</label>
+                            <select name="patient_group" class="form-control">
+                                <option value="">No Group (Default Pricing)</option>
+                                {% for g in patient_groups %}
+                                <option value="{{ g.id }}">{{ g.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID Type</label>
+                            <select name="id_type" class="form-control">
+                                <option value="">---------</option>
+                                <option value="NATIONAL_ID">National ID</option>
+                                <option value="PASSPORT">Passport</option>
+                                <option value="DRIVING_LICENSE">Driving License</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID Number</label>
+                            <input type="text" name="id_number" class="form-control" placeholder="Enter ID number">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Reason for Visit</label>
+                            <select name="reason_for_visit" class="form-control">
+                                <option value="">---------</option>
+                                <option value="CONSULTATION">General Consultation</option>
+                                <option value="CHECKUP">Routine Checkup</option>
+                                <option value="EMERGENCY">Emergency</option>
+                                <option value="FOLLOWUP">Follow-up Visit</option>
+                                <option value="REFERRAL">Referral</option>
+                                <option value="TREATMENT">Treatment</option>
+                                <option value="SCREENING">Screening</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Blood Type</label>
+                            <select name="blood_type" class="form-control">
+                                <option value="">---------</option>
+                                <option value="A+">A+</option><option value="A-">A-</option>
+                                <option value="B+">B+</option><option value="B-">B-</option>
+                                <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                                <option value="O+">O+</option><option value="O-">O-</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Allergies</label>
+                            <textarea name="allergies" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Register Patient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== APPOINTMENTS MODALS ========== -->
+
+<!-- Appointment Create Modal -->
+<div class="modal fade" id="appointmentCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-calendar-plus"></i> Schedule Appointment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+ 
+            <form id="appointmentCreateForm" action="{% url 'appointments:appointment_create_ajax' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Patient <span class="text-danger">*</span></label>
+                            <select name="patient" id="appointment_patient_select" class="form-control" required>
+                                <option value="">Select Patient</option>
+                                {% for patient in all_patients %}
+                                <option value="{{ patient.id }}">{{ patient.get_full_name }} ({{ patient.patient_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Service <span class="text-danger">*</span></label>
+                            <select name="service" id="appointment_service_select" class="form-control" required>
+                                <option value="">Select Service</option>
+                                {% for service in all_services %}
+                                <option value="{{ service.id }}">{{ service.name }} - UGX {{ service.price|floatformat:0 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Provider <span class="text-danger">*</span></label>
+                            <select name="provider" id="appointment_provider_select" class="form-control" required>
+                                <option value="">Select Provider</option>
+                                {% for provider in all_providers %}
+                                <option value="{{ provider.id }}">{{ provider.get_full_name }} - {{ provider.get_role_display }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="appointment_date" id="appointment_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Time <span class="text-danger">*</span></label>
+                            <input type="time" name="appointment_time" id="appointment_time" class="form-control" required>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" id="appointment_notes" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Template for invoice item row -->
+<template id="invoiceItemRowTemplate">
+    <tr>
+        <td>
+            <select class="form-select form-select-sm invoice-item-service" name="items-__index__-service">
+                <option value="">Select service...</option>
+                {% for s in services %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm invoice-item-desc" name="items-__index__-description" placeholder="Description">
+        </td>
+        <td>
+            <input type="number" min="1" step="1" value="1" class="form-control form-control-sm invoice-item-qty" name="items-__index__-quantity">
+        </td>
+        <td>
+            <input type="number" min="0" step="0.01" class="form-control form-control-sm invoice-item-price" name="items-__index__-unit_price" placeholder="0.00">
+        </td>
+        <td class="text-end">
+            <button type="button" class="btn btn-sm btn-outline-danger invoice-item-remove"><i class="bi bi-trash"></i></button>
+        </td>
+    </tr>
+    </template>
+
+<script>
+// ==================== INVOICE CREATE: Dynamic Line Items ====================
+document.addEventListener('DOMContentLoaded', function() {
+    const modalEl = document.getElementById('invoiceCreateModal');
+    if (!modalEl) return;
+
+    const itemsBody = modalEl.querySelector('#invoiceItemsBody');
+    const addBtn = modalEl.querySelector('#addInvoiceItemBtn');
+    const rowTpl = document.getElementById('invoiceItemRowTemplate');
+
+    function addInvoiceItemRow() {
+        if (!rowTpl || !itemsBody) return;
+        const index = itemsBody.children.length;
+        const fragment = rowTpl.content.cloneNode(true);
+        // Replace __index__ placeholders
+        fragment.querySelectorAll('[name]').forEach(el => {
+            el.name = el.name.replace('__index__', index);
+        });
+
+        const row = fragment.querySelector('tr');
+        // Wire remove
+        row.querySelector('.invoice-item-remove').addEventListener('click', function() {
+            row.remove();
+        });
+        // Wire service price autofill
+        const serviceSelect = row.querySelector('.invoice-item-service');
+        const priceInput = row.querySelector('.invoice-item-price');
+        const descInput = row.querySelector('.invoice-item-desc');
+        serviceSelect.addEventListener('change', function() {
+            const sid = this.value;
+            if (!sid) return;
+            fetch('{% url "billing:get_service_price" %}?service_id=' + encodeURIComponent(sid))
+                .then(r => r.json())
+                .then(data => {
+                    if (typeof data.price !== 'undefined') {
+                        priceInput.value = data.price;
+                    }
+                    if (data.description && !descInput.value) {
+                        descInput.value = data.description;
+                    }
+                })
+                .catch(() => {});
+        });
+
+        itemsBody.appendChild(fragment);
+    }
+
+    // Initialize on show: clear and add one row
+    modalEl.addEventListener('show.bs.modal', function() {
+        if (itemsBody) {
+            itemsBody.innerHTML = '';
+            addInvoiceItemRow();
+        }
+    });
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            addInvoiceItemRow();
+        });
+    }
+});
+</script>
+
+<!-- ========== VITAL SIGNS MODAL ========== -->
+
+<div class="modal fade" id="vitalSignsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-heart-pulse-fill"></i> Record Vital Signs</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="vitalSignsForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Height (cm)</label>
+                            <input type="number" name="height" class="form-control" step="0.1" placeholder="cm">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Weight (kg)</label>
+                            <input type="number" name="weight" class="form-control" step="0.1" placeholder="kg">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Systolic BP (mmHg)</label>
+                            <input type="number" name="blood_pressure_systolic" class="form-control" placeholder="mmHg">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Diastolic BP (mmHg)</label>
+                            <input type="number" name="blood_pressure_diastolic" class="form-control" placeholder="mmHg">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Heart Rate (BPM)</label>
+                            <input type="number" name="heart_rate" class="form-control" placeholder="BPM">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Temperature (°C)</label>
+                            <input type="number" name="temperature" class="form-control" step="0.1" placeholder="°C">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Respiratory Rate (breaths/min)</label>
+                            <input type="number" name="respiratory_rate" class="form-control" placeholder="breaths/min">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Oxygen Saturation (%)</label>
+                            <input type="number" name="oxygen_saturation" class="form-control" placeholder="%">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Clinical Notes</label>
+                            <textarea name="notes" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Save Vital Signs</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Update Modal -->
+<div class="modal fade" id="appointmentUpdateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-calendar-check"></i> Update Appointment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="appointmentUpdateForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Patient <span class="text-danger">*</span></label>
+                            <select name="patient" id="appointment_update_patient_select" class="form-control" required>
+                                <option value="">Select Patient</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Service <span class="text-danger">*</span></label>
+                            <select name="service" id="appointment_update_service_select" class="form-control" required>
+                                <option value="">Select Service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Provider <span class="text-danger">*</span></label>
+                            <select name="provider" id="appointment_update_provider_select" class="form-control" required>
+                                <option value="">Select Provider</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" id="appointment_update_status" class="form-control">
+                                <option value="scheduled">Scheduled</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="appointment_date" id="appointment_update_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Time <span class="text-danger">*</span></label>
+                            <input type="time" name="appointment_time" id="appointment_update_time" class="form-control" required>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" id="appointment_update_notes" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Reschedule Modal -->
+<div class="modal fade" id="appointmentRescheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-calendar-event"></i> Reschedule Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="appointmentRescheduleForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">New Date <span class="text-danger">*</span></label>
+                        <input type="date" name="appointment_date" id="reschedule_date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Time <span class="text-danger">*</span></label>
+                        <input type="time" name="appointment_time" id="reschedule_time" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Rescheduling</label>
+                        <textarea name="reschedule_reason" class="form-control" rows="3" placeholder="Optional"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Reschedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== BILLING MODALS ========== -->
+
+<!-- Payment Modal (General Use) -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-cash-coin"></i> Record Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="paymentForm" action="{% url 'billing:payment_record_ajax' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="invoice" id="payment_invoice_id_general">
+                <input type="hidden" name="patient" id="payment_patient_id_general">
+                <input type="hidden" name="status" value="completed">
+                <div class="modal-body">
+                    <div id="invoice-info-section-general" class="alert alert-info mb-3" style="display: none;">
+                        <strong>Invoice:</strong> <span id="invoice-display-number-general"></span><br>
+                        <strong>Balance Due:</strong> UGX <span id="invoice-display-balance-general"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount (UGX) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" id="payment_amount_general" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <select name="payment_method" class="form-control" required>
+                            <option value="">Select Method</option>
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="mobile_money">Mobile Money</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="insurance">Insurance</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reference Number</label>
+                        <input type="text" name="reference_number" class="form-control" placeholder="Transaction ID, Check #, etc.">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Record Modal (for invoices list) -->
+<div class="modal fade" id="paymentRecordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-cash-coin"></i> Record Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="paymentRecordForm" action="{% url 'billing:payment_record_ajax' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="invoice" id="payment_invoice_id">
+                <input type="hidden" name="patient" id="payment_patient_id">
+                <input type="hidden" name="status" value="completed">
+                <div class="modal-body">
+                    <div id="invoice-info-section" class="alert alert-info mb-3" style="display: none;">
+                        <strong>Invoice:</strong> <span id="invoice-display-number"></span><br>
+                        <strong>Balance Due:</strong> UGX <span id="invoice-display-balance"></span>
+                    </div>
+                    
+                    <!-- Patient selector (visible only when no invoice/patient context) -->
+                    <div class="mb-3" id="payment_patient_select_wrapper" style="display: none;">
+                        <label class="form-label">Patient <span class="text-danger">*</span></label>
+                        <select name="patient_select" id="payment_patient_select" class="form-control">
+                            <option value="">Select patient...</option>
+                            {% if modal_active_patients %}
+                                {% for p in modal_active_patients %}
+                                    <option value="{{ p.pk }}">{{ p.get_full_name }} - {{ p.patient_id }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                        <div class="form-text">Select a patient when recording a payment not tied to a specific invoice.</div>
+                    </div>
+                    <!-- Invoice selector (loads after selecting patient; optional) -->
+                    <div class="mb-3" id="payment_invoice_select_wrapper" style="display: none;">
+                        <label class="form-label">Invoice (optional)</label>
+                        <select id="payment_invoice_select" class="form-control">
+                            <option value="">Select invoice...</option>
+                        </select>
+                        <div class="form-text">If you are paying a specific invoice, choose it here.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount (UGX) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" id="payment_amount" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <select name="payment_method" class="form-control" required>
+                            <option value="">Select Method</option>
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="mobile_money">Mobile Money</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="insurance">Insurance</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reference Number</label>
+                        <input type="text" name="reference_number" class="form-control" placeholder="Transaction ID, Check #, etc.">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== LABORATORY MODALS ========== -->
+
+<!-- Lab Request Modal -->
+<div class="modal fade" id="labRequestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-prescription2"></i> Lab Test Request</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="labRequestForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Test <span class="text-danger">*</span></label>
+                        <select name="test" class="form-control" required>
+                            <option value="">Select Test</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <select name="priority" class="form-control">
+                            <option value="routine">Routine</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="stat">STAT</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Clinical Notes</label>
+                        <textarea name="clinical_notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Request Test</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lab Result Modal -->
+<div class="modal fade" id="labResultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-file-earmark-medical"></i> Record Lab Result</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="labResultForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Result <span class="text-danger">*</span></label>
+                        <textarea name="result" class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Result Status</label>
+                        <select name="status" class="form-control">
+                            <option value="normal">Normal</option>
+                            <option value="abnormal">Abnormal</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Result</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MEDICAL RECORDS MODAL ========== -->
+
+<div class="modal fade" id="medicalRecordModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-file-medical-fill"></i> Medical Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="medicalRecordForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Record Type <span class="text-danger">*</span></label>
+                        <select name="record_type" class="form-control" required>
+                            <option value="">Select Type</option>
+                            <option value="consultation">Consultation</option>
+                            <option value="diagnosis">Diagnosis</option>
+                            <option value="treatment">Treatment</option>
+                            <option value="progress_note">Progress Note</option>
+                            <option value="discharge">Discharge Summary</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Content <span class="text-danger">*</span></label>
+                        <textarea name="content" class="form-control" rows="10" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== INVENTORY MODALS ========== -->
+
+<!-- Drug Entry Modal -->
+<div class="modal fade" id="drugEntryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-capsule"></i> Add Drug to Inventory</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="drugEntryForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Drug Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Manufacturer</label>
+                            <input type="text" name="manufacturer" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Batch Number</label>
+                            <input type="text" name="batch_number" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" name="expiry_date" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                            <input type="number" name="quantity" class="form-control" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Unit Price (UGX)</label>
+                            <input type="number" name="unit_price" class="form-control" step="0.01">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Currency</label>
+                            <input type="text" name="currency" class="form-control" value="UGX" readonly>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Add Drug</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Removed duplicate older Invoice Create Modal to avoid conflicts -->
+
+<script>
+// Initialize all modal form handlers
+document.addEventListener('DOMContentLoaded', function() {
+    // Patient Register
+    if (document.getElementById('patientRegisterForm')) {
+        document.getElementById('patientRegisterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('patientRegisterForm', 'patientRegisterModal');
+        });
+    }
+
+    // Appointment Create
+    if (document.getElementById('appointmentCreateForm')) {
+        document.getElementById('appointmentCreateForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('appointmentCreateForm', 'appointmentCreateModal');
+        });
+    }
+    
+    // Vital Signs
+    if (document.getElementById('vitalSignsForm')) {
+        document.getElementById('vitalSignsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('vitalSignsForm', 'vitalSignsModal');
+        });
+    }
+    
+    // Invoice Create (Full) - prevent default and submit via AJAX
+    if (document.getElementById('invoiceCreateForm')) {
+        document.getElementById('invoiceCreateForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('invoiceCreateForm', 'invoiceCreateModal');
+        });
+    }
+    
+    // Payment Record
+    if (document.getElementById('paymentRecordForm')) {
+        document.getElementById('paymentRecordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('paymentRecordForm', 'paymentRecordModal');
+        });
+    }
+    
+    // Lab Request
+    if (document.getElementById('labRequestForm')) {
+        document.getElementById('labRequestForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('labRequestForm', 'labRequestModal');
+        });
+    }
+    
+    // Lab Result
+    if (document.getElementById('labResultForm')) {
+        document.getElementById('labResultForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('labResultForm', 'labResultModal');
+        });
+    }
+    
+    // Medical Record
+    if (document.getElementById('medicalRecordForm')) {
+        document.getElementById('medicalRecordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('medicalRecordForm', 'medicalRecordModal');
+        });
+    }
+    
+    // Drug Entry
+    if (document.getElementById('drugEntryForm')) {
+        document.getElementById('drugEntryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.modalForms.submitModalForm('drugEntryForm', 'drugEntryModal');
+        });
+    }
+    
+    // Invoice Create handler is registered above in the main initializer
+    
+    // Setup modal resets for all forms
+    const modals = [
+        {modalId: 'patientRegisterModal', formId: 'patientRegisterForm'},
+        {modalId: 'appointmentCreateModal', formId: 'appointmentCreateForm'},
+        {modalId: 'vitalSignsModal', formId: 'vitalSignsForm'},
+        {modalId: 'paymentRecordModal', formId: 'paymentRecordForm'},
+        {modalId: 'labRequestModal', formId: 'labRequestForm'},
+        {modalId: 'labResultModal', formId: 'labResultForm'},
+        {modalId: 'medicalRecordModal', formId: 'medicalRecordForm'},
+        {modalId: 'drugEntryModal', formId: 'drugEntryForm'},
+        {modalId: 'newInvoiceModal', formId: 'newInvoiceForm'},
+        {modalId: 'invoiceCreateModal', formId: 'invoiceCreateForm'}
+    ];
+    
+    modals.forEach(function(modal) {
+        if (document.getElementById(modal.modalId) && document.getElementById(modal.formId)) {
+            window.modalForms.setupModalReset(modal.modalId, modal.formId);
+        }
+    });
+});
+
+// Helper functions for opening modals with dynamic data
+function openPatientRegisterModal() {
+    const modal = new bootstrap.Modal(document.getElementById('patientRegisterModal'));
+    modal.show();
+}
+
+// Age ↔ DOB sync for patient registration
+(function() {
+    const dob = document.getElementById('reg_dob');
+    const age = document.getElementById('reg_age');
+    if (!dob || !age) return;
+
+    dob.addEventListener('change', function() {
+        if (!this.value) { age.value = ''; return; }
+        const birth = new Date(this.value);
+        const today = new Date();
+        let a = today.getFullYear() - birth.getFullYear();
+        if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) a--;
+        age.value = a >= 0 ? a : '';
+    });
+
+    age.addEventListener('change', function() {
+        if (!this.value) { dob.value = ''; return; }
+        const today = new Date();
+        const year = today.getFullYear() - parseInt(this.value);
+        dob.value = year + '-01-01';
+    });
+})();
+
+function openAppointmentModal(patientId) {
+    // Pre-select patient if provided
+    if (patientId) {
+        const patientSelect = document.getElementById('appointment_patient_select');
+        if (patientSelect) {
+            patientSelect.value = patientId;
+        }
+    }
+    
+    // Set default date to today
+    const dateInput = document.getElementById('appointment_date');
+    if (dateInput && !dateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('appointmentCreateModal'));
+    modal.show();
+}
+
+function openVitalSignsModal(patientId) {
+    const form = document.getElementById('vitalSignsForm');
+    form.action = `/patients/ajax/${patientId}/vitals/`;
+    const modal = new bootstrap.Modal(document.getElementById('vitalSignsModal'));
+    modal.show();
+}
+
+function openPaymentModal(invoiceId, invoiceNumber, balanceDue, patientId) {
+    // Set hidden fields
+    document.getElementById('payment_invoice_id').value = invoiceId || '';
+    document.getElementById('payment_patient_id').value = patientId || '';
+    
+    // Set amount to balance due
+    if (balanceDue) {
+        document.getElementById('payment_amount').value = balanceDue;
+    }
+    
+    // Show invoice info if provided
+    if (invoiceNumber && balanceDue) {
+        document.getElementById('invoice-display-number').textContent = invoiceNumber;
+        document.getElementById('invoice-display-balance').textContent = parseFloat(balanceDue).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        document.getElementById('invoice-info-section').style.display = 'block';
+    } else {
+        document.getElementById('invoice-info-section').style.display = 'none';
+    }
+    
+    // Toggle patient selector when no context is provided
+    const patientSelectWrapper = document.getElementById('payment_patient_select_wrapper');
+    const patientSelect = document.getElementById('payment_patient_select');
+    const invoiceSelectWrapper = document.getElementById('payment_invoice_select_wrapper');
+    const invoiceSelect = document.getElementById('payment_invoice_select');
+    // Reset invoice selector
+    if (invoiceSelect) {
+        invoiceSelect.innerHTML = '<option value="">Select invoice...</option>';
+    }
+    if (patientSelectWrapper) {
+        if ((!invoiceId || invoiceId === '') && (!patientId || patientId === '')) {
+            // No invoice/patient: show selector and clear hidden input
+            patientSelectWrapper.style.display = 'block';
+            document.getElementById('payment_patient_id').value = '';
+            if (patientSelect) { patientSelect.value = ''; }
+            if (invoiceSelectWrapper) { invoiceSelectWrapper.style.display = 'none'; }
+        } else {
+            // Have context: hide selector
+            patientSelectWrapper.style.display = 'none';
+            // If patientId provided, ensure hidden field is set
+            if (patientId) {
+                document.getElementById('payment_patient_id').value = patientId;
+            }
+            // If invoice is already provided, keep invoiceSelect hidden
+            if (invoiceSelectWrapper) { invoiceSelectWrapper.style.display = 'none'; }
+        }
+    }
+    // Sync select to hidden on change/submit to avoid duplicate name issues
+    if (patientSelect) {
+        patientSelect.addEventListener('change', function() {
+            document.getElementById('payment_patient_id').value = this.value || '';
+            // When patient changes, load invoices for that patient
+            if (this.value) {
+                fetch(`/billing/ajax/invoices/for-patient/?patient=${this.value}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if (invoiceSelect) {
+                            invoiceSelect.innerHTML = '<option value="">Select invoice...</option>';
+                        }
+                        if (data && data.success && data.invoices && data.invoices.length) {
+                            if (invoiceSelect) {
+                                data.invoices.forEach(inv => {
+                                    const opt = document.createElement('option');
+                                    opt.value = inv.id;
+                                    const bal = Number(inv.balance_due || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                                    opt.textContent = `${inv.invoice_number} — Balance UGX ${bal}`;
+                                    invoiceSelect.appendChild(opt);
+                                });
+                            }
+                            if (invoiceSelectWrapper) { invoiceSelectWrapper.style.display = 'block'; }
+                        } else {
+                            if (invoiceSelectWrapper) { invoiceSelectWrapper.style.display = 'none'; }
+                        }
+                        // Clear hidden invoice if user re-picks patient
+                        document.getElementById('payment_invoice_id').value = '';
+                    })
+                    .catch(() => {
+                        if (invoiceSelectWrapper) { invoiceSelectWrapper.style.display = 'none'; }
+                    });
+            } else {
+                if (invoiceSelectWrapper) { invoiceSelectWrapper.style.display = 'none'; }
+                document.getElementById('payment_invoice_id').value = '';
+            }
+        }, { once: false });
+        const form = document.getElementById('paymentRecordForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                if (patientSelectWrapper && patientSelectWrapper.style.display === 'block') {
+                    document.getElementById('payment_patient_id').value = patientSelect.value || '';
+                }
+            }, { once: false });
+        }
+    }
+
+    // Map invoice selector to hidden invoice field
+    if (invoiceSelect) {
+        invoiceSelect.addEventListener('change', function() {
+            document.getElementById('payment_invoice_id').value = this.value || '';
+        }, { once: false });
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('paymentRecordModal'));
+    modal.show();
+}
+
+function openLabRequestModal(patientId) {
+    const form = document.getElementById('labRequestForm');
+    form.action = `/laboratory/ajax/request/create/?patient=${patientId}`;
+    const modal = new bootstrap.Modal(document.getElementById('labRequestModal'));
+    modal.show();
+}
+
+function openLabResultModal(requestId) {
+    const form = document.getElementById('labResultForm');
+    form.action = `/laboratory/ajax/result/record/?request=${requestId}`;
+    const modal = new bootstrap.Modal(document.getElementById('labResultModal'));
+    modal.show();
+}
+
+function openMedicalRecordModal(patientId) {
+    const form = document.getElementById('medicalRecordForm');
+    form.action = `/medical_records/ajax/record/create/?patient=${patientId}`;
+    const modal = new bootstrap.Modal(document.getElementById('medicalRecordModal'));
+    modal.show();
+}
+
+// ==================== BILLING: NEW INVOICE FOR PATIENT ====================
+// Dual-mode modal opener: if patient info provided, prefill and hide selector; otherwise show selector/input.
+function openInvoiceForPatientModal(patientPk = null, patientName = '', patientCode = '') {
+    const modalEl = document.getElementById('newInvoiceModal');
+    if (!modalEl) return;
+    const form = modalEl.querySelector('form');
+    const hiddenInput = modalEl.querySelector('#invoice_patient_id_hidden');
+    const selectWrapper = modalEl.querySelector('#invoice_patient_select_wrapper');
+    const inputWrapper = modalEl.querySelector('#invoice_patient_input_wrapper');
+    const displaySpan = modalEl.querySelector('#newInvoicePatientDisplay');
+
+    // Reset state
+    if (hiddenInput) hiddenInput.value = '';
+    if (displaySpan) displaySpan.textContent = '';
+    if (form) form.reset();
+
+    if (patientPk) {
+        // Prefill with provided patient
+        if (hiddenInput) hiddenInput.value = patientPk;
+        if (displaySpan) displaySpan.textContent = `${patientName || ''} ${patientCode ? '(' + patientCode + ')' : ''}`.trim();
+        if (selectWrapper) selectWrapper.style.display = 'none';
+        if (inputWrapper) inputWrapper.style.display = 'none';
+    } else {
+        // No patient context: show selector if available, else show text input
+        if (selectWrapper) selectWrapper.style.display = (selectWrapper.dataset.available === '1') ? 'block' : 'none';
+        if (inputWrapper) inputWrapper.style.display = (selectWrapper && selectWrapper.dataset.available === '1') ? 'none' : 'block';
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+// ==================== BILLING: FULL INVOICE CREATE ====================
+function openFullInvoiceCreateModal(patientPk = null, defaultDueDays = 30) {
+    const modalEl = document.getElementById('invoiceCreateModal');
+    if (!modalEl) return;
+    const form = modalEl.querySelector('#invoiceCreateForm');
+    if (form) form.reset();
+
+    const patientSelect = modalEl.querySelector('#invoice_create_patient');
+    const dueDateInput = modalEl.querySelector('#invoice_create_due_date');
+
+    if (patientPk && patientSelect) {
+        patientSelect.value = String(patientPk);
+    }
+
+    if (dueDateInput) {
+        const d = new Date();
+        d.setDate(d.getDate() + (defaultDueDays || 30));
+        dueDateInput.value = d.toISOString().split('T')[0];
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+</script>
+
+<!-- Global modal width override — 70% on desktop, 95% on mobile -->
+<style>
+ .modal-dialog { max-width: 70vw; width: 70vw; }
+ @media (max-width: 992px) {
+   .modal-dialog { max-width: 95vw; width: 95vw; }
+ }
+ </style>
+<div class="modal fade" id="invoiceCreateModal" tabindex="-1" aria-labelledby="invoiceCreateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoiceCreateModalLabel">
+                    <i class="bi bi-receipt me-2"></i>Create Invoice
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="invoiceCreateForm" method="post" action="{% url 'billing:invoice_create_full_ajax' %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="invoice_create_patient">Patient</label>
+                            <select class="form-select" id="invoice_create_patient" name="patient" required>
+                                <option value="">Select patient...</option>
+                                {% if modal_active_patients %}
+                                {% for p in modal_active_patients %}
+                                <option value="{{ p.pk }}">{{ p.get_full_name }} - {{ p.patient_id }}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="invoice_create_due_date">Due date</label>
+                            <input type="date" class="form-control" id="invoice_create_due_date" name="due_date" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="invoice_create_tax_rate">Tax rate (%)</label>
+                            <input type="number" step="0.01" class="form-control" id="invoice_create_tax_rate" name="tax_rate" placeholder="%">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="invoice_create_discount">Discount (UGX)</label>
+                            <input type="number" step="0.01" class="form-control" id="invoice_create_discount" name="discount_amount" placeholder="UGX 0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="invoice_create_notes">Notes</label>
+                            <textarea class="form-control" rows="3" id="invoice_create_notes" name="notes" placeholder="Internal notes..."></textarea>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0"><i class="bi bi-list-ul me-1"></i>Line Items</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="addInvoiceItemBtn">
+                            <i class="bi bi-plus-circle"></i> Add Item
+                        </button>
+                    </div>
+                    <div id="invoiceItemsContainer" class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 28%">Service</th>
+                                    <th style="width: 30%">Description</th>
+                                    <th style="width: 12%">Qty</th>
+                                    <th style="width: 18%">Unit Price (UGX)</th>
+                                    <th style="width: 12%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoiceItemsBody">
+                                <!-- Rows inserted dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-circle me-1"></i>Create Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- New Invoice for Patient Modal (Global) -->
+<div class="modal fade" id="newInvoiceModal" tabindex="-1" aria-labelledby="newInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newInvoiceModalLabel">
+                    <i class="bi bi-person-plus me-2"></i>Create Invoice for Patient
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="newInvoiceForm" method="post" action="{% url 'billing:invoice_create_for_patient' %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <!-- Hidden field used when opened with a specific patient -->
+                    <input type="hidden" name="patient_id" id="invoice_patient_id_hidden">
+
+                    <!-- Context display when patient is preselected -->
+                    <div id="invoice_patient_prefilled" class="alert alert-info mb-3" style="display: none;">
+                        <strong>Patient:</strong> <span id="newInvoicePatientDisplay"></span>
+                    </div>
+
+                    <!-- Patient selector (render only if modal_active_patients exists in context) -->
+                    <div id="invoice_patient_select_wrapper" data-available="{% if modal_active_patients %}1{% else %}0{% endif %}" style="display: {% if modal_active_patients %}block{% else %}none{% endif %};">
+                        {% if modal_active_patients %}
+                        <div class="mb-3">
+                            <label for="invoice_patient_select" class="form-label">Select Patient</label>
+                            <select class="form-select" id="invoice_patient_select" name="patient_id">
+                                <option value="">Choose a patient...</option>
+                                {% for patient in modal_active_patients %}
+                                <option value="{{ patient.pk }}">{{ patient.get_full_name }} - {{ patient.patient_id }}{% if patient.phone %} ({{ patient.phone }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">A draft invoice will be created; you can add services later.</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Fallback: manual patient ID entry if no list is available -->
+                    <div id="invoice_patient_input_wrapper" style="display: {% if modal_active_patients %}none{% else %}block{% endif %};">
+                        <div class="mb-3">
+                            <label for="invoice_patient_id_input" class="form-label">Patient ID (internal numeric)</label>
+                            <input type="number" class="form-control" id="invoice_patient_id_input" name="patient_id" placeholder="Enter patient internal ID" {% if modal_active_patients %}disabled{% endif %}>
+                            <div class="form-text">Tip: open from a patient page to auto-fill.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-receipt me-1"></i>Create Draft Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

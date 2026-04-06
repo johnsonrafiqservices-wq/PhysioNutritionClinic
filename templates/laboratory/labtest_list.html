@@ -1,0 +1,733 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-clipboard-data me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Laboratory Test Catalog</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex flex-wrap gap-2 align-items-center">
+    <button type="button" class="btn btn-success btn-sm px-3" id="addTestBtn">
+        <i class="bi bi-plus-circle me-1"></i> Add Test
+    </button>
+    <a href="{% url 'laboratory:dashboard' %}" class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-arrow-left me-1"></i> Dashboard
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- ============================================================ -->
+<!-- Statistics Cards                                              -->
+<!-- ============================================================ -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Total Tests</div>
+                        <div class="metric-value">{{ total_tests }}</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="bi bi-clipboard-data"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Active Tests</div>
+                        <div class="metric-value">{{ active_tests }}</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Inactive Tests</div>
+                        <div class="metric-value">{{ inactive_tests }}</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-pause-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Categories</div>
+                        <div class="metric-value">{{ tests_by_category|length }}</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Filters & Search                                              -->
+<!-- ============================================================ -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control border-start-0" value="{{ search_query }}" placeholder="Search by name, code, description...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Category</label>
+                <select name="category" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.code }}" {% if selected_category == category.code %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        <i class="bi bi-search me-1"></i> Filter
+                    </button>
+                    <a href="{% url 'laboratory:labtest_list' %}" class="btn btn-outline-secondary" title="Clear filters">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Two Column Layout: Available Tests & Tests by Category       -->
+<!-- ============================================================ -->
+<div class="row">
+    <!-- Left Column: Available Tests -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-list-ul me-2"></i>Available Tests</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-white text-dark">{{ tests|length }} test{{ tests|length|pluralize }}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="text-white mb-0" style="font-size: 0.75rem;">Show:</label>
+                            <select id="rowsPerPage" class="form-select form-select-sm" style="width: 70px; font-size: 0.75rem;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if tests %}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" style="font-size: 0.875rem;" id="testsTable">
+                            <thead>
+                                <tr style="background: #fff; border-bottom: 1px solid #e9ecef;">
+                                    <th class="ps-4 py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Test Name</th>
+                                    <th class="py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Code</th>
+                                    <th class="py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Category</th>
+                                    <th class="py-3 text-uppercase text-end" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Price</th>
+                                    <th class="pe-4 py-3 text-uppercase text-center" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="testsTableBody">
+                                {% for test in tests %}
+                                <tr class="test-row" style="border-bottom: 1px solid #f1f3f5;">
+                                    <td class="ps-4 py-3">
+                                        <a href="{% url 'laboratory:labtest_detail' test.pk %}" class="text-decoration-none text-dark" style="font-size: 0.875rem; font-weight: 500;">
+                                            {{ test.name }}
+                                        </a>
+                                    </td>
+                                    <td class="py-3">
+                                        <span style="font-size: 0.875rem; color: #495057;">{{ test.code }}</span>
+                                    </td>
+                                    <td class="py-3">
+                                        <span style="font-size: 0.875rem; color: #495057;">{{ test.get_category_display }}</span>
+                                    </td>
+                                    <td class="py-3 text-end">
+                                        <span style="font-size: 0.875rem; color: #495057;">{{ test.price|intcomma }} {{ test.currency }}</span>
+                                    </td>
+                                    <td class="pe-4 py-3 text-center">
+                                        <a href="{% url 'laboratory:labtest_detail' test.pk %}" class="btn btn-sm btn-outline-primary rounded-circle" title="View Details" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-eye" style="font-size: 0.875rem;"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="px-3 py-2 border-top d-flex justify-content-between align-items-center" style="background: #f8f9fa;">
+                        <div>
+                            <small class="text-muted" id="showingInfo">Showing <span id="showingStart">1</span>-<span id="showingEnd">10</span> of <span id="totalRows">{{ tests|length }}</span></small>
+                        </div>
+                        <div>
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                            </nav>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-inbox" style="font-size: 2rem; color: #95a5a6;"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2" style="color: #2c3e50;">No Tests Found</h5>
+                        <p class="text-muted mb-4">No laboratory tests match your search criteria.</p>
+                        <button type="button" class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#testModal" onclick="openAddModal()">
+                            <i class="bi bi-plus-circle me-1"></i> Add First Test
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Tests by Category -->
+    <div class="col-lg-4 mb-4">
+        {% if tests_by_category %}
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-pie-chart me-2"></i>Tests by Category</h6>
+            </div>
+            <div class="card-body p-2">
+                <div class="list-group list-group-flush">
+                    {% for cat in tests_by_category %}
+                    <div class="list-group-item border-0 px-2 py-2" style="background: transparent;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
+                                    <i class="bi bi-folder text-white" style="font-size: 0.7rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-dark" style="font-size: 0.8rem;">{{ cat.label }}</div>
+                                    <small class="text-muted" style="font-size: 0.65rem;">{{ cat.count }} test{{ cat.count|pluralize }}</small>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge rounded-pill" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); font-size: 0.75rem; padding: 0.35rem 0.6rem;">{{ cat.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-pie-chart me-2"></i>Tests by Category</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center py-4">
+                    <div class="mb-2" style="width: 50px; height: 50px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items-center; justify-content: center;">
+                        <i class="bi bi-diagram-3" style="font-size: 1.2rem; color: #95a5a6;"></i>
+                    </div>
+                    <p class="text-muted mb-0" style="font-size: 0.8rem;">No categories yet</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Shared Add / Edit Test Modal                                  -->
+<!-- ============================================================ -->
+<div class="modal fade" id="testModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow" style="max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header border-0 text-white py-3" id="testModalHeader" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); flex-shrink: 0;">
+                <div>
+                    <h5 class="modal-title mb-0 fw-bold" id="testModalTitle"><i class="bi bi-plus-circle me-2"></i>Add Laboratory Test</h5>
+                    <small class="opacity-75" id="testModalSubtitle">Fill in the test details and parameters below</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-4" style="overflow-y: auto; flex: 1 1 auto;">
+            <form id="testModalForm" method="post">
+                {% csrf_token %}
+                    <!-- Alert area -->
+                    <div id="testModalAlert" class="d-none"></div>
+
+                    <!-- Test Basic Info -->
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-data me-2 text-primary"></i>Test Information</h6>
+                        <hr class="flex-grow-1 ms-3">
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Test Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="m_name" class="form-control" placeholder="e.g., Complete Blood Count" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Test Code <span class="text-danger">*</span></label>
+                            <input type="text" name="code" id="m_code" class="form-control" placeholder="e.g., CBC001" required>
+                            <small class="text-muted">Unique identifier</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Category <span class="text-danger">*</span></label>
+                            <select name="category" id="m_category" class="form-select">
+                                {% for category in categories %}
+                                <option value="{{ category.code }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Sample Type</label>
+                            <input type="text" name="sample_type" id="m_sample_type" class="form-control" placeholder="e.g., Blood, Urine">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Turnaround (hours)</label>
+                            <input type="number" name="duration_hours" id="m_duration_hours" class="form-control" value="24">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Price <span class="text-danger">*</span></label>
+                            <input type="number" name="price" id="m_price" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Currency</label>
+                            <input type="text" name="currency" id="m_currency" class="form-control" value="UGX">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="m_is_active" value="on" checked>
+                                <label class="form-check-label" for="m_is_active">Active</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Description</label>
+                            <textarea name="description" id="m_description" class="form-control" rows="2" placeholder="Brief description of the test"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Test Parameters -->
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-list-check me-2 text-primary"></i>Test Parameters</h6>
+                        <hr class="flex-grow-1 ms-3">
+                        <button type="button" class="btn btn-success btn-sm ms-3" id="modalAddParamBtn">
+                            <i class="bi bi-plus-circle me-1"></i> Add Parameter
+                        </button>
+                    </div>
+                    <div class="table-responsive mb-2">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;" id="modalParamsTable">
+                            <thead>
+                                <tr style="background: #f0f4f8;">
+                                    <th style="min-width:140px;">Name <span class="text-danger">*</span></th>
+                                    <th style="min-width:100px;">Code <span class="text-danger">*</span></th>
+                                    <th style="min-width:130px;">Result Type</th>
+                                    <th style="min-width:80px;">Unit</th>
+                                    <th style="min-width:90px;">Ref. Min</th>
+                                    <th style="min-width:90px;">Ref. Max</th>
+                                    <th style="min-width:120px;">Ref. Text</th>
+                                    <th style="min-width:130px;">Flag Criteria</th>
+                                    <th class="text-center" style="width:45px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalParamsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="modalNoParamMsg" class="text-center text-muted py-3 small">
+                        <i class="bi bi-info-circle me-1"></i> No parameters yet. Click <strong>Add Parameter</strong> above.
+                    </div>
+            </form>
+            </div>
+            <div class="modal-footer border-0 bg-light" style="flex-shrink: 0;">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="testModalForm" class="btn px-4 fw-semibold" id="testModalSubmitBtn">
+                    <i class="bi bi-save me-1"></i> <span id="testModalSubmitText">Save Test</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .toggle-form .btn { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+</style>
+
+<script>
+(function() {
+    // --- Config ---
+    var resultTypes = [
+        {% for val, label in result_types %}
+        {value: "{{ val }}", label: "{{ label }}"},
+        {% endfor %}
+    ];
+    var flagCriteria = [
+        {% for val, label in flag_criteria %}
+        {value: "{{ val }}", label: "{{ label }}"},
+        {% endfor %}
+    ];
+    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    var addUrl = "{% url 'laboratory:labtest_add' %}";
+    var modalEl = document.getElementById('testModal');
+    var bsModal = null;
+
+    // --- State ---
+    var rowIndex = 0;
+    var editMode = false;
+    var editUrl = '';
+
+    // --- Helpers ---
+    function buildSelect(name, options, defaultVal) {
+        var s = '<select name="' + name + '" class="form-select form-select-sm">';
+        options.forEach(function(o) {
+            s += '<option value="' + o.value + '"' + (o.value === defaultVal ? ' selected' : '') + '>' + o.label + '</option>';
+        });
+        s += '</select>';
+        return s;
+    }
+
+    function addParamRow(data) {
+        var i = rowIndex++;
+        var d = data || {};
+        var tbody = document.getElementById('modalParamsBody');
+        var tr = document.createElement('tr');
+        tr.dataset.index = i;
+        tr.innerHTML =
+            '<td><input type="text" name="param_' + i + '_name" class="form-control form-control-sm" value="' + (d.name || '') + '" required></td>' +
+            '<td><input type="text" name="param_' + i + '_code" class="form-control form-control-sm" value="' + (d.code || '') + '" required></td>' +
+            '<td>' + buildSelect('param_' + i + '_result_type', resultTypes, d.result_type || 'numeric') + '</td>' +
+            '<td><input type="text" name="param_' + i + '_unit" class="form-control form-control-sm" value="' + (d.unit || '') + '"></td>' +
+            '<td><input type="number" name="param_' + i + '_ref_min" class="form-control form-control-sm" step="any" value="' + (d.ref_min !== undefined && d.ref_min !== '' ? d.ref_min : '') + '"></td>' +
+            '<td><input type="number" name="param_' + i + '_ref_max" class="form-control form-control-sm" step="any" value="' + (d.ref_max !== undefined && d.ref_max !== '' ? d.ref_max : '') + '"></td>' +
+            '<td><input type="text" name="param_' + i + '_ref_text" class="form-control form-control-sm" value="' + (d.ref_text || '') + '"></td>' +
+            '<td>' + buildSelect('param_' + i + '_flag_criteria', flagCriteria, d.flag_criteria || 'range') + '</td>' +
+            '<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm remove-row-btn"><i class="bi bi-trash"></i></button></td>';
+        tbody.appendChild(tr);
+        toggleNoParamMsg();
+        // sync flag on result type change
+        var rtSel = tr.querySelector('[name="param_' + i + '_result_type"]');
+        var flSel = tr.querySelector('[name="param_' + i + '_flag_criteria"]');
+        rtSel.addEventListener('change', function() { syncFlag(this.value, flSel); });
+    }
+
+    function syncFlag(rt, flSel) {
+        var m = {'positive_negative':'positive_negative','reactive_nonreactive':'reactive_nonreactive','present_absent':'present_absent','detected_not_detected':'detected_not_detected','normal_abnormal':'normal_abnormal','numeric':'range','percentage':'range','ratio':'range','titer':'range'};
+        if (m[rt]) flSel.value = m[rt];
+    }
+
+    function toggleNoParamMsg() {
+        var body = document.getElementById('modalParamsBody');
+        document.getElementById('modalNoParamMsg').style.display = body.children.length === 0 ? 'block' : 'none';
+    }
+
+    function reindexRows() {
+        var rows = document.querySelectorAll('#modalParamsBody tr');
+        rows.forEach(function(tr, idx) {
+            var old = tr.dataset.index;
+            tr.dataset.index = idx;
+            tr.querySelectorAll('[name]').forEach(function(el) {
+                el.name = el.name.replace('param_' + old + '_', 'param_' + idx + '_');
+            });
+        });
+        rowIndex = rows.length;
+    }
+
+    function clearParams() {
+        document.getElementById('modalParamsBody').innerHTML = '';
+        rowIndex = 0;
+        toggleNoParamMsg();
+    }
+
+    function clearForm() {
+        document.getElementById('m_name').value = '';
+        document.getElementById('m_code').value = '';
+        document.getElementById('m_category').value = 'other';
+        document.getElementById('m_sample_type').value = '';
+        document.getElementById('m_duration_hours').value = '24';
+        document.getElementById('m_price').value = '';
+        document.getElementById('m_currency').value = 'UGX';
+        document.getElementById('m_description').value = '';
+        document.getElementById('m_is_active').checked = true;
+        clearParams();
+        document.getElementById('testModalAlert').className = 'd-none';
+    }
+
+    // --- Open Add ---
+    window.openAddModal = function() {
+        editMode = false;
+        editUrl = '';
+        clearForm();
+        document.getElementById('testModalHeader').style.background = 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)';
+        document.getElementById('testModalTitle').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Add Laboratory Test';
+        document.getElementById('testModalSubtitle').textContent = 'Fill in the test details and parameters below';
+        var btn = document.getElementById('testModalSubmitBtn');
+        btn.className = 'btn btn-success px-4 fw-semibold';
+        document.getElementById('testModalSubmitText').textContent = 'Save Test';
+    };
+
+    // --- Open Edit ---
+    window.openEditModal = function(jsonUrl, editActionUrl) {
+        editMode = true;
+        editUrl = editActionUrl;
+        clearForm();
+        document.getElementById('testModalHeader').style.background = 'linear-gradient(135deg, #e67e22 0%, #f39c12 100%)';
+        document.getElementById('testModalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Edit Laboratory Test';
+        document.getElementById('testModalSubtitle').textContent = 'Loading...';
+        var btn = document.getElementById('testModalSubmitBtn');
+        btn.className = 'btn btn-warning px-4 fw-semibold';
+        document.getElementById('testModalSubmitText').textContent = 'Update Test';
+
+        if (!bsModal) bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+
+        // Fetch data
+        fetch(jsonUrl)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                document.getElementById('m_name').value = d.name;
+                document.getElementById('m_code').value = d.code;
+                document.getElementById('m_category').value = d.category;
+                document.getElementById('m_sample_type').value = d.sample_type || '';
+                document.getElementById('m_duration_hours').value = d.duration_hours;
+                document.getElementById('m_price').value = d.price;
+                document.getElementById('m_currency').value = d.currency;
+                document.getElementById('m_description').value = d.description || '';
+                document.getElementById('m_is_active').checked = d.is_active;
+                document.getElementById('testModalSubtitle').textContent = d.name + ' (' + d.code + ')';
+                // Load parameters
+                clearParams();
+                (d.parameters || []).forEach(function(p) { addParamRow(p); });
+            })
+            .catch(function() {
+                document.getElementById('testModalSubtitle').textContent = 'Error loading test data';
+            });
+    };
+
+    // --- Events ---
+    document.getElementById('modalAddParamBtn').addEventListener('click', function() { addParamRow(); });
+
+    document.getElementById('modalParamsBody').addEventListener('click', function(e) {
+        var btn = e.target.closest('.remove-row-btn');
+        if (btn) { btn.closest('tr').remove(); reindexRows(); toggleNoParamMsg(); }
+    });
+
+    // Edit buttons on table rows
+    document.querySelectorAll('.edit-test-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            openEditModal(this.dataset.jsonUrl, this.dataset.editUrl);
+        });
+    });
+
+    // Form submission via AJAX
+    document.getElementById('testModalForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        var submitBtn = document.getElementById('testModalSubmitBtn');
+        var alertDiv = document.getElementById('testModalAlert');
+        submitBtn.disabled = true;
+        submitBtn.querySelector('i').className = 'bi bi-arrow-repeat me-1 spin-icon';
+
+        var url = editMode ? editUrl : addUrl;
+        var formData = new FormData(form);
+        // Ensure is_active checkbox is sent correctly
+        if (!document.getElementById('m_is_active').checked) {
+            formData.delete('is_active');
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
+            body: formData
+        })
+        .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
+        .then(function(res) {
+            if (res.ok && res.data.success) {
+                alertDiv.className = 'alert alert-success';
+                alertDiv.innerHTML = '<i class="bi bi-check-circle me-1"></i> ' + (res.data.message || 'Saved!');
+                setTimeout(function() { location.reload(); }, 800);
+            } else {
+                var errMsg = '';
+                if (res.data.errors) {
+                    for (var k in res.data.errors) {
+                        errMsg += '<strong>' + k + ':</strong> ' + res.data.errors[k].join(', ') + '<br>';
+                    }
+                } else {
+                    errMsg = res.data.message || 'An error occurred.';
+                }
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.innerHTML = errMsg;
+                submitBtn.disabled = false;
+                submitBtn.querySelector('i').className = 'bi bi-save me-1';
+            }
+        })
+        .catch(function() {
+            alertDiv.className = 'alert alert-danger';
+            alertDiv.innerHTML = 'Network error. Please try again.';
+            submitBtn.disabled = false;
+            submitBtn.querySelector('i').className = 'bi bi-save me-1';
+        });
+    });
+
+    // Reset on modal close
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        clearForm();
+        document.getElementById('testModalSubmitBtn').disabled = false;
+        document.getElementById('testModalSubmitBtn').querySelector('i').className = 'bi bi-save me-1';
+    });
+
+    toggleNoParamMsg();
+})();
+
+// ============================================================
+// Table Pagination Script
+// ============================================================
+(function() {
+    var currentPage = 1;
+    var rowsPerPage = 10;
+    var allRows = [];
+    var totalRows = 0;
+
+    function init() {
+        var tbody = document.getElementById('testsTableBody');
+        if (!tbody) return;
+        
+        allRows = Array.from(tbody.querySelectorAll('.test-row'));
+        totalRows = allRows.length;
+        
+        var rowsSelect = document.getElementById('rowsPerPage');
+        if (rowsSelect) {
+            rowsSelect.addEventListener('change', function() {
+                rowsPerPage = parseInt(this.value);
+                currentPage = 1;
+                renderTable();
+            });
+        }
+        
+        renderTable();
+    }
+
+    function renderTable() {
+        var start = (currentPage - 1) * rowsPerPage;
+        var end = start + rowsPerPage;
+        
+        allRows.forEach(function(row, index) {
+            if (index >= start && index < end) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        updatePaginationInfo();
+        renderPagination();
+    }
+
+    function updatePaginationInfo() {
+        var start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+        var end = Math.min(currentPage * rowsPerPage, totalRows);
+        
+        document.getElementById('showingStart').textContent = start;
+        document.getElementById('showingEnd').textContent = end;
+        document.getElementById('totalRows').textContent = totalRows;
+    }
+
+    function renderPagination() {
+        var totalPages = Math.ceil(totalRows / rowsPerPage);
+        var paginationEl = document.getElementById('pagination');
+        if (!paginationEl) return;
+        
+        paginationEl.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+        
+        // Previous button
+        var prevLi = document.createElement('li');
+        prevLi.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+        prevLi.innerHTML = '<a class="page-link" href="#" tabindex="-1">Previous</a>';
+        if (currentPage > 1) {
+            prevLi.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                currentPage--;
+                renderTable();
+            });
+        }
+        paginationEl.appendChild(prevLi);
+        
+        // Page numbers (show max 5 pages)
+        var startPage = Math.max(1, currentPage - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for (var i = startPage; i <= endPage; i++) {
+            var li = document.createElement('li');
+            li.className = 'page-item' + (i === currentPage ? ' active' : '');
+            li.innerHTML = '<a class="page-link" href="#">' + i + '</a>';
+            
+            (function(pageNum) {
+                li.querySelector('a').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = pageNum;
+                    renderTable();
+                });
+            })(i);
+            
+            paginationEl.appendChild(li);
+        }
+        
+        // Next button
+        var nextLi = document.createElement('li');
+        nextLi.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
+        nextLi.innerHTML = '<a class="page-link" href="#">Next</a>';
+        if (currentPage < totalPages) {
+            nextLi.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                currentPage++;
+                renderTable();
+            });
+        }
+        paginationEl.appendChild(nextLi);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spin-icon { animation: spin 1s linear infinite; display: inline-block; }
+</style>
+{% endblock %}

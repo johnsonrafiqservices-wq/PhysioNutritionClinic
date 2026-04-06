@@ -1,0 +1,725 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sales Report - Pharmacy{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-graph-up-arrow me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">
+            Sales Report & Analytics
+        </span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Sales
+    </a>
+    <button type="button" class="btn btn-success" onclick="exportToExcel()">
+        <i class="bi bi-file-earmark-excel"></i> Export Excel
+    </button>
+    <button type="button" class="btn btn-danger" onclick="exportToPDF()">
+        <i class="bi bi-file-earmark-pdf"></i> Export PDF
+    </button>
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="bi bi-printer"></i> Print
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --alafia-primary: #0ea5e9;
+        --alafia-success: #10b981;
+        --alafia-warning: #f59e0b;
+        --alafia-danger: #ef4444;
+        --alafia-info: #6366f1;
+    }
+
+    .stats-card {
+        border-radius: 8px;
+        padding: 1rem;
+        background: white;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        border-left: 3px solid;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    .stats-card.primary {
+        border-left-color: var(--alafia-primary);
+    }
+
+    .stats-card.success {
+        border-left-color: var(--alafia-success);
+    }
+
+    .stats-card.warning {
+        border-left-color: var(--alafia-warning);
+    }
+
+    .stats-card.info {
+        border-left-color: var(--alafia-info);
+    }
+
+    .stats-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stats-icon.primary {
+        background: rgba(14, 165, 233, 0.1);
+        color: var(--alafia-primary);
+    }
+
+    .stats-icon.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--alafia-success);
+    }
+
+    .stats-icon.warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--alafia-warning);
+    }
+
+    .stats-icon.info {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--alafia-info);
+    }
+
+    .stats-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0.25rem 0;
+        color: #1e293b;
+    }
+
+    .stats-label {
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        margin-bottom: 1rem;
+    }
+
+    .chart-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .filter-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        margin-bottom: 1rem;
+    }
+
+    .table-wrapper {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        overflow-x: auto;
+    }
+
+    .modern-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .modern-table thead th {
+        background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+        color: white;
+        font-weight: 600;
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: none;
+    }
+
+    .modern-table thead th:first-child {
+        border-top-left-radius: 8px;
+    }
+
+    .modern-table thead th:last-child {
+        border-top-right-radius: 8px;
+    }
+
+    .modern-table tbody tr {
+        border-bottom: 1px solid #e2e8f0;
+        transition: background-color 0.2s;
+    }
+
+    .modern-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .modern-table tbody td {
+        padding: 0.75rem;
+        color: #475569;
+        font-size: 0.875rem;
+    }
+
+    .badge-revenue {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .no-print {
+        /* Hidden during print */
+    }
+
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .stats-card, .chart-container, .table-wrapper {
+            box-shadow: none;
+            border: 1px solid #e2e8f0;
+        }
+    }
+
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+    }
+
+    .trend-indicator.up {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--alafia-success);
+    }
+
+    .trend-indicator.down {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--alafia-danger);
+    }
+
+    canvas {
+        max-height: 300px;
+    }
+
+    .chart-wrapper {
+        position: relative;
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Date Range Filter -->
+<div class="filter-card no-print">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label for="start_date" class="form-label">
+                <i class="bi bi-calendar-event"></i> Start Date
+            </label>
+            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+        </div>
+        <div class="col-md-4">
+            <label for="end_date" class="form-label">
+                <i class="bi bi-calendar-check"></i> End Date
+            </label>
+            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-filter"></i> Apply Filter
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row g-2 mb-3">
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card primary">
+            <div class="stats-icon primary">
+                <i class="bi bi-cart-check-fill"></i>
+            </div>
+            <div class="stats-label">Total Sales</div>
+            <div class="stats-value">{{ total_sales|default:0 }}</div>
+            <small class="text-muted">
+                <i class="bi bi-calendar3"></i> {{ start_date }} to {{ end_date }}
+            </small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card success">
+            <div class="stats-icon success">
+                <i class="bi bi-currency-exchange"></i>
+            </div>
+            <div class="stats-label">Total Revenue</div>
+            <div class="stats-value">UGX {{ total_revenue|floatformat:0|default:0 }}</div>
+            <small class="text-muted">
+                <i class="bi bi-graph-up"></i> Gross sales amount
+            </small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card warning">
+            <div class="stats-icon warning">
+                <i class="bi bi-box-seam"></i>
+            </div>
+            <div class="stats-label">Units Sold</div>
+            <div class="stats-value">{{ total_quantity|default:0 }}</div>
+            <small class="text-muted">
+                <i class="bi bi-boxes"></i> Total quantity
+            </small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card info">
+            <div class="stats-icon info">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <div class="stats-label">Average Sale</div>
+            <div class="stats-value">UGX {{ avg_sale_value|floatformat:0|default:0 }}</div>
+            <small class="text-muted">
+                <i class="bi bi-bar-chart"></i> Per transaction
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-2 mb-3">
+    <!-- Daily Sales Trend Chart -->
+    <div class="col-lg-7">
+        <div class="chart-container">
+            <div class="chart-title">
+                <i class="bi bi-graph-up"></i> Daily Sales Trend
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="dailySalesChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Products Pie Chart -->
+    <div class="col-lg-5">
+        <div class="chart-container">
+            <div class="chart-title">
+                <i class="bi bi-pie-chart-fill"></i> Top 5 Products
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="topProductsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Performance Bar Chart -->
+<div class="row g-2 mb-3">
+    <div class="col-12">
+        <div class="chart-container">
+            <div class="chart-title">
+                <i class="bi bi-bar-chart-fill"></i> Product Performance by Revenue
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="productPerformanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Selling Products Table -->
+<div class="table-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            <i class="bi bi-trophy-fill text-warning"></i> Top Selling Products
+        </h5>
+        <span class="fw-semibold text-primary">{{ sales_by_drug|length }} Products</span>
+    </div>
+    
+    {% if sales_by_drug %}
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th width="5%">#</th>
+                <th width="40%">Product Name</th>
+                <th width="15%">Units Sold</th>
+                <th width="15%">Transactions</th>
+                <th width="25%">Revenue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in sales_by_drug %}
+            <tr>
+                <td><strong>{{ forloop.counter }}</strong></td>
+                <td>
+                    <i class="bi bi-capsule text-primary"></i>
+                    <strong>{{ item.batch__medication__name }}</strong>
+                </td>
+                <td>
+                    <span class="fw-semibold text-secondary">{{ item.quantity }} units</span>
+                </td>
+                <td>
+                    <i class="bi bi-receipt"></i> {{ item.count }}
+                </td>
+                <td>
+                    <span class="badge-revenue">
+                        UGX {{ item.revenue|floatformat:0 }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+        <h4 class="text-muted mt-3">No Sales Data</h4>
+        <p class="text-muted">No sales recorded for the selected date range.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Export Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// Prepare data for charts
+const dailySalesData = {{ daily_sales_json|safe }};
+const topProductsData = {{ sales_by_drug_json|safe }};
+
+// Daily Sales Trend Chart
+const dailyLabels = dailySalesData.map(item => {
+    const date = new Date(item.date);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+});
+const dailyRevenues = dailySalesData.map(item => item.revenue || 0);
+const dailyCounts = dailySalesData.map(item => item.count || 0);
+
+const dailySalesCtx = document.getElementById('dailySalesChart').getContext('2d');
+new Chart(dailySalesCtx, {
+    type: 'line',
+    data: {
+        labels: dailyLabels,
+        datasets: [{
+            label: 'Revenue (UGX)',
+            data: dailyRevenues,
+            borderColor: '#0ea5e9',
+            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            yAxisID: 'y'
+        }, {
+            label: 'Transactions',
+            data: dailyCounts,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            yAxisID: 'y1'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        if (context.parsed.y !== null) {
+                            if (context.datasetIndex === 0) {
+                                label += 'UGX ' + context.parsed.y.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            } else {
+                                label += context.parsed.y;
+                            }
+                        }
+                        return label;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Revenue (UGX)'
+                },
+                ticks: {
+                    callback: function(value) {
+                        return 'UGX ' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    }
+                }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Transactions'
+                },
+                grid: {
+                    drawOnChartArea: false,
+                }
+            }
+        }
+    }
+});
+
+// Top 5 Products Pie Chart
+const top5Products = topProductsData.slice(0, 5);
+const pieLabels = top5Products.map(item => item.batch__medication__name || 'Unknown');
+const pieData = top5Products.map(item => item.revenue || 0);
+
+const topProductsCtx = document.getElementById('topProductsChart').getContext('2d');
+new Chart(topProductsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: pieLabels,
+        datasets: [{
+            data: pieData,
+            backgroundColor: [
+                '#0ea5e9',
+                '#10b981',
+                '#f59e0b',
+                '#ef4444',
+                '#6366f1'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return label + ': UGX ' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + ' (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Product Performance Bar Chart (Top 10)
+const top10Products = topProductsData.slice(0, 10);
+const barLabels = top10Products.map(item => {
+    const name = item.batch__medication__name || 'Unknown';
+    return name.length > 20 ? name.substring(0, 20) + '...' : name;
+});
+const barData = top10Products.map(item => item.revenue || 0);
+const barQuantities = top10Products.map(item => item.quantity || 0);
+
+const productPerformanceCtx = document.getElementById('productPerformanceChart').getContext('2d');
+new Chart(productPerformanceCtx, {
+    type: 'bar',
+    data: {
+        labels: barLabels,
+        datasets: [{
+            label: 'Revenue (UGX)',
+            data: barData,
+            backgroundColor: 'rgba(14, 165, 233, 0.8)',
+            borderColor: '#0ea5e9',
+            borderWidth: 2,
+            borderRadius: 6,
+            barThickness: 40
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const index = context.dataIndex;
+                        const revenue = context.parsed.x;
+                        const quantity = barQuantities[index];
+                        return [
+                            'Revenue: UGX ' + revenue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ","),
+                            'Units Sold: ' + quantity
+                        ];
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    callback: function(value) {
+                        return 'UGX ' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Export to Excel
+function exportToExcel() {
+    const wb = XLSX.utils.book_new();
+    
+    // Summary Sheet
+    const summaryData = [
+        ['Sales Report Summary'],
+        ['Period', '{{ start_date }} to {{ end_date }}'],
+        [''],
+        ['Metric', 'Value'],
+        ['Total Sales', '{{ total_sales }}'],
+        ['Total Revenue', 'UGX {{ total_revenue|floatformat:0 }}'],
+        ['Units Sold', '{{ total_quantity }}'],
+        ['Average Sale Value', 'UGX {{ avg_sale_value|floatformat:0 }}']
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+    
+    // Sales by Product Sheet
+    const productData = [['#', 'Product Name', 'Units Sold', 'Transactions', 'Revenue (UGX)']];
+    {% for item in sales_by_drug %}
+    productData.push([
+        '{{ forloop.counter }}',
+        '{{ item.batch__medication__name|escapejs }}',
+        '{{ item.quantity }}',
+        '{{ item.count }}',
+        '{{ item.revenue|floatformat:0 }}'
+    ]);
+    {% endfor %}
+    const productSheet = XLSX.utils.aoa_to_sheet(productData);
+    XLSX.utils.book_append_sheet(wb, productSheet, 'Products');
+    
+    // Daily Sales Sheet
+    const dailyData = [['Date', 'Transactions', 'Revenue (UGX)']];
+    dailySalesData.forEach(item => {
+        dailyData.push([
+            item.date,
+            item.count,
+            item.revenue ? item.revenue.toFixed(2) : '0'
+        ]);
+    });
+    const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
+    XLSX.utils.book_append_sheet(wb, dailySheet, 'Daily Sales');
+    
+    // Save file
+    XLSX.writeFile(wb, 'Sales_Report_{{ start_date }}_to_{{ end_date }}.xlsx');
+}
+
+// Export to PDF
+function exportToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text('Sales Report', 14, 20);
+    doc.setFontSize(11);
+    doc.text('Period: {{ start_date }} to {{ end_date }}', 14, 28);
+    
+    // Summary Statistics
+    doc.setFontSize(14);
+    doc.text('Summary', 14, 40);
+    doc.setFontSize(10);
+    doc.text('Total Sales: {{ total_sales }}', 14, 48);
+    doc.text('Total Revenue: UGX {{ total_revenue|floatformat:0 }}', 14, 54);
+    doc.text('Units Sold: {{ total_quantity }}', 14, 60);
+    doc.text('Average Sale: UGX {{ avg_sale_value|floatformat:0 }}', 14, 66);
+    
+    // Top Products Table
+    doc.setFontSize(14);
+    doc.text('Top Selling Products', 14, 78);
+    
+    const tableData = [];
+    {% for item in sales_by_drug %}
+    tableData.push([
+        '{{ forloop.counter }}',
+        '{{ item.batch__medication__name|escapejs }}',
+        '{{ item.quantity }}',
+        '{{ item.count }}',
+        'UGX {{ item.revenue|floatformat:0 }}'
+    ]);
+    {% endfor %}
+    
+    doc.autoTable({
+        startY: 82,
+        head: [['#', 'Product', 'Units', 'Trans', 'Revenue']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [14, 165, 233] }
+    });
+    
+    doc.save('Sales_Report_{{ start_date }}_to_{{ end_date }}.pdf');
+}
+</script>
+{% endblock %}

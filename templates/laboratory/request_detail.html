@@ -1,0 +1,1391 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-file-medical me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Test Request Details</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex flex-wrap gap-2 align-items-center">
+    {% if not result %}
+    <button type="button" class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addResultModal">
+        <i class="bi bi-plus-circle me-1"></i> Add Result
+    </button>
+    {% endif %}
+    {% if result and can_edit_result %}
+    <button type="button" class="btn btn-warning btn-sm px-3" data-bs-toggle="modal" data-bs-target="#editResultModal">
+        <i class="bi bi-pencil-square me-1"></i> Edit Result
+    </button>
+    {% endif %}
+    {% if result and can_verify_result %}
+        {% if not result.verified %}
+        <form method="post" action="{% url 'laboratory:verify_result' result.pk %}" class="d-inline" id="verifyForm">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm px-3"><i class="bi bi-patch-check me-1"></i> Verify Result</button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'laboratory:unverify_result' result.pk %}" class="d-inline" id="unverifyForm">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-x-circle me-1"></i> Unverify</button>
+        </form>
+        {% endif %}
+    {% endif %}
+    <a href="{% url 'laboratory:request_print' request.pk %}" class="btn btn-outline-secondary btn-sm px-3" target="_blank">
+        <i class="bi bi-printer me-1"></i> Print Request
+    </a>
+    <button type="button" class="btn btn-outline-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#reportCommentModal">
+        <i class="bi bi-file-earmark-text me-1"></i> Print Report
+    </button>
+    <button type="button" class="btn btn-outline-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#selectCertificateModal">
+        <i class="bi bi-file-earmark-medical me-1"></i> Certificate
+    </button>
+    <a href="{% url 'laboratory:request_list' %}" class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Status Banner -->
+<div class="card mb-4 border">
+    <div class="card-body py-3">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="me-4">
+                        <i class="bi bi-{% if request.status == 'completed' %}check-circle-fill text-success{% elif request.status == 'in_progress' %}hourglass-split text-info{% elif request.status == 'cancelled' %}x-circle-fill text-danger{% else %}clock-fill text-warning{% endif %}" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 fw-bold">
+                            <a href="{% url 'laboratory:labtest_detail' request.test.pk %}" class="text-decoration-none text-dark">
+                                {{ request.test.name }}
+                            </a>
+                        </h4>
+                        <p class="mb-0 text-muted">
+                            <span class="me-3"><i class="bi bi-person"></i> {{ request.patient.get_full_name }}</span>
+                            <span class="me-3"><i class="bi bi-upc"></i> {{ request.test.code }}</span>
+                            {% if request.sample_id %}<span><i class="bi bi-droplet"></i> {{ request.sample_id }}</span>{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <span class="fw-bold text-{% if request.status == 'completed' %}success{% elif request.status == 'in_progress' %}info{% elif request.status == 'cancelled' %}danger{% else %}warning{% endif %}">
+                    {{ request.get_status_display }}
+                </span>
+                {% if request.priority == 'stat' or request.priority == 'urgent' %}
+                <span class="ms-2 fw-bold text-{% if request.priority == 'stat' %}danger{% else %}warning{% endif %}">
+                    ({{ request.get_priority_display }})
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Request Information -->
+    <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-clipboard2-pulse me-2"></i>Request Information</h6>
+            </div>
+            <div class="card-body py-2 px-3">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Patient</small>
+                            <a href="{% url 'patients:patient_detail' request.patient.patient_id %}" class="fw-semibold text-decoration-none" style="font-size: 0.85rem;">
+                                <i class="bi bi-person-circle me-1"></i>{{ request.patient.get_full_name }}
+                            </a>
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">{{ request.patient.patient_id }}</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Requested By</small>
+                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-person-badge me-1"></i>{{ request.requested_by.get_full_name|default:request.requested_by }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Date Requested</small>
+                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-calendar-event me-1"></i>{{ request.date_requested|date:"M d, Y" }}</span>
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">{{ request.date_requested|time:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Priority Level</small>
+                            <span class="fw-bold text-{% if request.priority == 'stat' %}danger{% elif request.priority == 'urgent' %}warning{% else %}secondary{% endif %}" style="font-size: 0.85rem;">
+                                <i class="bi bi-flag-fill me-1"></i>{{ request.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if request.sample_id %}
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Sample ID</small>
+                            <code class="fw-semibold" style="font-size: 0.85rem;">{{ request.sample_id }}</code>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if request.sample_collected_at %}
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Sample Collected</small>
+                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-droplet-fill me-1 text-info"></i>{{ request.sample_collected_at|date:"M d, Y g:i A" }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if request.reason_for_test %}
+                <div class="mt-2 p-2 rounded border-start border-3 border-primary" style="background: #e7f3ff;">
+                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-question-circle me-1"></i><strong>Reason for Test</strong></small>
+                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.reason_for_test }}</p>
+                </div>
+                {% endif %}
+                
+                {% if request.samples_required %}
+                <div class="mt-2 p-2 rounded border-start border-3 border-info" style="background: #e7f9ff;">
+                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-droplet-half me-1"></i><strong>Samples Required</strong></small>
+                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.samples_required }}</p>
+                </div>
+                {% endif %}
+                
+                {% if request.clinical_notes %}
+                <div class="mt-2 p-2 rounded border-start border-3 border-secondary" style="background: #f8f9fa;">
+                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-journal-medical me-1"></i>Clinical Notes</small>
+                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.clinical_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Information -->
+    <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-flask me-2"></i>Test Information</h6>
+            </div>
+            <div class="card-body py-2 px-3">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Category</small>
+                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-tag me-1"></i>{{ request.test.get_category_display }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Sample Type</small>
+                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-droplet me-1"></i>{{ request.test.sample_type|default:"Not specified" }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Expected Duration</small>
+                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-clock me-1"></i>{{ request.test.duration_hours }} hours</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Price</small>
+                            <span class="fw-bold text-dark" style="font-size: 1rem;">{{ request.test.price|intcomma }} <small>{{ request.test.currency }}</small></span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-2 rounded border">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;"><i class="bi bi-diagram-3 me-1"></i>Profile</small>
+                            {% if profile %}
+                                <span class="badge bg-primary me-2" style="font-size: 0.75rem;">{{ profile.name }}</span>
+                                <small class="text-muted" style="font-size: 0.7rem;">{{ profile_parameters|length }} parameter(s)</small>
+                            {% else %}
+                                <span class="text-muted" style="font-size: 0.85rem;">No profile linked</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if request.test.description %}
+                <div class="mt-2 p-2 rounded border">
+                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>Test Description</small>
+                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.test.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if profile and profile_parameters %}
+<!-- Profile Parameters & Results Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-list-check me-2"></i>{{ profile.name }}</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-white text-dark">{{ profile_parameters|length }} parameter{{ profile_parameters|length|pluralize }}</span>
+                        {% if result %}
+                            {% if result.verified %}
+                            <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Unverified</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #f0f4f8;">
+                                <th class="ps-3 text-muted" style="width: 40px;">#</th>
+                                <th style="min-width: 180px;">Parameter</th>
+                                <th class="text-center" style="width: 80px;">Unit</th>
+                                <th class="text-center" style="min-width: 140px;">Reference Range</th>
+                                {% if result %}
+                                <th class="text-center" style="min-width: 120px; background: #e8f4fd;">Result</th>
+                                <th class="text-center" style="width: 100px; background: #e8f4fd;">Flag</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in profile_parameters %}
+                            <tr class="{% if item.pr and item.pr.flag == 'critical_low' or item.pr and item.pr.flag == 'critical_high' %}table-danger{% elif item.pr and item.pr.flag == 'low' or item.pr and item.pr.flag == 'high' or item.pr and item.pr.flag == 'abnormal' %}table-warning{% endif %}">
+                                <td class="ps-3 text-muted small">{{ forloop.counter }}</td>
+                                <td>
+                                    <span class="fw-semibold">{{ item.param.name }}</span>
+                                    <br><small class="text-muted">{{ item.param.code }}</small>
+                                </td>
+                                <td class="text-center text-muted small">{{ item.param.unit|default:"—" }}</td>
+                                <td class="text-center small">
+                                    {% if item.param.reference_range_text %}
+                                        {{ item.param.reference_range_text }}
+                                    {% elif item.param.reference_range_min is not None and item.param.reference_range_max is not None %}
+                                        {{ item.param.reference_range_min }} – {{ item.param.reference_range_max }}
+                                    {% elif item.param.reference_range_min is not None %}
+                                        &ge; {{ item.param.reference_range_min }}
+                                    {% elif item.param.reference_range_max is not None %}
+                                        &le; {{ item.param.reference_range_max }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                {% if result %}
+                                <td class="text-center fw-bold" style="background: rgba(232,244,253,0.3);">
+                                    {% if item.pr %}
+                                        {{ item.pr.result_value }}
+                                        {% if item.param.unit %}<small class="text-muted fw-normal"> {{ item.param.unit }}</small>{% endif %}
+                                    {% else %}
+                                        <span class="text-muted fst-italic fw-normal">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center" style="background: rgba(232,244,253,0.3);">
+                                    {% if item.pr %}
+                                        {% if item.pr.flag == 'normal' %}
+                                            <span class="badge rounded-pill bg-success px-3">Normal</span>
+                                        {% elif item.pr.flag == 'low' %}
+                                            <span class="badge rounded-pill bg-info text-dark px-3"><i class="bi bi-arrow-down-short"></i> Low</span>
+                                        {% elif item.pr.flag == 'high' %}
+                                            <span class="badge rounded-pill bg-warning text-dark px-3"><i class="bi bi-arrow-up-short"></i> High</span>
+                                        {% elif item.pr.flag == 'critical_low' %}
+                                            <span class="badge rounded-pill bg-danger px-3"><i class="bi bi-exclamation-triangle-fill me-1"></i>Crit Low</span>
+                                        {% elif item.pr.flag == 'critical_high' %}
+                                            <span class="badge rounded-pill bg-danger px-3"><i class="bi bi-exclamation-triangle-fill me-1"></i>Crit High</span>
+                                        {% elif item.pr.flag == 'abnormal' %}
+                                            <span class="badge rounded-pill bg-danger px-3">Abnormal</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">No parameters defined for this profile.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Results Section -->
+{% if result %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header py-3" style="background: linear-gradient(135deg, {% if result.verified %}#27ae60, #2ecc71{% else %}#7f8c8d, #95a5a6{% endif %});">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-clipboard-check me-2"></i>Test Result Summary</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if result.is_abnormal %}
+                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Abnormal</span>
+                        {% else %}
+                        <span class="badge bg-light text-success"><i class="bi bi-check-circle-fill me-1"></i>Normal</span>
+                        {% endif %}
+                        {% if result.verified %}
+                        <span class="badge bg-light text-success"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending Verification</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Meta row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 h-100" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Reported By</small>
+                            <span class="fw-semibold"><i class="bi bi-person-check me-1 text-primary"></i>{{ result.reported_by.get_full_name|default:result.reported_by }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 h-100" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Date Reported</small>
+                            <span class="fw-semibold"><i class="bi bi-calendar-check me-1 text-primary"></i>{{ result.date_reported|date:"M d, Y" }}</span>
+                            <small class="text-muted d-block">{{ result.date_reported|time:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 h-100 {% if result.verified %}border border-success{% endif %}" style="background: {% if result.verified %}#f0fdf4{% else %}#f8f9fa{% endif %};">
+                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Verification</small>
+                            {% if result.verified %}
+                            <span class="fw-bold text-success"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+                            <small class="text-muted d-block">{{ result.verified_by.get_full_name }}</small>
+                            <small class="text-muted d-block">{{ result.verified_at|date:"M d, Y g:i A" }}</small>
+                            {% else %}
+                            <span class="text-warning fw-semibold"><i class="bi bi-hourglass-split me-1"></i>Awaiting</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 h-100 text-center {% if result.is_abnormal %}border border-danger{% else %}border border-success{% endif %}" style="background: {% if result.is_abnormal %}#fef2f2{% else %}#f0fdf4{% endif %};">
+                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Overall Status</small>
+                            {% if result.is_abnormal %}
+                            <span class="fw-bold text-danger fs-5"><i class="bi bi-exclamation-triangle-fill me-1"></i>Abnormal</span>
+                            {% else %}
+                            <span class="fw-bold text-success fs-5"><i class="bi bi-check-circle-fill me-1"></i>Normal</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if not profile_parameters and result.result_value %}
+                <div class="row mb-4">
+                    <div class="col-lg-5 mx-auto">
+                        <div class="text-center p-4 rounded-3 border-2 {% if result.is_abnormal %}border-danger{% else %}border-success{% endif %}" style="border-style: dashed !important; background: {% if result.is_abnormal %}#fef2f2{% else %}#f0fdf4{% endif %};">
+                            <small class="text-uppercase text-muted d-block mb-2 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Result Value</small>
+                            <h2 class="fw-bold {% if result.is_abnormal %}text-danger{% else %}text-success{% endif %} mb-0">
+                                {{ result.result_value }}
+                            </h2>
+                            {% if result.result_unit %}<span class="text-muted">{{ result.result_unit }}</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if result.interpretation or result.remarks %}
+                <div class="row g-3">
+                    {% if result.interpretation %}
+                    <div class="{% if result.remarks %}col-md-6{% else %}col-12{% endif %}">
+                        <div class="p-3 rounded-3 border-start border-3 border-primary h-100" style="background: #f0f7ff;">
+                            <small class="text-uppercase text-muted d-block mb-2 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;"><i class="bi bi-chat-square-text me-1"></i>Interpretation</small>
+                            <p class="mb-0">{{ result.interpretation }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if result.remarks %}
+                    <div class="{% if result.interpretation %}col-md-6{% else %}col-12{% endif %}">
+                        <div class="p-3 rounded-3 border-start border-3 border-secondary h-100" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block mb-2 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;"><i class="bi bi-sticky me-1"></i>Remarks</small>
+                            <p class="mb-0">{{ result.remarks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-hourglass-split" style="font-size: 2rem; color: #95a5a6;"></i>
+                </div>
+                <h5 class="fw-bold mb-2" style="color: #2c3e50;">Result Pending</h5>
+                <p class="text-muted mb-4">No result has been recorded for this test yet.</p>
+                <button type="button" class="btn btn-success px-4 py-2" data-bs-toggle="modal" data-bs-target="#addResultModal">
+                    <i class="bi bi-plus-circle me-2"></i>Add Result Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if result and can_edit_result %}
+<!-- Edit Result Modal -->
+<div class="modal fade" id="editResultModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable result-entry-dialog">
+        <div class="modal-content border-0 shadow" style="max-height: 90vh;">
+            <form id="editResultForm" method="post" action="{% url 'laboratory:edit_result_modal' request.pk %}" class="result-entry-form">
+                {% csrf_token %}
+                <div class="modal-header border-0 text-white py-3" style="background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);">
+                    <div>
+                        <h5 class="modal-title mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Test Results</h5>
+                        <small class="opacity-75">{{ request.test.name }} &bull; {{ request.patient.get_full_name }}</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-4 result-entry-body">
+                    {% if profile_parameters %}
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-list-check me-2 text-primary"></i>Parameter Values</h6>
+                        <hr class="flex-grow-1 ms-3">
+                    </div>
+                    <div class="table-responsive mb-4 result-params-table" style="max-height: 55vh; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: #f0f4f8;">
+                                    <th class="fw-semibold" style="min-width:160px;">Parameter</th>
+                                    <th class="fw-semibold text-center" style="width:70px;">Unit</th>
+                                    <th class="fw-semibold text-center" style="min-width:130px;">Ref. Range</th>
+                                    <th class="fw-semibold" style="min-width:160px;">Result Value <span class="text-danger">*</span></th>
+                                    <th class="fw-semibold" style="min-width:160px;">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in profile_parameters %}
+                                <tr>
+                                    <td>
+                                        <span class="fw-semibold">{{ item.param.name }}</span>
+                                        <br><small class="text-muted">{{ item.param.get_result_type_display }}</small>
+                                    </td>
+                                    <td class="text-center"><small class="text-muted">{{ item.param.unit|default:"&#8212;" }}</small></td>
+                                    <td class="text-center small text-muted">
+                                        {% if item.param.reference_range_text %}
+                                            {{ item.param.reference_range_text }}
+                                        {% elif item.param.reference_range_min is not None and item.param.reference_range_max is not None %}
+                                            {{ item.param.reference_range_min }} &#8211; {{ item.param.reference_range_max }}
+                                        {% elif item.param.reference_range_min is not None %}
+                                            &ge; {{ item.param.reference_range_min }}
+                                        {% elif item.param.reference_range_max is not None %}
+                                            &le; {{ item.param.reference_range_max }}
+                                        {% else %}&#8212;{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.param.result_type == 'positive_negative' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm edit-param-input" data-param-id="{{ item.param.id }}">
+                                            <option value="">&#8212; select &#8212;</option>
+                                            <option value="Positive">Positive</option>
+                                            <option value="Negative">Negative</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'reactive_nonreactive' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm edit-param-input" data-param-id="{{ item.param.id }}">
+                                            <option value="">&#8212; select &#8212;</option>
+                                            <option value="Reactive">Reactive</option>
+                                            <option value="Non-Reactive">Non-Reactive</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'present_absent' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm edit-param-input" data-param-id="{{ item.param.id }}">
+                                            <option value="">&#8212; select &#8212;</option>
+                                            <option value="Present">Present</option>
+                                            <option value="Absent">Absent</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'detected_not_detected' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm edit-param-input" data-param-id="{{ item.param.id }}">
+                                            <option value="">&#8212; select &#8212;</option>
+                                            <option value="Detected">Detected</option>
+                                            <option value="Not Detected">Not Detected</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'normal_abnormal' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm edit-param-input" data-param-id="{{ item.param.id }}">
+                                            <option value="">&#8212; select &#8212;</option>
+                                            <option value="Normal">Normal</option>
+                                            <option value="Abnormal">Abnormal</option>
+                                        </select>
+                                        {% else %}
+                                        <input type="text" name="param_{{ item.param.id }}" class="form-control form-control-sm edit-param-input" data-param-id="{{ item.param.id }}"
+                                               placeholder="{% if item.param.result_type == 'numeric' %}0.00{% else %}Enter value{% endif %}">
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <input type="text" name="param_{{ item.param.id }}_notes" class="form-control form-control-sm edit-param-notes" data-param-id="{{ item.param.id }}" placeholder="Optional notes">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-card-text me-2 text-primary"></i>Summary</h6>
+                        <hr class="flex-grow-1 ms-3">
+                    </div>
+                    <div class="row g-3">
+                        {% if not profile_parameters %}
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Result Value <span class="text-danger">*</span></label>
+                            <textarea name="overall_value" id="edit_overall_value" class="form-control" rows="2" placeholder="Enter result value"></textarea>
+                        </div>
+                        {% else %}
+                        <input type="hidden" name="overall_value" value="">
+                        {% endif %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Interpretation</label>
+                            <textarea name="interpretation" id="edit_interpretation" class="form-control" rows="2" placeholder="Clinical interpretation (optional)"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Remarks</label>
+                            <textarea name="remarks" id="edit_remarks" class="form-control" rows="2" placeholder="Any additional remarks (optional)"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_abnormal" value="1" id="editResultIsAbnormal">
+                                <label class="form-check-label" for="editResultIsAbnormal">Mark overall result as abnormal</label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 bg-light result-entry-footer">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-semibold" id="editResultSubmitBtn">
+                        <i class="bi bi-save me-1"></i>Update Results
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var editModal = document.getElementById('editResultModal');
+    if (!editModal) return;
+
+    // Load current values when modal opens
+    editModal.addEventListener('show.bs.modal', function () {
+        fetch('{% url "laboratory:edit_result_modal" request.pk %}', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!data.success) return;
+            var r = data.result;
+            var ov = document.getElementById('edit_overall_value');
+            if (ov) ov.value = r.overall_value || '';
+            var interp = document.getElementById('edit_interpretation');
+            if (interp) interp.value = r.interpretation || '';
+            var rem = document.getElementById('edit_remarks');
+            if (rem) rem.value = r.remarks || '';
+            document.getElementById('editResultIsAbnormal').checked = r.is_abnormal;
+
+            // Fill parameter values
+            (r.parameter_results || []).forEach(function (pr) {
+                var inp = editModal.querySelector('.edit-param-input[data-param-id="' + pr.parameter_id + '"]');
+                if (inp) inp.value = pr.result_value;
+                var notes = editModal.querySelector('.edit-param-notes[data-param-id="' + pr.parameter_id + '"]');
+                if (notes) notes.value = pr.notes || '';
+            });
+        });
+    });
+
+    // Submit edit form via AJAX
+    var form = document.getElementById('editResultForm');
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var btn = document.getElementById('editResultSubmitBtn');
+        var orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            btn.disabled = false;
+            btn.innerHTML = orig;
+            if (data.success) {
+                bootstrap.Modal.getInstance(editModal).hide();
+                if (typeof showToast === 'function') showToast(data.message, 'success');
+                setTimeout(function () { window.location.reload(); }, 1000);
+            } else {
+                if (typeof showToast === 'function') showToast(data.message || 'An error occurred.', 'error');
+            }
+        })
+        .catch(function () {
+            btn.disabled = false;
+            btn.innerHTML = orig;
+            if (typeof showToast === 'function') showToast('An error occurred. Please try again.', 'error');
+        });
+    });
+})();
+</script>
+{% endif %}
+
+{% if not result %}
+<!-- Add Result Modal -->
+<div class="modal fade" id="addResultModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable result-entry-dialog">
+        <div class="modal-content border-0 shadow" style="max-height: 90vh;">
+            <form id="addResultForm" method="post" action="{% url 'laboratory:add_result_modal' request.pk %}" class="result-entry-form">
+                {% csrf_token %}
+                <div class="modal-header border-0 text-white py-3" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
+                    <div>
+                        <h5 class="modal-title mb-0 fw-bold"><i class="bi bi-clipboard-check me-2"></i>Record Test Results</h5>
+                        <small class="opacity-75">{{ request.test.name }} &bull; {{ request.patient.get_full_name }}</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-4 result-entry-body">
+
+                    {% if profile_parameters %}
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-list-check me-2 text-primary"></i>Parameter Values</h6>
+                        <hr class="flex-grow-1 ms-3">
+                    </div>
+                    <div class="table-responsive mb-4 result-params-table" style="max-height: 55vh; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: #f0f4f8;">
+                                    <th class="fw-semibold" style="min-width:160px;">Parameter</th>
+                                    <th class="fw-semibold text-center" style="width:70px;">Unit</th>
+                                    <th class="fw-semibold text-center" style="min-width:130px;">Ref. Range</th>
+                                    <th class="fw-semibold" style="min-width:160px;">Result Value <span class="text-danger">*</span></th>
+                                    <th class="fw-semibold" style="min-width:160px;">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in profile_parameters %}
+                                <tr>
+                                    <td>
+                                        <span class="fw-semibold">{{ item.param.name }}</span>
+                                        <br><small class="text-muted">{{ item.param.get_result_type_display }}</small>
+                                    </td>
+                                    <td class="text-center"><small class="text-muted">{{ item.param.unit|default:"—" }}</small></td>
+                                    <td class="text-center small text-muted">
+                                        {% if item.param.reference_range_text %}
+                                            {{ item.param.reference_range_text }}
+                                        {% elif item.param.reference_range_min is not None and item.param.reference_range_max is not None %}
+                                            {{ item.param.reference_range_min }} – {{ item.param.reference_range_max }}
+                                        {% elif item.param.reference_range_min is not None %}
+                                            &ge; {{ item.param.reference_range_min }}
+                                        {% elif item.param.reference_range_max is not None %}
+                                            &le; {{ item.param.reference_range_max }}
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.param.result_type == 'positive_negative' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm">
+                                            <option value="">— select —</option>
+                                            <option value="Positive">Positive</option>
+                                            <option value="Negative">Negative</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'reactive_nonreactive' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm">
+                                            <option value="">— select —</option>
+                                            <option value="Reactive">Reactive</option>
+                                            <option value="Non-Reactive">Non-Reactive</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'present_absent' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm">
+                                            <option value="">— select —</option>
+                                            <option value="Present">Present</option>
+                                            <option value="Absent">Absent</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'detected_not_detected' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm">
+                                            <option value="">— select —</option>
+                                            <option value="Detected">Detected</option>
+                                            <option value="Not Detected">Not Detected</option>
+                                        </select>
+                                        {% elif item.param.result_type == 'normal_abnormal' %}
+                                        <select name="param_{{ item.param.id }}" class="form-select form-select-sm">
+                                            <option value="">— select —</option>
+                                            <option value="Normal">Normal</option>
+                                            <option value="Abnormal">Abnormal</option>
+                                        </select>
+                                        {% else %}
+                                        <input type="text" name="param_{{ item.param.id }}" class="form-control form-control-sm"
+                                               placeholder="{% if item.param.result_type == 'numeric' %}0.00{% else %}Enter value{% endif %}">
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <input type="text" name="param_{{ item.param.id }}_notes" class="form-control form-control-sm" placeholder="Optional notes">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-person-badge me-2 text-primary"></i>Patient Vitals</h6>
+                        <hr class="flex-grow-1 ms-3">
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Height (cm)</label>
+                            <input type="number" name="height" class="form-control" step="0.1" placeholder="e.g., 170" value="{{ request.patient.height|default:'' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Weight (kg)</label>
+                            <input type="number" name="weight" class="form-control" step="0.1" placeholder="e.g., 70" value="{{ request.patient.weight|default:'' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">BMI (kg/m²)</label>
+                            <input type="number" name="bmi" class="form-control" step="0.1" placeholder="Auto-calculated" value="{{ request.patient.bmi|default:'' }}" readonly>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-card-text me-2 text-primary"></i>Summary</h6>
+                        <hr class="flex-grow-1 ms-3">
+                    </div>
+                    <div class="row g-3">
+                        {% if not profile_parameters %}
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Result Value <span class="text-danger">*</span></label>
+                            <textarea name="overall_value" class="form-control" rows="2" placeholder="Enter result value" required></textarea>
+                        </div>
+                        {% else %}
+                        <input type="hidden" name="overall_value" value="">
+                        {% endif %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Interpretation</label>
+                            <textarea name="interpretation" class="form-control" rows="2" placeholder="Clinical interpretation (optional)"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Remarks</label>
+                            <textarea name="remarks" class="form-control" rows="2" placeholder="Any additional remarks (optional)"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_abnormal" value="1" id="resultIsAbnormal">
+                                <label class="form-check-label" for="resultIsAbnormal">Mark overall result as abnormal</label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 bg-light result-entry-footer">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4 fw-semibold" id="addResultSubmitBtn">
+                        <i class="bi bi-save me-1"></i>Save Results
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('addResultForm');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var btn = document.getElementById('addResultSubmitBtn');
+        var orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            btn.disabled = false;
+            btn.innerHTML = orig;
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addResultModal')).hide();
+                showToast(data.message, 'success');
+                setTimeout(function () { window.location.reload(); }, 1000);
+            } else {
+                showToast(data.message || 'An error occurred.', 'error');
+            }
+        })
+        .catch(function () {
+            btn.disabled = false;
+            btn.innerHTML = orig;
+            showToast('An error occurred. Please try again.', 'error');
+        });
+    });
+})();
+</script>
+{% endif %}
+
+<!-- Report Comment Modal -->
+<div class="modal fade" id="reportCommentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable" style="max-width: 70%;">
+        <div class="modal-content border-0 rounded-3 overflow-hidden">
+            <div class="modal-header border-0 text-white px-4 py-3" style="background:#1a3a5c;">
+                <h6 class="modal-title fw-bold mb-0"><i class="bi bi-file-earmark-text me-2"></i>Generate Lab Test Report</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Info alert -->
+                <div class="mx-3 mt-3 p-3 rounded" style="background:#e8f4f8; border:1px solid #b8dff0;">
+                    <small><i class="bi bi-info-circle me-2" style="color:#0c7abf;"></i>Choose which sections to include in the report.</small>
+                </div>
+
+                <!-- Report Type & Referring Doctor -->
+                <div class="px-4 py-3 border-top">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="fw-bold small d-block mb-1"><i class="bi bi-tag me-1 text-muted"></i>Report Type</label>
+                            <select id="reportType" class="form-select form-select-sm">
+                                <option value="final" selected>Final Report</option>
+                                <option value="preliminary">Preliminary Report</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="fw-bold small d-block mb-1"><i class="bi bi-person-badge me-1 text-muted"></i>Referring Doctor</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" id="reportRefDoctor" class="form-control form-control-sm" placeholder="Doctor name" value="{{ request.requested_by.get_full_name|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" id="reportRefLocation" class="form-control form-control-sm" placeholder="Location / Clinic">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" id="reportRefContact" class="form-control form-control-sm" placeholder="Phone / Email">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section rows -->
+                <div class="mt-2">
+                    <!-- 1. Patient Information -->
+                    <div class="d-flex align-items-center px-4 py-3 border-top" style="cursor:pointer;" onclick="toggleReportSection('reportPatientDetails','reportChevronPatient')">
+                        <input type="checkbox" class="form-check-input me-3 flex-shrink-0" id="reportSectionPatient" checked style="width:1.1em;height:1.1em;cursor:pointer;" onclick="event.stopPropagation(); toggleReportPatientSubs(this);">
+                        <span class="fw-bold">Patient Information</span>
+                        <i class="bi bi-chevron-down ms-auto text-muted" id="reportChevronPatient" style="transition:transform 0.2s;"></i>
+                    </div>
+                    <div id="reportPatientDetails" style="display:none; background:#f8f9fa; padding:12px 28px 16px;">
+                        <div class="row g-2">
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubPatientName" value="patient_name" checked><label class="form-check-label small" for="reportSubPatientName">Patient Name</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubPatientId" value="patient_id" checked><label class="form-check-label small" for="reportSubPatientId">Patient ID</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubAge" value="age" checked><label class="form-check-label small" for="reportSubAge">Age</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubGender" value="gender" checked><label class="form-check-label small" for="reportSubGender">Gender</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubDob" value="dob" checked><label class="form-check-label small" for="reportSubDob">Date of Birth</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubPhone" value="phone" checked><label class="form-check-label small" for="reportSubPhone">Phone</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubNationality" value="nationality" checked><label class="form-check-label small" for="reportSubNationality">Nationality</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubIdType" value="id_type" checked><label class="form-check-label small" for="reportSubIdType">ID Type</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubIdNumber" value="id_number" checked><label class="form-check-label small" for="reportSubIdNumber">ID Number</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubTestDate" value="test_date" checked><label class="form-check-label small" for="reportSubTestDate">Test Date</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubDoctor" value="referring_doctor" checked><label class="form-check-label small" for="reportSubDoctor">Referring Doctor</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubReason" value="reason_for_test"><label class="form-check-label small" for="reportSubReason">Reason for Test</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input reportPatientSub" id="reportSubClinicalNotes" value="clinical_notes"><label class="form-check-label small" for="reportSubClinicalNotes">Clinical Notes</label></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Test Results -->
+                    <div class="d-flex align-items-center px-4 py-3 border-top border-bottom">
+                        <input type="checkbox" class="form-check-input me-3 flex-shrink-0" id="reportSectionResults" checked style="width:1.1em;height:1.1em;cursor:pointer;">
+                        <span class="fw-bold">Test Results</span>
+                        <span class="text-muted small ms-2">(parameters below)</span>
+                        <i class="bi bi-chevron-down ms-auto text-muted"></i>
+                    </div>
+                </div>
+
+                <!-- Comment / Remarks -->
+                <div class="px-4 py-3 border-top">
+                    <label class="fw-bold d-block mb-1" for="reportComment"><i class="bi bi-chat-left-text me-2 text-muted"></i>Comment / Remarks <span class="text-muted fw-normal small">(optional)</span></label>
+                    <textarea id="reportComment" class="form-control" rows="2" placeholder="e.g. Results within normal range. Recommend follow-up in 6 weeks."></textarea>
+                </div>
+
+                <!-- Test with Parameters -->
+                <div class="px-4 py-2 border-top d-flex align-items-center" style="background:#fff;">
+                    <span class="fw-semibold small text-muted text-uppercase" style="letter-spacing:0.04em;"><i class="bi bi-clipboard-check me-2"></i>Test & Parameters</span>
+                </div>
+
+                <!-- Test row (collapsible) -->
+                <div style="cursor:pointer;" onclick="toggleReportTestRow(this)" class="report-test-row">
+                    <div class="d-flex align-items-center px-4 py-3 border-top border-bottom" style="background:#f8f9fa;">
+                        <input type="checkbox" class="form-check-input me-3 flex-shrink-0 reportTestCheck" value="{{ request.pk }}" checked onclick="event.stopPropagation(); toggleReportParamRow(this);" style="width:1.1em;height:1.1em;">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">{{ request.test.name }}</div>
+                            <small class="text-muted">{{ request.test.code }} • {{ request.date_requested|date:"d/m/Y" }}</small>
+                        </div>
+                        <i class="bi bi-chevron-down text-muted" style="transition:transform 0.2s;"></i>
+                    </div>
+                    {% if profile_parameters %}
+                    <!-- Parameter sub-row -->
+                    <div class="report-param-row" data-test-id="{{ request.pk }}" style="display:none;">
+                        <div style="background:#f0f0f0; padding:10px 16px 14px;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <small class="text-muted fw-semibold">Select Parameters to Show:</small>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="reportSelectAllParams" checked onchange="toggleAllReportParams(this)">
+                                    <label class="form-check-label small" for="reportSelectAllParams">Select All</label>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                {% for item in profile_parameters %}
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-sm">
+                                        <input type="checkbox" class="form-check-input report-param" name="report_param_{{ request.pk }}" value="{{ item.param.id }}" id="repparam_{{ item.param.id }}" checked>
+                                        <label class="form-check-label small" for="repparam_{{ item.param.id }}">{{ item.param.name }}{% if item.param.unit %} ({{ item.param.unit }}){% endif %}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="modal-footer justify-content-between border-top py-3 px-4">
+                <span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Report will open in a new tab</span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn px-4 fw-semibold" style="background:#1a3a5c;color:#fff;" onclick="openReport()">
+                        <i class="bi bi-file-earmark-text me-1"></i>Open Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function toggleReportSection(detailsId, chevronId) {
+    var el = document.getElementById(detailsId);
+    var ch = document.getElementById(chevronId);
+    if (!el) return;
+    var isHidden = el.style.display === 'none' || !el.style.display;
+    el.style.display = isHidden ? 'block' : 'none';
+    if (ch) ch.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function toggleReportTestRow(row) {
+    var paramRow = row.querySelector('.report-param-row');
+    var chevron = row.querySelector('.bi-chevron-down');
+    if (paramRow) {
+        if (paramRow.style.display === 'none' || !paramRow.style.display) {
+            paramRow.style.display = 'block';
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            paramRow.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+}
+
+function toggleReportParamRow(checkbox) {
+    var row = checkbox.closest('.report-test-row');
+    var paramRow = row.querySelector('.report-param-row');
+    if (paramRow) {
+        if (checkbox.checked) {
+            paramRow.style.display = 'block';
+            row.querySelector('.bi-chevron-down').style.transform = 'rotate(180deg)';
+        } else {
+            paramRow.style.display = 'none';
+            row.querySelector('.bi-chevron-down').style.transform = 'rotate(0deg)';
+        }
+    }
+}
+
+function toggleAllReportParams(checkbox) {
+    var params = document.querySelectorAll('.report-param');
+    params.forEach(function(p) { p.checked = checkbox.checked; });
+}
+
+function toggleReportPatientSubs(cb) {
+    document.querySelectorAll('.reportPatientSub').forEach(function(el) { el.checked = cb.checked; });
+}
+
+function collectReportPatientFields() {
+    var vals = [];
+    document.querySelectorAll('.reportPatientSub:checked').forEach(function(cb) { vals.push(cb.value); });
+    return vals;
+}
+
+function openReport() {
+    var url = '{% url "laboratory:test_report" request.pk %}';
+    var params = [];
+    
+    // Collect sections
+    var sections = [];
+    if (document.getElementById('reportSectionPatient').checked) sections.push('patient');
+    if (document.getElementById('reportSectionResults').checked) sections.push('results');
+    if (sections.length > 0) params.push('sections=' + sections.join(','));
+    
+    // Collect selected patient fields
+    var patientFields = collectReportPatientFields();
+    if (patientFields.length > 0) params.push('patient_fields=' + patientFields.join(','));
+    
+    // Collect selected parameters
+    var selectedParams = [];
+    document.querySelectorAll('.report-param:checked').forEach(function(cb) {
+        selectedParams.push(cb.value);
+    });
+    if (selectedParams.length > 0) {
+        params.push('test_{{ request.pk }}_params=' + selectedParams.join(','));
+    }
+    
+    // Add comment
+    var comment = document.getElementById('reportComment').value.trim();
+    if (comment) params.push('comment=' + encodeURIComponent(comment));
+    
+    // Report type
+    var reportType = document.getElementById('reportType').value;
+    if (reportType) params.push('report_type=' + encodeURIComponent(reportType));
+    
+    // Referring doctor info
+    var refDoctor = document.getElementById('reportRefDoctor').value.trim();
+    if (refDoctor) params.push('ref_doctor=' + encodeURIComponent(refDoctor));
+    var refLocation = document.getElementById('reportRefLocation').value.trim();
+    if (refLocation) params.push('ref_location=' + encodeURIComponent(refLocation));
+    var refContact = document.getElementById('reportRefContact').value.trim();
+    if (refContact) params.push('ref_contact=' + encodeURIComponent(refContact));
+    
+    // Build final URL
+    if (params.length > 0) url += '?' + params.join('&');
+    
+    window.open(url, '_blank');
+    var modal = bootstrap.Modal.getInstance(document.getElementById('reportCommentModal'));
+    if (modal) modal.hide();
+}
+</script>
+
+<!-- Certificate Selection Modal -->
+<div class="modal fade" id="selectCertificateModal" tabindex="-1" aria-labelledby="selectCertificateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable" style="max-width: 70%;">
+        <div class="modal-content border-0 rounded-3 overflow-hidden">
+            <div class="modal-header border-0 text-white px-4 py-3" style="background: #1B5C38;">
+                <h6 class="modal-title fw-bold mb-0" id="selectCertificateModalLabel">
+                    <i class="bi bi-award me-2"></i>Generate Lab Test Certificate
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Info alert -->
+                <div class="mx-3 mt-3 p-3 rounded" style="background:#d9eef7; border:1px solid #b8dff0;">
+                    <small><i class="bi bi-info-circle me-2" style="color:#0c7abf;"></i>Choose which sections and fields to include, then select the lab tests.</small>
+                </div>
+
+                <!-- Section rows -->
+                <div class="mt-2">
+
+                    <!-- 1. Patient Information -->
+                    <div class="d-flex align-items-center px-4 py-3 border-top" style="cursor:pointer;" onclick="toggleCertSection('certPatientDetails','certChevronPatient')">
+                        <input type="checkbox" class="form-check-input me-3 flex-shrink-0" id="certSectionPatient" checked style="width:1.1em;height:1.1em;cursor:pointer;" onclick="event.stopPropagation(); toggleCertSubs(this,'certPatientSub')">
+                        <span class="fw-bold">Patient Information</span>
+                        <i class="bi bi-chevron-down ms-auto text-muted" id="certChevronPatient" style="transition:transform 0.2s;"></i>
+                    </div>
+                    <div id="certPatientDetails" style="display:none; background:#f8f9fa; padding:12px 28px 16px;">
+                        <div class="row g-2">
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubPatientName" value="patient_name" checked><label class="form-check-label small" for="certSubPatientName">Patient Name</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubPatientId" value="patient_id" checked><label class="form-check-label small" for="certSubPatientId">Patient ID</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubAge" value="age" checked><label class="form-check-label small" for="certSubAge">Age</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubGender" value="gender" checked><label class="form-check-label small" for="certSubGender">Gender</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubDob" value="dob" checked><label class="form-check-label small" for="certSubDob">Date of Birth</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubPhone" value="phone" checked><label class="form-check-label small" for="certSubPhone">Phone</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubNationality" value="nationality" checked><label class="form-check-label small" for="certSubNationality">Nationality</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubIdType" value="id_type" checked><label class="form-check-label small" for="certSubIdType">ID Type</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubIdNumber" value="id_number" checked><label class="form-check-label small" for="certSubIdNumber">ID Number</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubCity" value="city" checked><label class="form-check-label small" for="certSubCity">City</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubCountry" value="country" checked><label class="form-check-label small" for="certSubCountry">Country</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubPatientGroup" value="patient_group" checked><label class="form-check-label small" for="certSubPatientGroup">Patient Group</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubEmail" value="email"><label class="form-check-label small" for="certSubEmail">Email</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubAddress" value="address"><label class="form-check-label small" for="certSubAddress">Address</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPatientSub" id="certSubBloodType" value="blood_type"><label class="form-check-label small" for="certSubBloodType">Blood Type</label></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Physical Examination -->
+                    <div class="d-flex align-items-center px-4 py-3 border-top" style="cursor:pointer;" onclick="toggleCertSection('certPhysicalDetails','certChevronPhysical')">
+                        <input type="checkbox" class="form-check-input me-3 flex-shrink-0" id="certSectionPhysical" checked style="width:1.1em;height:1.1em;cursor:pointer;" onclick="event.stopPropagation(); toggleCertSubs(this,'certPhysicalSub')">
+                        <span class="fw-bold">Physical Examination</span>
+                        <i class="bi bi-chevron-down ms-auto text-muted" id="certChevronPhysical" style="transition:transform 0.2s;"></i>
+                    </div>
+                    <div id="certPhysicalDetails" style="display:none; background:#f8f9fa; padding:12px 28px 16px;">
+                        <div class="row g-2">
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPhysicalSub" id="certSubEyesEars" value="eyes_ears" checked><label class="form-check-label small" for="certSubEyesEars">Eyes &amp; Ears</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPhysicalSub" id="certSubCardio" value="cardiovascular" checked><label class="form-check-label small" for="certSubCardio">Cardiovascular</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPhysicalSub" id="certSubRespiratory" value="respiratory" checked><label class="form-check-label small" for="certSubRespiratory">Respiratory</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPhysicalSub" id="certSubBodySystems" value="body_systems" checked><label class="form-check-label small" for="certSubBodySystems">Body Systems</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPhysicalSub" id="certSubSkinOther" value="skin_other" checked><label class="form-check-label small" for="certSubSkinOther">Skin &amp; Other</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certPhysicalSub" id="certSubVitalSigns" value="vital_signs" checked><label class="form-check-label small" for="certSubVitalSigns">Vital Signs</label></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Laboratory Investigation -->
+                    <div class="d-flex align-items-center px-4 py-3 border-top" style="cursor:pointer;" onclick="toggleCertSection('certLabInvDetails','certChevronLabInv')">
+                        <input type="checkbox" class="form-check-input me-3 flex-shrink-0" id="certSectionLabInv" checked style="width:1.1em;height:1.1em;cursor:pointer;" onclick="event.stopPropagation(); toggleCertSubs(this,'certLabInvSub')">
+                        <span class="fw-bold">Laboratory Investigation</span>
+                        <i class="bi bi-chevron-down ms-auto text-muted" id="certChevronLabInv" style="transition:transform 0.2s;"></i>
+                    </div>
+                    <div id="certLabInvDetails" style="display:none; background:#f8f9fa; padding:12px 28px 16px;">
+                        <div class="row g-2">
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certLabInvSub" id="certSubUrine" value="urine" checked><label class="form-check-label small" for="certSubUrine">Urine</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certLabInvSub" id="certSubStool" value="stool" checked><label class="form-check-label small" for="certSubStool">Stool / Routine</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certLabInvSub" id="certSubBlood" value="blood" checked><label class="form-check-label small" for="certSubBlood">Blood</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certLabInvSub" id="certSubChemistry" value="chemistry" checked><label class="form-check-label small" for="certSubChemistry">Chemistry</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certLabInvSub" id="certSubElisa" value="elisa" checked><label class="form-check-label small" for="certSubElisa">Elisa</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input certLabInvSub" id="certSubOtherTests" value="other_tests" checked><label class="form-check-label small" for="certSubOtherTests">Other Tests</label></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Lab Test Results -->
+                    <div class="d-flex align-items-center px-4 py-3 border-top border-bottom">
+                        <input type="checkbox" class="form-check-input me-3 flex-shrink-0" id="certSectionResults" style="width:1.1em;height:1.1em;cursor:pointer;">
+                        <span class="fw-bold">Lab Test Results</span>
+                        <span class="text-muted small ms-2">(select tests below)</span>
+                        <i class="bi bi-chevron-down ms-auto text-muted"></i>
+                    </div>
+                </div>
+
+                <!-- Comment / Remarks -->
+                <div class="px-4 py-3 border-top">
+                    <label class="fw-bold d-block mb-1" for="certComment"><i class="bi bi-chat-left-text me-2 text-muted"></i>Comment / Remarks <span class="text-muted fw-normal small">(optional)</span></label>
+                    <textarea id="certComment" class="form-control" rows="2" placeholder="e.g. Patient cleared for travel. Follow-up in 3 months."></textarea>
+                </div>
+
+                <!-- Select All Tests row -->
+                <div class="px-4 py-2 border-bottom d-flex align-items-center" style="background:#fff;">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="certSelectAllTests" checked onchange="toggleAllCertTests(this)">
+                        <label class="form-check-label fw-semibold small" for="certSelectAllTests">Select All Tests</label>
+                    </div>
+                </div>
+
+                <!-- Tests table -->
+                <table class="table mb-0" style="font-size:0.88rem;">
+                    <thead style="background:#f8f9fa;">
+                        <tr>
+                            <th style="width:44px; padding-left:1.2rem;"></th>
+                            <th class="text-muted text-uppercase" style="font-size:0.72rem; font-weight:700; letter-spacing:0.04em;">Test Name</th>
+                            <th class="text-muted text-uppercase" style="font-size:0.72rem; font-weight:700; letter-spacing:0.04em;">Code</th>
+                            <th class="text-muted text-uppercase" style="font-size:0.72rem; font-weight:700; letter-spacing:0.04em;">Date Requested</th>
+                            <th class="text-muted text-uppercase" style="font-size:0.72rem; font-weight:700; letter-spacing:0.04em;">Status</th>
+                            <th class="text-muted text-uppercase" style="font-size:0.72rem; font-weight:700; letter-spacing:0.04em;">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Test row -->
+                        <tr style="cursor:pointer;" onclick="toggleCertTestRow(this)" class="cert-test-row table-active">
+                            <td class="ps-3 align-middle">
+                                <input type="checkbox" class="form-check-input certTestCheck" value="{{ request.pk }}" checked onchange="updateCertSelectedCount(); toggleCertParamRow(this);" onclick="event.stopPropagation();">
+                            </td>
+                            <td class="align-middle fw-semibold">{{ request.test.name }}</td>
+                            <td class="align-middle text-muted">{{ request.test.code }}</td>
+                            <td class="align-middle text-muted">{{ request.date_requested|date:"d/m/Y" }}</td>
+                            <td class="align-middle">
+                                {% if request.status == 'completed' %}
+                                <span class="badge px-2 py-1" style="background:#1B5C38; font-size:0.78rem;">Completed</span>
+                                {% elif request.status == 'in_progress' %}
+                                <span class="badge bg-primary px-2 py-1" style="font-size:0.78rem;">In Progress</span>
+                                {% elif request.status == 'sample_collected' %}
+                                <span class="badge bg-info text-dark px-2 py-1" style="font-size:0.78rem;">Sample Collected</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark px-2 py-1" style="font-size:0.78rem;">{{ request.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if result %}
+                                <span class="badge px-2 py-1" style="background:#1B5C38; font-size:0.78rem;"><i class="bi bi-check-circle me-1"></i>Yes</span>
+                                {% else %}
+                                <span class="badge bg-secondary px-2 py-1" style="font-size:0.78rem;"><i class="bi bi-x-circle me-1"></i>No</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if profile_parameters %}
+                        <!-- Parameter sub-row -->
+                        <tr class="cert-param-row" data-test-id="{{ request.pk }}">
+                            <td style="background:#f0f0f0;"></td>
+                            <td colspan="5" style="background:#f0f0f0; padding:10px 16px 14px;">
+                                <small class="text-muted fw-semibold d-block mb-2">Select Parameters to Show:</small>
+                                <div class="row g-2">
+                                    {% for item in profile_parameters %}
+                                    <div class="col-md-6">
+                                        <div class="form-check form-check-sm">
+                                            <input type="checkbox" class="form-check-input test-param" name="param_{{ request.pk }}" value="{{ item.param.id }}" id="reqparam_{{ item.param.id }}" checked>
+                                            <label class="form-check-label small" for="reqparam_{{ item.param.id }}">{{ item.param.name }}{% if item.param.unit %} ({{ item.param.unit }}){% endif %}</label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer justify-content-between border-top py-3 px-4">
+                <small class="text-muted" id="certSelectedCount">1 test(s) selected</small>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn px-4 fw-semibold" style="background:#1B5C38; color:#fff;" onclick="generateCertificate()">
+                        <i class="bi bi-award me-1"></i>Generate Certificate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleCertSection(detailsId, chevronId) {
+    var el = document.getElementById(detailsId);
+    var ch = document.getElementById(chevronId);
+    if (!el || !ch) return;
+    var isHidden = el.style.display === 'none' || el.style.display === '';
+    el.style.display = isHidden ? 'block' : 'none';
+    ch.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function toggleCertSubs(cb, groupClass) {
+    document.querySelectorAll('.' + groupClass).forEach(function(el) { el.checked = cb.checked; });
+}
+
+function toggleCertTestRow(row) {
+    var cb = row.querySelector('.certTestCheck');
+    cb.checked = !cb.checked;
+    row.classList.toggle('table-active', cb.checked);
+    toggleCertParamRow(cb);
+    updateCertSelectedCount();
+}
+
+function toggleCertParamRow(cb) {
+    var pr = document.querySelector('.cert-param-row[data-test-id="' + cb.value + '"]');
+    if (pr) pr.style.display = cb.checked ? 'table-row' : 'none';
+}
+
+function toggleAllCertTests(masterCb) {
+    document.querySelectorAll('.certTestCheck').forEach(function(cb) {
+        cb.checked = masterCb.checked;
+        var row = cb.closest('tr');
+        if (row) row.classList.toggle('table-active', cb.checked);
+        toggleCertParamRow(cb);
+    });
+    updateCertSelectedCount();
+}
+
+function updateCertSelectedCount() {
+    var n = document.querySelectorAll('.certTestCheck:checked').length;
+    document.getElementById('certSelectedCount').textContent = n + ' test(s) selected';
+}
+
+function collectCheckedValues(cls) {
+    var vals = [];
+    document.querySelectorAll('.' + cls + ':checked').forEach(function(cb) { vals.push(cb.value); });
+    return vals;
+}
+
+function generateCertificate() {
+    var sections = [];
+    if (document.getElementById('certSectionPatient').checked) sections.push('patient');
+    if (document.getElementById('certSectionPhysical').checked) sections.push('physical');
+    if (document.getElementById('certSectionLabInv').checked) sections.push('labinv');
+    if (document.getElementById('certSectionResults').checked) sections.push('results');
+
+    var params = [];
+    document.querySelectorAll('.test-param:checked').forEach(function(cb) { params.push(cb.value); });
+
+    var url = '{% url "laboratory:test_certificate" request.pk %}?ids={{ request.pk }}'
+        + '&sections=' + sections.join(',')
+        + '&patient_fields=' + collectCheckedValues('certPatientSub').join(',')
+        + '&physical_fields=' + collectCheckedValues('certPhysicalSub').join(',')
+        + '&labinv_fields=' + collectCheckedValues('certLabInvSub').join(',');
+
+    if (params.length > 0) {
+        url += '&test_{{ request.pk }}_params=' + params.join(',');
+    }
+
+    var comment = document.getElementById('certComment').value.trim();
+    if (comment) {
+        url += '&comment=' + encodeURIComponent(comment);
+    }
+
+    window.open(url, '_blank');
+}
+</script>
+
+<style>
+#editResultModal .result-entry-dialog,
+#addResultModal .result-entry-dialog {
+    max-width: min(1200px, 96vw);
+}
+
+#editResultModal .modal-content,
+#addResultModal .modal-content {
+    height: 90vh;
+    max-height: 90vh;
+}
+
+#editResultModal .result-entry-form,
+#addResultModal .result-entry-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+#editResultModal .result-entry-body,
+#addResultModal .result-entry-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+#editResultModal .result-params-table,
+#addResultModal .result-params-table {
+    max-height: 55vh;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+#editResultModal .result-entry-footer,
+#addResultModal .result-entry-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    flex-shrink: 0;
+}
+
+@media (max-width: 991.98px) {
+    #editResultModal .result-entry-dialog,
+    #addResultModal .result-entry-dialog {
+        max-width: 100%;
+        margin: 0.5rem;
+    }
+
+    #editResultModal .result-params-table,
+    #addResultModal .result-params-table {
+        max-height: 45vh;
+    }
+}
+</style>
+{% endblock %}

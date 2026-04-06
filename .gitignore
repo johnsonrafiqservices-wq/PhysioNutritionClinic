@@ -1,0 +1,68 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Environment variables
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Media files (keep structure but ignore uploads)
+media/uploads/
+media/temp/
+
+# Static files (will be regenerated)
+staticfiles/
+static/admin/
+static/rest_framework/
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+firebase-credentials.json

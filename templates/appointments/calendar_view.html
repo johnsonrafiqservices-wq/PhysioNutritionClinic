@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calendar Schedule - Alafia Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar3 text-primary me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Calendar Schedule</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --alafia-primary: #2c5282;
+        --alafia-secondary: #38a169;
+        --alafia-gradient: linear-gradient(135deg, #2c5282 0%, #38a169 100%);
+        --alafia-light-blue: #e6f3ff;
+        --alafia-light-green: #e6f7ed;
+    }
+
+    .calendar-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(44, 82, 130, 0.1);
+        overflow: hidden;
+    }
+
+    .calendar-header {
+        background: var(--alafia-gradient);
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .calendar-nav-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .calendar-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .calendar-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: #e2e8f0;
+    }
+
+    .calendar-day-header {
+        background: var(--alafia-light-blue);
+        padding: 1rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--alafia-primary);
+        border-bottom: 2px solid var(--alafia-primary);
+    }
+
+    .calendar-day {
+        background: white;
+        min-height: 120px;
+        padding: 0.75rem;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+
+    .calendar-day:hover {
+        background: var(--alafia-light-blue);
+        border-color: var(--alafia-primary);
+    }
+
+    .calendar-day.other-month {
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+
+    .calendar-day.today {
+        background: var(--alafia-light-green);
+        border-color: var(--alafia-secondary);
+        box-shadow: inset 0 0 0 2px var(--alafia-secondary);
+    }
+
+    .calendar-day.has-appointments {
+        border-left: 4px solid var(--alafia-secondary);
+    }
+
+    .day-number {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        color: var(--alafia-primary);
+    }
+
+    .calendar-day.other-month .day-number {
+        color: #6c757d;
+    }
+
+    .appointment-indicator {
+        background: var(--alafia-gradient);
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: 12px;
+        margin-bottom: 0.25rem;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .appointment-indicator:hover {
+        transform: scale(1.05);
+    }
+
+    .appointment-count {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: var(--alafia-secondary);
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .calendar-stats {
+        background: var(--alafia-light-blue);
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--alafia-primary);
+        font-weight: 600;
+    }
+
+    .day-detail-modal .modal-header {
+        background: var(--alafia-gradient);
+        color: white;
+        border-bottom: none;
+    }
+
+    .day-detail-modal .modal-header .btn-close {
+        filter: invert(1);
+    }
+
+    .appointment-card {
+        border-left: 4px solid var(--alafia-secondary);
+        background: var(--alafia-light-green);
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-radius: 8px;
+        transition: transform 0.2s ease;
+    }
+
+    .appointment-card:hover {
+        transform: translateX(4px);
+    }
+
+    .appointment-time {
+        font-weight: 700;
+        color: var(--alafia-primary);
+        font-size: 1.1rem;
+    }
+
+    .appointment-patient {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 0.25rem;
+    }
+
+    .appointment-service {
+        color: var(--alafia-secondary);
+        font-weight: 500;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-scheduled { background: #e3f2fd; color: #1976d2; }
+    .status-confirmed { background: #e8f5e8; color: #2e7d32; }
+    .status-in_progress { background: #fff3e0; color: #f57c00; }
+    .status-completed { background: #e8f5e8; color: #388e3c; }
+    .status-cancelled { background: #ffebee; color: #d32f2f; }
+    .status-no_show { background: #fafafa; color: #616161; }
+
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .btn-calendar {
+        background: var(--alafia-gradient);
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-calendar:hover {
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(44, 82, 130, 0.3);
+    }
+
+    .btn-calendar-outline {
+        background: transparent;
+        border: 2px solid var(--alafia-primary);
+        color: var(--alafia-primary);
+    }
+
+    .btn-calendar-outline:hover {
+        background: var(--alafia-primary);
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-day {
+            min-height: 80px;
+            padding: 0.5rem;
+        }
+        
+        .calendar-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .calendar-nav {
+            display: flex;
+            gap: 1rem;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="calendar-container">
+                <!-- Calendar Header -->
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <a href="?year={{ prev_year }}&month={{ prev_month }}" class="calendar-nav-btn">
+                            <i class="bi bi-chevron-left"></i>
+                            Previous
+                        </a>
+                    </div>
+                    
+                    <h2 class="calendar-title">{{ month_name }} {{ year }}</h2>
+                    
+                    <div class="calendar-nav">
+                        <a href="?year={{ next_year }}&month={{ next_month }}" class="calendar-nav-btn">
+                            Next
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div class="calendar-grid">
+                    <!-- Day Headers -->
+                    <div class="calendar-day-header">Monday</div>
+                    <div class="calendar-day-header">Tuesday</div>
+                    <div class="calendar-day-header">Wednesday</div>
+                    <div class="calendar-day-header">Thursday</div>
+                    <div class="calendar-day-header">Friday</div>
+                    <div class="calendar-day-header">Saturday</div>
+                    <div class="calendar-day-header">Sunday</div>
+
+                    <!-- Calendar Days -->
+                    {% for week in weeks %}
+                        {% for day in week %}
+                            <div class="calendar-day {% if not day.is_current_month %}other-month{% endif %} {% if day.is_today %}today{% endif %} {% if day.appointment_count > 0 %}has-appointments{% endif %}"
+                                 data-date="{{ day.date|date:'Y-m-d' }}"
+                                 data-year="{{ day.date.year }}"
+                                 data-month="{{ day.date.month }}"
+                                 data-day="{{ day.date.day }}"
+                                 onclick="showDayDetail('{{ day.date.year }}', '{{ day.date.month }}', '{{ day.date.day }}')">
+                                
+                                <div class="day-number">{{ day.date.day }}</div>
+                                
+                                {% if day.appointment_count > 0 %}
+                                    <div class="appointment-count">{{ day.appointment_count }}</div>
+                                    
+                                    {% for appointment in day.appointments|slice:":2" %}
+                                        <div class="appointment-indicator" title="{{ appointment.patient.get_full_name }} - {{ appointment.service.name }}">
+                                            {{ appointment.appointment_time|date:'H:i' }} {{ appointment.patient.first_name }}
+                                        </div>
+                                    {% endfor %}
+                                    
+                                    {% if day.appointment_count > 2 %}
+                                        <div class="appointment-indicator" style="background: #6c757d;">
+                                            +{{ day.appointment_count|add:'-2' }} more
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <!-- Calendar Stats -->
+                <div class="calendar-stats">
+                    <div class="stat-item">
+                        <i class="bi bi-calendar-check"></i>
+                        <span>{{ total_appointments }} appointments this month</span>
+                    </div>
+                    
+                    <div class="quick-actions">
+                        <a href="?year=2024&month=1" class="btn-calendar-outline me-2">
+                            <i class="bi bi-calendar-date"></i>
+                            Jan 2024
+                        </a>
+                        <button type="button" class="btn-calendar" data-bs-toggle="modal" data-bs-target="#appointmentCreateModal">
+                            <i class="bi bi-plus-circle"></i>
+                            New Appointment
+                        </button>
+                        <a href="{% url 'appointments:appointment_list' %}" class="btn-calendar-outline">
+                            <i class="bi bi-list-ul"></i>
+                            List View
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Day Detail Modal -->
+<div class="modal fade day-detail-modal" id="dayDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dayDetailTitle">Appointments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="dayDetailBody">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDayDetail(year, month, day) {
+    const modal = new bootstrap.Modal(document.getElementById('dayDetailModal'));
+    const titleElement = document.getElementById('dayDetailTitle');
+    const bodyElement = document.getElementById('dayDetailBody');
+    
+    // Show loading state
+    bodyElement.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch day details
+    fetch(`/appointments/calendar/${year}/${month}/${day}/`)
+        .then(response => response.json())
+        .then(data => {
+            titleElement.textContent = `Appointments - ${data.date_display}`;
+            
+            if (data.appointments.length === 0) {
+                bodyElement.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3 text-muted">No appointments scheduled</h5>
+                        <p class="text-muted">This day is available for new appointments.</p>
+                        <button type="button" class="btn-calendar mt-2" data-bs-toggle="modal" data-bs-target="#appointmentCreateModal">
+                            <i class="bi bi-plus-circle"></i>
+                            Schedule Appointment
+                        </button>
+                    </div>
+                `;
+            } else {
+                let appointmentsHtml = '';
+                data.appointments.forEach(appointment => {
+                    appointmentsHtml += `
+                        <div class="appointment-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="appointment-time">${appointment.time}</div>
+                                <span class="status-badge status-${appointment.status}">${appointment.status_display}</span>
+                            </div>
+                            <div class="appointment-patient">${appointment.patient_name} (${appointment.patient_id})</div>
+                            <div class="appointment-service">${appointment.service}</div>
+                            <div class="text-muted small">Provider: ${appointment.provider}</div>
+                            ${appointment.notes ? `<div class="text-muted small mt-1"><i class="bi bi-chat-text"></i> ${appointment.notes}</div>` : ''}
+                            <div class="d-flex gap-2 mt-2">
+                                <a href="/appointments/${appointment.id}/" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                bodyElement.innerHTML = appointmentsHtml;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching day details:', error);
+            bodyElement.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Error loading appointments. Please try again.
+                </div>
+            `;
+        });
+}
+
+// Add keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft') {
+        document.querySelector('a[href*="month={{ prev_month }}"]').click();
+    } else if (e.key === 'ArrowRight') {
+        document.querySelector('a[href*="month={{ next_month }}"]').click();
+    }
+});
+
+// Add today button functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Add "Today" button to navigation
+    const todayBtn = document.createElement('a');
+    todayBtn.href = '?year={{ today.year }}&month={{ today.month }}';
+    todayBtn.className = 'calendar-nav-btn';
+    todayBtn.innerHTML = '<i class="bi bi-house"></i> Today';
+    
+    const prevBtn = document.querySelector('.calendar-nav');
+    prevBtn.appendChild(todayBtn);
+});
+</script>
+{% endblock %}

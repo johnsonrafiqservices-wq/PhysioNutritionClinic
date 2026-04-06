@@ -1,0 +1,318 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans 'Dashboard' %} | {{ site_title|default:_('Alafia Point Wellness Clinic Admin') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<!-- Bootstrap CSS (local) -->
+<link href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+<!-- Bootstrap Icons (local) -->
+<link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
+<!-- Font Awesome (for existing icons) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* Bootstrap Integration with Alafia Design System */
+    :root {
+        --bs-primary: var(--alafia-primary);
+        --bs-primary-rgb: var(--alafia-primary-rgb);
+        --bs-success: var(--alafia-success);
+        --bs-info: var(--alafia-info);
+        --bs-warning: var(--alafia-warning);
+        --bs-danger: var(--alafia-danger);
+        --bs-light: var(--alafia-light);
+        --bs-dark: var(--alafia-dark);
+        --bs-border-color: var(--alafia-border);
+        --bs-border-radius: 0.75rem;
+        --bs-border-radius-sm: 0.5rem;
+        --bs-border-radius-lg: 1rem;
+    }
+
+    /* Custom Dashboard Enhancements */
+    .dashboard-container {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .dashboard-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header-custom {
+        background: linear-gradient(135deg, var(--alafia-primary-light) 0%, var(--alafia-gradient-light) 100%);
+        border-bottom: 1px solid var(--alafia-border);
+        font-weight: 600;
+        color: var(--alafia-dark);
+        padding: 1rem 1.25rem;
+    }
+
+    .quick-action-btn {
+        background: var(--alafia-gradient);
+        border: none;
+        color: white;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+    }
+
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        color: white;
+        text-decoration: none;
+        opacity: 0.9;
+    }
+
+    .module-list-item {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    .module-list-item:hover {
+        background: var(--alafia-primary-light);
+        border-left-color: var(--alafia-primary);
+        transform: translateX(3px);
+    }
+
+    .module-list-item a {
+        color: var(--alafia-primary);
+        text-decoration: none;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .module-list-item a:hover {
+        color: var(--alafia-primary-dark);
+        text-decoration: none;
+    }
+
+    .recent-action-item {
+        border-left: 3px solid var(--alafia-primary);
+        background: var(--alafia-primary-light);
+        transition: all 0.2s ease;
+        margin-bottom: 0.75rem;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    .recent-action-item:hover {
+        background: var(--alafia-gradient-light);
+        transform: translateX(3px);
+    }
+
+    .recent-action-time {
+        font-size: 0.75rem;
+        color: var(--alafia-secondary);
+        font-weight: 500;
+    }
+
+    .recent-action-text {
+        color: var(--alafia-dark);
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    /* Bootstrap Button Customizations */
+    .btn-outline-primary {
+        border-color: var(--alafia-primary);
+        color: var(--alafia-primary);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--alafia-primary);
+        border-color: var(--alafia-primary);
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .dashboard-card {
+            margin-bottom: 1rem;
+        }
+        
+        .quick-action-btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* Custom Scrollbar for Recent Actions */
+    .recent-actions-container {
+        max-height: 350px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--alafia-border) transparent;
+    }
+
+    .recent-actions-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .recent-actions-container::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .recent-actions-container::-webkit-scrollbar-thumb {
+        background: var(--alafia-border);
+        border-radius: 3px;
+    }
+
+    .recent-actions-container::-webkit-scrollbar-thumb:hover {
+        background: var(--alafia-secondary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid dashboard-container">
+    {% if dashboard.children %}
+        <div class="row g-4">
+            {% for module in dashboard.children %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-header card-header-custom d-flex align-items-center">
+                            {% if module.title %}
+                                {% if 'Quick Actions' in module.title %}
+                                    <i class="fas fa-bolt me-2"></i>
+                                {% elif 'Recent Actions' in module.title %}
+                                    <i class="fas fa-clock me-2"></i>
+                                {% elif 'Patient' in module.title %}
+                                    <i class="fas fa-user-injured me-2"></i>
+                                {% elif 'Appointment' in module.title %}
+                                    <i class="fas fa-calendar-check me-2"></i>
+                                {% elif 'Medical' in module.title %}
+                                    <i class="fas fa-file-medical me-2"></i>
+                                {% elif 'System' in module.title %}
+                                    <i class="fas fa-cogs me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-folder me-2"></i>
+                                {% endif %}
+                                <span class="fw-semibold">{{ module.title }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            {% if module.template %}
+                                {% include module.template with module=module %}
+                            {% else %}
+                                {% if 'Quick Actions' in module.title %}
+                                    <div class="row g-2">
+                                        {% for child in module.children %}
+                                            <div class="col-12 col-sm-6">
+                                                <a href="{{ child.url }}" class="btn quick-action-btn w-100">
+                                                    {% if 'Patient' in child.title %}
+                                                        <i class="fas fa-user-plus me-2"></i>
+                                                    {% elif 'Appointment' in child.title %}
+                                                        <i class="fas fa-calendar-plus me-2"></i>
+                                                    {% elif 'Invoice' in child.title %}
+                                                        <i class="fas fa-file-invoice me-2"></i>
+                                                    {% elif 'Lab' in child.title %}
+                                                        <i class="fas fa-flask me-2"></i>
+                                                    {% else %}
+                                                        <i class="fas fa-plus me-2"></i>
+                                                    {% endif %}
+                                                    {{ child.title }}
+                                                </a>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% elif 'Recent Actions' in module.title %}
+                                    <div class="recent-actions-container">
+                                        {% for action in module.children %}
+                                            <div class="recent-action-item p-3">
+                                                <div class="recent-action-time mb-1">{{ action.timestamp|timesince }} ago</div>
+                                                <div class="recent-action-text">{{ action.title }}</div>
+                                            </div>
+                                        {% empty %}
+                                            <div class="text-center text-muted py-4">
+                                                <i class="fas fa-clock fa-2x mb-2 opacity-50"></i>
+                                                <p class="mb-0">No recent activity</p>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="list-group list-group-flush">
+                                        {% for child in module.children %}
+                                            <div class="module-list-item">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <a href="{{ child.url }}" class="flex-grow-1">
+                                                        {% if 'patient' in child.title|lower %}
+                                                            <i class="fas fa-user-injured me-2"></i>
+                                                        {% elif 'appointment' in child.title|lower %}
+                                                            <i class="fas fa-calendar-check me-2"></i>
+                                                        {% elif 'invoice' in child.title|lower %}
+                                                            <i class="fas fa-file-invoice-dollar me-2"></i>
+                                                        {% elif 'payment' in child.title|lower %}
+                                                            <i class="fas fa-credit-card me-2"></i>
+                                                        {% elif 'medical' in child.title|lower %}
+                                                            <i class="fas fa-file-medical me-2"></i>
+                                                        {% elif 'lab' in child.title|lower %}
+                                                            <i class="fas fa-flask me-2"></i>
+                                                        {% elif 'user' in child.title|lower %}
+                                                            <i class="fas fa-user me-2"></i>
+                                                        {% elif 'drug' in child.title|lower %}
+                                                            <i class="fas fa-pills me-2"></i>
+                                                        {% elif 'report' in child.title|lower %}
+                                                            <i class="fas fa-chart-bar me-2"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-file me-2"></i>
+                                                        {% endif %}
+                                                        {{ child.title }}
+                                                    </a>
+                                                    <div class="btn-group btn-group-sm">
+                                                        {% if child.add_url %}
+                                                            <a href="{{ child.add_url }}" class="btn btn-outline-primary btn-sm">
+                                                                <i class="fas fa-plus"></i>
+                                                            </a>
+                                                        {% endif %}
+                                                        {% if child.change_url %}
+                                                            <a href="{{ child.change_url }}" class="btn btn-outline-secondary btn-sm">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-tachometer-alt fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">Welcome to Alafia Point Wellness Clinic</h4>
+                        <p class="text-muted">Your dashboard modules will appear here once configured.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Bootstrap JS (local) -->
+<script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+{% endblock %}

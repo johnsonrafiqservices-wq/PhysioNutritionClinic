@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-building me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Departments</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+{% if request.user.role == 'admin' %}
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createDepartmentModal">
+    <i class="bi bi-plus-circle"></i> Add Department
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Departments List -->
+<div class="row">
+    {% if departments %}
+        {% for dept in departments %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">{{ dept.name }}</h5>
+                            <p class="text-muted mb-0"><small>{{ dept.code }}</small></p>
+                        </div>
+                        {% if dept.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if dept.description %}
+                    <p class="card-text text-muted small">{{ dept.description|truncatewords:20 }}</p>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="mb-0">
+                                <h4 class="text-primary mb-0">{{ dept.active_staff_count }}</h4>
+                                <small class="text-muted">Staff Members</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-0">
+                                {% if dept.head %}
+                                    <h6 class="mb-0 text-truncate">{{ dept.head.get_full_name|truncatewords:2 }}</h6>
+                                    <small class="text-muted">Department Head</small>
+                                {% else %}
+                                    <h6 class="mb-0 text-muted">-</h6>
+                                    <small class="text-muted">No Head Assigned</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if request.user.role == 'admin' %}
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary flex-fill" title="Edit">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-info flex-fill" title="View Staff">
+                            <i class="bi bi-people"></i> Staff
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center py-5">
+                        <i class="bi bi-building" style="font-size: 3rem; color: var(--alafia-secondary);"></i>
+                        <h4 class="text-muted mt-3">No Departments</h4>
+                        <p class="text-muted">Create your first department to organize staff.</p>
+                        {% if request.user.role == 'admin' %}
+                        <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#createDepartmentModal">
+                            <i class="bi bi-plus-circle me-2"></i>Add First Department
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Create Department Modal -->
+<div class="modal fade" id="createDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-building me-2"></i>Add Department</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form data-modal-form method="post" action="{% url 'staff_management:department_create_ajax' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Department Name *</label>
+                        <input type="text" name="name" class="form-control" required 
+                               placeholder="e.g., Physiotherapy">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department Code *</label>
+                        <input type="text" name="code" class="form-control" required 
+                               placeholder="e.g., PHYSIO" maxlength="10">
+                        <small class="form-text text-muted">Short code for the department</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="3" 
+                                  placeholder="Brief description of the department"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department Head</label>
+                        <select name="head" class="form-select">
+                            <option value="">No head assigned</option>
+                            {% for member in staff %}
+                            <option value="{{ member.user.id }}">{{ member.user.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="is_active" class="form-check-input" id="is_active" checked>
+                        <label class="form-check-label" for="is_active">
+                            Active Department
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Create Department
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Handle modal form submission
+document.querySelector('#createDepartmentModal form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || 'An error occurred');
+        }
+    } catch (error) {
+        alert('An error occurred. Please try again.');
+    }
+});
+</script>
+{% endblock %}

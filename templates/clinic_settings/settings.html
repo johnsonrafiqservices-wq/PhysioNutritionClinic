@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Clinic Settings - {{ settings.clinic_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-gear-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Clinic Settings</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Clinic Information</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.clinic_name.id_for_label }}" class="form-label">Clinic Name</label>
+                                {{ form.clinic_name }}
+                                {% if form.clinic_name.help_text %}
+                                    <div class="form-text">{{ form.clinic_name.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number</label>
+                                {{ form.phone }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
+                                {{ form.email }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.website.id_for_label }}" class="form-label">Website</label>
+                                {{ form.website }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.address.id_for_label }}" class="form-label">Address</label>
+                        {{ form.address }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.logo.id_for_label }}" class="form-label">Clinic Logo</label>
+                        {{ form.logo }}
+                        {% if form.logo.help_text %}
+                            <div class="form-text">{{ form.logo.help_text }}</div>
+                        {% endif %}
+                        {% if settings.logo %}
+                            <div class="mt-2">
+                                <small class="text-muted">Current logo:</small><br>
+                                <img src="{{ settings.logo.url }}" alt="Current Logo" class="img-thumbnail" style="max-height: 100px;">
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Save Settings
+                        </button>
+                        <a href="{% url 'clinic_settings:theme_customization' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-palette"></i> Customize Theme
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Theme Customization Card -->
+        <div class="card shadow mt-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Theme Customization</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Customize the colors and appearance of the entire clinic management system.</p>
+                <div class="d-grid">
+                    <a href="{% url 'clinic_settings:theme_customization' %}" class="btn btn-primary">
+                        <i class="bi bi-palette"></i> Open Theme Customizer
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Modules Card -->
+        <div class="card shadow mt-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">System Modules</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Enable or disable system modules to customize which features are available in the clinic.</p>
+                <div class="d-grid">
+                    <a href="{% url 'clinic_settings:modules' %}" class="btn btn-primary">
+                        <i class="bi bi-grid"></i> Manage Modules
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Management Card -->
+        {% url 'clinic_settings:database' as db_url %}
+        {% if db_url %}
+        <div class="card shadow mt-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Database Management</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Export (download) or import (restore) the system database. Useful for backups and data migration.</p>
+                <div class="d-grid">
+                    <a href="{{ db_url }}" class="btn btn-primary">
+                        <i class="bi bi-database"></i> Manage Database
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- User Permissions Card -->
+        <div class="card shadow mt-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">User Permissions</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Assign, grant, or revoke app access rights for individual users. Overrides role defaults.</p>
+                <div class="d-grid">
+                    <a href="{% url 'accounts:manage_permissions' %}" class="btn btn-primary">
+                        <i class="bi bi-shield-lock"></i> Manage Permissions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Preview</h6>
+            </div>
+            <div class="card-body text-center">
+                {% if settings.logo %}
+                    <img src="{{ settings.logo.url }}" alt="{{ settings.clinic_name }}" class="img-fluid mb-3" style="max-height: 120px;">
+                {% else %}
+                    <div class="bg-light p-4 mb-3 rounded">
+                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No logo uploaded</p>
+                    </div>
+                {% endif %}
+                <h5>{{ settings.clinic_name }}</h5>
+                {% if settings.address %}
+                    <p class="text-muted small">{{ settings.address }}</p>
+                {% endif %}
+                {% if settings.phone %}
+                    <p class="text-muted small"><i class="bi bi-telephone"></i> {{ settings.phone }}</p>
+                {% endif %}
+                {% if settings.email %}
+                    <p class="text-muted small"><i class="bi bi-envelope"></i> {{ settings.email }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+
+{% block title %}Appointment Details - {{ appointment.patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar-event-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Appointment Details</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <!-- {% if appointment.status == 'scheduled' %}
+        <a href="#" class="btn btn-success" onclick="confirmAppointment({{ appointment.id }})">
+            <i class="bi bi-check"></i> Confirm
+        </a>
+    {% endif %} -->
+    {% if user.is_staff or user == appointment.patient.user %}
+        {% if appointment.status != 'confirmed' %}
+        <form method="post" action="{% url 'appointments:appointment_confirm' appointment.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-check"></i> Confirm Appointment
+            </button>
+        </form>
+        {% endif %}
+        {% if user.is_staff %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#appointmentUpdateModal" onclick="loadAppointmentData({{ appointment.id }})">
+            <i class="fas fa-edit"></i> Edit Appointment
+        </button>
+        {% endif %}
+    {% endif %}
+    {% if appointment.status in 'scheduled,confirmed' %}
+        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#appointmentRescheduleModal" onclick="loadRescheduleData({{ appointment.id }})">
+            <i class="bi bi-calendar-event"></i> Reschedule
+        </button>
+        <button class="btn btn-danger" onclick="confirmCancelAppointment({{ appointment.id }})">
+            <i class="bi bi-x"></i> Cancel
+        </button>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Appointment Information -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Appointment Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Appointment ID:</strong></td>
+                                <td><span class="fw-semibold text-primary">{{ appointment.id }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Date:</strong></td>
+                                <td>{{ appointment.appointment_date|date:"F d, Y" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Time:</strong></td>
+                                <td>{{ appointment.appointment_time|time:"g:i A" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Duration:</strong></td>
+                                <td>{{ appointment.service.duration }} minutes</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    <span class="fw-semibold text-{% if appointment.status == 'scheduled' %}secondary{% elif appointment.status == 'confirmed' %}primary{% elif appointment.status == 'in_progress' %}warning{% elif appointment.status == 'completed' %}success{% elif appointment.status == 'cancelled' %}danger{% else %}dark{% endif %}">
+                                        {{ appointment.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Service:</strong></td>
+                                <td>{{ appointment.service.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Provider:</strong></td>
+                                <td>{{ appointment.provider.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Price:</strong></td>
+                                <td>${{ appointment.service.price }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Priority:</strong></td>
+                                <td>
+                                    <span class="fw-semibold text-{% if appointment.priority == 'high' %}danger{% elif appointment.priority == 'medium' %}warning{% else %}info{% endif %}">
+                                        {{ appointment.get_priority_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Created:</strong></td>
+                                <td>{{ appointment.created_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if appointment.reason_for_visit %}
+                <div class="mt-3">
+                    <strong>Reason for Visit:</strong>
+                    <p class="mt-1">{{ appointment.reason_for_visit }}</p>
+                </div>
+                {% endif %}
+                
+                {% if appointment.notes %}
+                <div class="mt-3">
+                    <strong>Notes:</strong>
+                    <p class="mt-1">{{ appointment.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Patient Information -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Information</h6>
+                <a href="{% url 'patients:patient_detail' appointment.patient.patient_id %}" class="btn btn-sm btn-outline-primary">
+                    View Full Profile
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Name:</strong></td>
+                                <td>{{ appointment.patient.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Patient ID:</strong></td>
+                                <td>{{ appointment.patient.patient_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Age:</strong></td>
+                                <td>{{ appointment.patient.get_age }} years</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Gender:</strong></td>
+                                <td>{{ appointment.patient.get_gender_display }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Phone:</strong></td>
+                                <td>{{ appointment.patient.phone }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>{% if appointment.patient.email %}{{ appointment.patient.email }}{% else %}<em>Not provided</em>{% endif %}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Insurance:</strong></td>
+                                <td>{% if appointment.patient.insurance_provider %}{{ appointment.patient.insurance_provider }}{% else %}<em>No insurance</em>{% endif %}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if appointment.patient.allergies %}
+                <div class="alert alert-warning mt-3">
+                    <strong><i class="bi bi-exclamation-triangle"></i> Allergies:</strong>
+                    {{ appointment.patient.allergies }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Treatment Sessions -->
+        {% if treatment_sessions %}
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Treatment Sessions</h6>
+            </div>
+            <div class="card-body">
+                {% for session in treatment_sessions %}
+                <div class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6>{{ session.session_date|date:"M d, Y H:i" }}</h6>
+                            <p class="mb-1"><strong>Treatment:</strong> {{ session.treatment_provided }}</p>
+                            {% if session.assessment %}
+                                <p class="mb-1"><strong>Assessment:</strong> {{ session.assessment|truncatechars:100 }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="fw-semibold text-success">{{ session.duration_minutes }} min</span>
+                    </div>
+                    <small class="text-muted">By {{ session.provider.get_full_name }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#vitalSignsModal" onclick="setVitalSignsPatient('{{ appointment.patient.patient_id }}')">
+                        <i class="bi bi-heart-pulse"></i> Record Vitals
+                    </button>
+                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#medicalRecordModal" onclick="setMedicalRecordPatient('{{ appointment.patient.patient_id }}')">
+                        <i class="bi bi-file-medical"></i> Add Medical Record
+                    </button>
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#paymentModal" onclick="setPaymentAppointment('{{ appointment.patient.id }}', '{{ appointment.id }}')">
+                        <i class="bi bi-credit-card"></i> Record Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Information -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Service Details</h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ appointment.service.name }}</h6>
+                <p class="text-muted">{{ appointment.service.description }}</p>
+                <div class="row">
+                    <div class="col-6">
+                        <small><strong>Duration:</strong><br>{{ appointment.service.duration }} minutes</small>
+                    </div>
+                    <div class="col-6">
+                        <small><strong>Price:</strong><br>${{ appointment.service.price }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Provider Information -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Provider Details</h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ appointment.provider.get_full_name }}</h6>
+                <p class="text-muted">{{ appointment.provider.get_role_display }}</p>
+                {% if appointment.provider.email %}
+                    <small><strong>Email:</strong> {{ appointment.provider.email }}</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Appointment History -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient's Recent Appointments</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_appointments %}
+                    {% for recent in recent_appointments %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <small class="text-muted">{{ recent.appointment_date|date:"M d, Y" }}</small>
+                        <div>
+                            <strong>{{ recent.service.name }}</strong>
+                            <span class="fw-semibold text-{% if recent.status == 'completed' %}success{% elif recent.status == 'cancelled' %}danger{% else %}secondary{% endif %} ms-2">
+                                {{ recent.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No previous appointments.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load appointment data for edit modal
+function loadAppointmentData(appointmentId) {
+    // Set the form action
+    const form = document.getElementById('appointmentUpdateForm');
+    if (!form) return;
+    
+    form.action = `/appointments/ajax/${appointmentId}/update/`;
+    
+    // Fetch appointment data via AJAX
+    fetch(`/appointments/${appointmentId}/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch appointment data');
+        return response.text();
+    })
+    .then(html => {
+        // Parse the HTML to extract data (or use a JSON endpoint)
+        // For now, populate with data from the page
+        populateUpdateForm();
+    })
+    .catch(error => {
+        console.error('Error loading appointment data:', error);
+        // Fall back to using data from the current page
+        populateUpdateForm();
+    });
+}
+
+// Populate update form with current appointment data
+function populateUpdateForm() {
+    // Patient
+    const patientSelect = document.getElementById('appointment_update_patient_select');
+    if (patientSelect) {
+        patientSelect.innerHTML = '<option value="{{ appointment.patient.id }}" selected>{{ appointment.patient.get_full_name }}</option>';
+    }
+    
+    // Service
+    const serviceSelect = document.getElementById('appointment_update_service_select');
+    if (serviceSelect) {
+        serviceSelect.innerHTML = '<option value="{{ appointment.service.id }}" selected>{{ appointment.service.name }}</option>';
+    }
+    
+    // Provider
+    const providerSelect = document.getElementById('appointment_update_provider_select');
+    if (providerSelect) {
+        providerSelect.innerHTML = '<option value="{{ appointment.provider.id }}" selected>{{ appointment.provider.get_full_name }}</option>';
+    }
+    
+    // Status
+    const statusSelect = document.getElementById('appointment_update_status');
+    if (statusSelect) {
+        statusSelect.value = '{{ appointment.status }}';
+    }
+    
+    // Date
+    const dateInput = document.getElementById('appointment_update_date');
+    if (dateInput) {
+        dateInput.value = '{{ appointment.appointment_date|date:"Y-m-d" }}';
+    }
+    
+    // Time
+    const timeInput = document.getElementById('appointment_update_time');
+    if (timeInput) {
+        timeInput.value = '{{ appointment.appointment_time|time:"H:i" }}';
+    }
+    
+    // Notes
+    const notesTextarea = document.getElementById('appointment_update_notes');
+    if (notesTextarea) {
+        notesTextarea.value = `{{ appointment.notes|escapejs }}`;
+    }
+}
+
+// Load reschedule modal data
+function loadRescheduleData(appointmentId) {
+    const form = document.getElementById('appointmentRescheduleForm');
+    if (form) {
+        form.action = `/appointments/ajax/${appointmentId}/reschedule/`;
+        
+        // Populate with current date and time
+        const dateInput = document.getElementById('reschedule_date');
+        if (dateInput) {
+            dateInput.value = '{{ appointment.appointment_date|date:"Y-m-d" }}';
+        }
+        
+        const timeInput = document.getElementById('reschedule_time');
+        if (timeInput) {
+            timeInput.value = '{{ appointment.appointment_time|time:"H:i" }}';
+        }
+    }
+}
+
+// Confirm and cancel appointment
+function confirmCancelAppointment(appointmentId) {
+    showConfirmModal(
+        'Cancel Appointment',
+        'Are you sure you want to cancel this appointment? This action cannot be undone.',
+        function() {
+            // Make AJAX call to cancel
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            fetch(`/appointments/ajax/${appointmentId}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast(data.message || 'Error canceling appointment', 'error');
+                }
+            })
+            .catch(error => {
+                showToast('An error occurred', 'error');
+            });
+        },
+        { confirmText: 'Cancel Appointment', confirmClass: 'btn-danger' }
+    );
+}
+
+// Set vital signs patient
+function setVitalSignsPatient(patientId) {
+    const form = document.getElementById('vitalSignsForm');
+    if (form) {
+        form.action = `/patients/ajax/${patientId}/vitals/`;
+    }
+}
+
+// Set medical record patient
+function setMedicalRecordPatient(patientId) {
+    const form = document.getElementById('medicalRecordForm');
+    if (form) {
+        form.action = `/medical_records/ajax/${patientId}/create/`;
+    }
+}
+
+// Set payment appointment
+function setPaymentAppointment(patientId, appointmentId) {
+    const form = document.getElementById('paymentForm');
+    if (form) {
+        form.action = '/billing/ajax/payment/record/';
+        // Set hidden fields
+        const patientInput = form.querySelector('[name="patient"]');
+        if (patientInput) patientInput.value = patientId;
+    }
+}
+
+// Setup form submissions for modals
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup appointment update form
+    const updateForm = document.getElementById('appointmentUpdateForm');
+    if (updateForm) {
+        updateForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitModalForm('appointmentUpdateForm', 'appointmentUpdateModal', function() {
+                window.location.reload();
+            });
+        });
+    }
+    
+    // Setup reschedule form
+    const rescheduleForm = document.getElementById('appointmentRescheduleForm');
+    if (rescheduleForm) {
+        rescheduleForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitModalForm('appointmentRescheduleForm', 'appointmentRescheduleModal', function() {
+                window.location.reload();
+            });
+        });
+    }
+    
+    // Setup vital signs form
+    const vitalForm = document.getElementById('vitalSignsForm');
+    if (vitalForm) {
+        vitalForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitModalForm('vitalSignsForm', 'vitalSignsModal', function() {
+                showToast('Vital signs recorded successfully', 'success');
+            });
+        });
+    }
+    
+    // Setup payment form
+    const paymentForm = document.getElementById('paymentForm');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitModalForm('paymentForm', 'paymentModal', function() {
+                window.location.reload();
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

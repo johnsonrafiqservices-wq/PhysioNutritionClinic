@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{{ title }} - {{ clinic_settings.clinic_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-clipboard-check me-2"></i>{{ title }}</h2>
+                <a href="{% url 'budget:budget_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back
+                </a>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                Budget Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name|add_class:"form-control" }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description|add_class:"form-control" }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.period_type.id_for_label }}" class="form-label">
+                                    Period Type <span class="text-danger">*</span>
+                                </label>
+                                {{ form.period_type|add_class:"form-select" }}
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                                    Start Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.start_date|add_class:"form-control" }}
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                                    End Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.end_date|add_class:"form-control" }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.total_amount.id_for_label }}" class="form-label">
+                                    Total Amount <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">UGX</span>
+                                    {{ form.total_amount|add_class:"form-control" }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">
+                                    Status <span class="text-danger">*</span>
+                                </label>
+                                {{ form.status|add_class:"form-select" }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between pt-3 border-top">
+                            <a href="{% url 'budget:budget_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle me-1"></i> Save Budget
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

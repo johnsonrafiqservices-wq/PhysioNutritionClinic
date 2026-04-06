@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Pharmacy Dashboard{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-capsule me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Pharmacy Dashboard</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:inventory' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-box-seam"></i> Inventory
+</a>
+<a href="{% url 'pharmacy:prescription_list' %}" class="btn btn-outline-success btn-sm">
+    <i class="bi bi-prescription2"></i> Prescriptions
+</a>
+<a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-outline-info btn-sm">
+    <i class="bi bi-cart3"></i> Sales
+</a>
+{% endblock %}
+
+{% block content %}
+<style>
+.kpi{border-left:3px solid transparent;transition:border-color .2s;}
+.kpi:hover{border-left-color:var(--accent,#0d6efd);}
+.kpi .kpi-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.kpi .kpi-val{font-size:1.35rem;font-weight:700;line-height:1.2;}
+.kpi .kpi-lbl{font-size:.72rem;color:#6c757d;margin:0;}
+.kpi .kpi-sub{font-size:.65rem;}
+.qa-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid #dee2e6;color:#495057;background:#fff;transition:all .15s;}
+.qa-btn:hover{background:var(--alafia-primary);color:#fff;border-color:var(--alafia-primary);}
+.qa-btn i{font-size:.9rem;}
+.sched-item{padding:6px 0;border-bottom:1px solid #f0f0f0;}
+.sched-item:last-child{border-bottom:0;}
+</style>
+
+<!-- KPI Row -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:var(--alafia-primary);">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:var(--alafia-primary-light);color:var(--alafia-primary);"><i class="bi bi-capsule"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:var(--alafia-primary);">{{ total_medications|intcomma }}</div>
+                    <p class="kpi-lbl">Medications</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#0891b2;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#cffafe;color:#0891b2;"><i class="bi bi-prescription2"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#0891b2;">{{ total_prescriptions|default:0|intcomma }}</div>
+                    <p class="kpi-lbl">Prescriptions</p>
+                    {% if pending_prescriptions > 0 %}<span class="badge bg-warning-subtle text-warning kpi-sub">{{ pending_prescriptions }} pending</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:{% if low_stock_count > 0 %}#dc3545{% else %}#198754{% endif %};">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#fff3cd;color:#e67e22;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:{% if low_stock_count > 0 %}#dc3545{% else %}#198754{% endif %};">{{ low_stock_count|intcomma }}</div>
+                    <p class="kpi-lbl">Low Stock</p>
+                    {% if low_stock_count > 0 %}<span class="badge bg-danger-subtle text-danger kpi-sub">Reorder needed</span>{% else %}<span class="badge bg-success-subtle text-success kpi-sub">All OK</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm kpi" style="--accent:#198754;">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+                <div class="kpi-icon" style="background:#d1e7dd;color:#198754;"><i class="bi bi-boxes"></i></div>
+                <div>
+                    <div class="kpi-val" style="color:#198754;">{{ total_batches|intcomma }}</div>
+                    <p class="kpi-lbl">Active Batches</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <span class="text-muted me-1" style="font-size:.75rem;line-height:2;"><i class="bi bi-lightning-charge-fill text-warning"></i> Quick:</span>
+    <a href="{% url 'pharmacy:medication_list' %}" class="qa-btn"><i class="bi bi-capsule"></i>Medications</a>
+    <a href="{% url 'pharmacy:batch_list' %}" class="qa-btn"><i class="bi bi-boxes"></i>Batches</a>
+    <a href="{% url 'pharmacy:prescription_list' %}" class="qa-btn"><i class="bi bi-prescription2"></i>Prescriptions</a>
+    <a href="{% url 'pharmacy:supplier_list' %}" class="qa-btn"><i class="bi bi-truck"></i>Suppliers</a>
+    <a href="{% url 'pharmacy:stock_movement_list' %}" class="qa-btn"><i class="bi bi-arrow-left-right"></i>Stock Movements</a>
+    <a href="{% url 'pharmacy:sales_dashboard' %}" class="qa-btn"><i class="bi bi-cart3"></i>Sales</a>
+    <a href="{% url 'pharmacy:inventory' %}" class="qa-btn"><i class="bi bi-box-seam"></i>Inventory</a>
+</div>
+
+<!-- Main Content: Low Stock + Recent Prescriptions -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-exclamation-triangle text-danger me-1"></i>Low Stock Items</h6>
+                <a href="{% url 'pharmacy:medication_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body p-0">
+                {% if low_stock_items %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Medication</th>
+                                <th class="border-0">Batch</th>
+                                <th class="border-0 text-center">Remaining</th>
+                                <th class="border-0 text-center">Reorder Lvl</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for batch in low_stock_items|slice:":8" %}
+                            <tr>
+                                <td class="ps-3 fw-medium">{{ batch.medication.name }}</td>
+                                <td class="text-muted">{{ batch.batch_number }}</td>
+                                <td class="text-center"><span class="badge bg-danger">{{ batch.quantity_remaining }}</span></td>
+                                <td class="text-center text-muted">{{ batch.medication.reorder_level }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle text-success" style="font-size:2rem;"></i>
+                    <p class="text-muted mt-1 mb-0 small">All stocks are healthy</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-prescription2 text-info me-1"></i>Recent Prescriptions</h6>
+                <a href="{% url 'pharmacy:prescription_list' %}" class="text-primary text-decoration-none" style="font-size:.75rem;">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_prescriptions %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Patient</th>
+                                <th class="border-0">Doctor</th>
+                                <th class="border-0">Date</th>
+                                <th class="border-0 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rx in recent_prescriptions %}
+                            <tr>
+                                <td class="ps-3">
+                                    <span class="fw-medium">{{ rx.patient.get_full_name }}</span>
+                                    <br><small class="text-muted">{{ rx.patient.patient_id }}</small>
+                                </td>
+                                <td class="text-muted">{{ rx.prescribed_by.get_full_name }}</td>
+                                <td class="text-muted">{{ rx.prescribed_date|date:"d M Y" }}</td>
+                                <td class="text-center">
+                                    {% if rx.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif rx.status == 'dispensed' %}<span class="badge bg-success">Dispensed</span>
+                                    {% elif rx.status == 'cancelled' %}<span class="badge bg-danger">Cancelled</span>
+                                    {% else %}<span class="badge bg-secondary">{{ rx.status|title }}</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-prescription2 text-muted" style="font-size:2rem;"></i>
+                    <p class="text-muted mt-1 mb-0 small">No recent prescriptions</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-{% if editing %}pencil-square{% else %}plus-circle{% endif %} me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{% if editing %}Edit Laboratory Test{% else %}Add Laboratory Test{% endif %}</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% if editing %}{% url 'laboratory:labtest_detail' test.pk %}{% else %}{% url 'laboratory:labtest_list' %}{% endif %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back
+</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="labTestForm">
+    {% csrf_token %}
+
+    <!-- Test Basic Info -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Test Information</h5>
+        </div>
+        <div class="card-body">
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">Test Name <span class="text-danger">*</span></label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.code.id_for_label }}" class="form-label fw-semibold">Test Code <span class="text-danger">*</span></label>
+                    {{ form.code }}
+                    {% if form.code.errors %}<div class="text-danger small mt-1">{{ form.code.errors }}</div>{% endif %}
+                    <small class="text-muted">Unique identifier (e.g., CBC001)</small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.category.id_for_label }}" class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                    {{ form.category }}
+                    {% if form.category.errors %}<div class="text-danger small mt-1">{{ form.category.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.sample_type.id_for_label }}" class="form-label fw-semibold">Sample Type</label>
+                    {{ form.sample_type }}
+                    {% if form.sample_type.errors %}<div class="text-danger small mt-1">{{ form.sample_type.errors }}</div>{% endif %}
+                    <small class="text-muted">e.g., Blood, Urine, Swab</small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.price.id_for_label }}" class="form-label fw-semibold">Price <span class="text-danger">*</span></label>
+                    {{ form.price }}
+                    {% if form.price.errors %}<div class="text-danger small mt-1">{{ form.price.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.currency.id_for_label }}" class="form-label fw-semibold">Currency</label>
+                    {{ form.currency }}
+                    {% if form.currency.errors %}<div class="text-danger small mt-1">{{ form.currency.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.duration_hours.id_for_label }}" class="form-label fw-semibold">Turnaround (hours)</label>
+                    {{ form.duration_hours }}
+                    {% if form.duration_hours.errors %}<div class="text-danger small mt-1">{{ form.duration_hours.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors }}</div>{% endif %}
+            </div>
+
+            <div class="form-check">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                {% if form.is_active.errors %}<div class="text-danger small mt-1">{{ form.is_active.errors }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Parameters (Profile) -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Test Parameters</h5>
+            <button type="button" class="btn btn-success btn-sm" id="addParamBtn">
+                <i class="bi bi-plus-circle"></i> Add Parameter
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0" id="parametersTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width:150px;">Parameter Name <span class="text-danger">*</span></th>
+                            <th style="min-width:110px;">Code <span class="text-danger">*</span></th>
+                            <th style="min-width:160px;">Result Type</th>
+                            <th style="min-width:90px;">Unit</th>
+                            <th style="min-width:100px;">Ref. Min</th>
+                            <th style="min-width:100px;">Ref. Max</th>
+                            <th style="min-width:140px;">Ref. Range Text</th>
+                            <th style="min-width:160px;">Flag Criteria</th>
+                            <th class="text-center" style="width:60px;">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parametersBody">
+                        <!-- Rows added by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="noParamMsg" class="text-center text-muted py-4">
+                <i class="bi bi-info-circle me-1"></i> No parameters yet. Click <strong>Add Parameter</strong> to define the test components.
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mb-4">
+        <a href="{% if editing %}{% url 'laboratory:labtest_detail' test.pk %}{% else %}{% url 'laboratory:labtest_list' %}{% endif %}" class="btn btn-secondary">
+            <i class="bi bi-x-circle"></i> Cancel
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-circle"></i> {% if editing %}Update Test &amp; Parameters{% else %}Save Test &amp; Parameters{% endif %}
+        </button>
+    </div>
+</form>
+
+<script>
+(function() {
+    var rowIndex = 0;
+
+    var resultTypes = [
+        {% for val, label in result_types %}
+            {value: "{{ val }}", label: "{{ label }}"},
+        {% endfor %}
+    ];
+
+    var flagCriteria = [
+        {% for val, label in flag_criteria %}
+            {value: "{{ val }}", label: "{{ label }}"},
+        {% endfor %}
+    ];
+
+    function buildSelect(name, options, defaultVal) {
+        var s = '<select name="' + name + '" class="form-select form-select-sm">';
+        options.forEach(function(o) {
+            s += '<option value="' + o.value + '"' + (o.value === defaultVal ? ' selected' : '') + '>' + o.label + '</option>';
+        });
+        s += '</select>';
+        return s;
+    }
+
+    function addRow() {
+        var i = rowIndex++;
+        var tbody = document.getElementById('parametersBody');
+        var tr = document.createElement('tr');
+        tr.dataset.index = i;
+        tr.innerHTML =
+            '<td><input type="text" name="param_' + i + '_name" class="form-control form-control-sm" placeholder="e.g., Haemoglobin" required></td>' +
+            '<td><input type="text" name="param_' + i + '_code" class="form-control form-control-sm" placeholder="e.g., HGB" required></td>' +
+            '<td>' + buildSelect('param_' + i + '_result_type', resultTypes, 'numeric') + '</td>' +
+            '<td><input type="text" name="param_' + i + '_unit" class="form-control form-control-sm" placeholder="e.g., g/dL"></td>' +
+            '<td><input type="number" name="param_' + i + '_ref_min" class="form-control form-control-sm" step="any" placeholder="Min"></td>' +
+            '<td><input type="number" name="param_' + i + '_ref_max" class="form-control form-control-sm" step="any" placeholder="Max"></td>' +
+            '<td><input type="text" name="param_' + i + '_ref_text" class="form-control form-control-sm" placeholder="e.g., 12–16 g/dL"></td>' +
+            '<td>' + buildSelect('param_' + i + '_flag_criteria', flagCriteria, 'range') + '</td>' +
+            '<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm remove-row-btn"><i class="bi bi-trash"></i></button></td>';
+        tbody.appendChild(tr);
+        updateNoParamMsg();
+        // Auto-toggle flag criteria based on result type
+        var resultTypeSelect = tr.querySelector('[name="param_' + i + '_result_type"]');
+        var flagSelect = tr.querySelector('[name="param_' + i + '_flag_criteria"]');
+        resultTypeSelect.addEventListener('change', function() {
+            syncFlagCriteria(this.value, flagSelect);
+        });
+    }
+
+    function syncFlagCriteria(resultType, flagSelect) {
+        var mapping = {
+            'positive_negative': 'positive_negative',
+            'reactive_nonreactive': 'reactive_nonreactive',
+            'present_absent': 'present_absent',
+            'detected_not_detected': 'detected_not_detected',
+            'normal_abnormal': 'normal_abnormal',
+            'numeric': 'range',
+            'percentage': 'range',
+            'ratio': 'range',
+            'titer': 'range',
+        };
+        if (mapping[resultType]) {
+            flagSelect.value = mapping[resultType];
+        }
+    }
+
+    function updateNoParamMsg() {
+        var tbody = document.getElementById('parametersBody');
+        var msg = document.getElementById('noParamMsg');
+        msg.style.display = tbody.children.length === 0 ? 'block' : 'none';
+    }
+
+    document.getElementById('addParamBtn').addEventListener('click', addRow);
+
+    document.getElementById('parametersBody').addEventListener('click', function(e) {
+        var btn = e.target.closest('.remove-row-btn');
+        if (btn) {
+            btn.closest('tr').remove();
+            updateNoParamMsg();
+            // Re-index rows so param_0_name, param_1_name, ... are contiguous
+            reindexRows();
+        }
+    });
+
+    function reindexRows() {
+        var rows = document.querySelectorAll('#parametersBody tr');
+        rows.forEach(function(tr, idx) {
+            var oldIdx = tr.dataset.index;
+            tr.dataset.index = idx;
+            tr.querySelectorAll('[name]').forEach(function(el) {
+                el.name = el.name.replace('param_' + oldIdx + '_', 'param_' + idx + '_');
+            });
+        });
+        rowIndex = rows.length;
+    }
+
+    updateNoParamMsg();
+
+    // Pre-populate existing parameters in edit mode
+    {% if editing and existing_params_json %}
+    var existingParams = {{ existing_params_json|safe }};
+    existingParams.forEach(function(p) {
+        addRow();
+        var i = rowIndex - 1;
+        var tbody = document.getElementById('parametersBody');
+        var tr = tbody.querySelector('tr[data-index="' + i + '"]');
+        if (!tr) return;
+        var nameInput = tr.querySelector('[name="param_' + i + '_name"]');
+        var codeInput = tr.querySelector('[name="param_' + i + '_code"]');
+        var rtSelect = tr.querySelector('[name="param_' + i + '_result_type"]');
+        var unitInput = tr.querySelector('[name="param_' + i + '_unit"]');
+        var refMinInput = tr.querySelector('[name="param_' + i + '_ref_min"]');
+        var refMaxInput = tr.querySelector('[name="param_' + i + '_ref_max"]');
+        var refTextInput = tr.querySelector('[name="param_' + i + '_ref_text"]');
+        var flagSelect = tr.querySelector('[name="param_' + i + '_flag_criteria"]');
+        if (nameInput) nameInput.value = p.name;
+        if (codeInput) codeInput.value = p.code;
+        if (rtSelect) rtSelect.value = p.result_type;
+        if (unitInput) unitInput.value = p.unit;
+        if (refMinInput && p.ref_min !== '') refMinInput.value = p.ref_min;
+        if (refMaxInput && p.ref_max !== '') refMaxInput.value = p.ref_max;
+        if (refTextInput) refTextInput.value = p.ref_text;
+        if (flagSelect) flagSelect.value = p.flag_criteria;
+    });
+    {% endif %}
+})();
+</script>
+{% endblock %}

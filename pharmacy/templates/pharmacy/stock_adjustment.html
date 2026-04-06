@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-arrow-repeat me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">{{ title }}</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:batch_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Batches</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-boxes text-primary me-1"></i>Batch Information</h6>
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-2" style="font-size:.85rem;">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Medication</label>
+                        <p class="mb-0 fw-medium">{{ batch.medication.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Batch Number</label>
+                        <p class="mb-0 fw-medium">{{ batch.batch_number }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Current Stock</label>
+                        <p class="mb-0 fw-medium">{{ batch.quantity_remaining }} units</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Expiry Date</label>
+                        <p class="mb-0 fw-medium">{{ batch.expiry_date }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-arrow-repeat text-primary me-1"></i>Stock Adjustment</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger py-2 small">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <label for="{{ form.adjustment_type.id_for_label }}" class="form-label small">Adjustment Type</label>
+                        {{ form.adjustment_type }}
+                        {% if form.adjustment_type.errors %}<div class="invalid-feedback d-block">{{ form.adjustment_type.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <label for="{{ form.quantity.id_for_label }}" class="form-label small">Quantity</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}<div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.reason.id_for_label }}" class="form-label small">Reason for Adjustment</label>
+                        {{ form.reason }}
+                        {% if form.reason.errors %}<div class="invalid-feedback d-block">{{ form.reason.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'pharmacy:batch_list' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle me-1"></i>Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle me-1"></i>Save Adjustment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-info-circle text-info me-1"></i>Instructions</h6>
+            </div>
+            <div class="card-body py-2">
+                <div class="alert alert-info py-2 mb-0 small">
+                    <strong>Before making adjustments:</strong>
+                    <ul class="mb-0 mt-1 ps-3">
+                        <li>Double-check the quantity</li>
+                        <li>Provide a clear reason</li>
+                        <li>Ensure proper authorization</li>
+                        <li>Verify batch information</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+            form.classList.add('was-validated');
+        }, false);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}
+<i class="bi bi-box-seam me-2"></i>Low Stock Alerts
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:inventory_dashboard' %}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+</a>
+<a href="{% url 'pharmacy:expiry_alerts' %}" class="btn btn-danger">
+    <i class="bi bi-exclamation-triangle me-1"></i> Expiry Alerts
+</a>
+<a href="{% url 'pharmacy:purchase_order_list' %}" class="btn btn-success">
+    <i class="bi bi-cart-plus me-1"></i> Purchase Orders
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Card -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="metric-icon warning">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div class="ms-3">
+                        <div class="metric-label">Low Stock Medications</div>
+                        <div class="metric-value text-warning">{{ low_stock_medications.count }}</div>
+                        <small class="text-muted">Medications at or below reorder level</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Medications -->
+{% if low_stock_medications %}
+<div class="card">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+            <i class="bi bi-box-seam me-2"></i>Low Stock Medications ({{ low_stock_medications.count }})
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Action Required:</strong> These medications are at or below their reorder levels. Consider placing purchase orders.
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Medication</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Reorder Level</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for medication in low_stock_medications %}
+                    <tr class="{% if medication.total_stock == 0 or medication.total_stock == None %}table-danger{% else %}table-warning{% endif %}">
+                        <td><strong>{{ medication.name }}</strong></td>
+                        <td>{{ medication.category.name|default:"N/A" }}</td>
+                        <td>
+                            {% if medication.total_stock == None or medication.total_stock == 0 %}
+                                <span class="fw-semibold text-danger">Out of Stock</span>
+                            {% else %}
+                                <span class="fw-semibold text-warning text-dark">{{ medication.total_stock }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-secondary">{{ medication.reorder_level }}</span>
+                        </td>
+                        <td>{{ medication.unit }}</td>
+                        <td>
+                            {% if medication.total_stock == None or medication.total_stock == 0 %}
+                                <span class="fw-semibold text-danger">Critical</span>
+                            {% elif medication.total_stock <= medication.reorder_level %}
+                                <span class="fw-semibold text-warning text-dark">Low</span>
+                            {% else %}
+                                <span class="fw-semibold text-success">Normal</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'pharmacy:medication_detail' medication.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                <button type="button" class="btn btn-sm btn-success" onclick="createPurchaseOrder({{ medication.id }}, '{{ medication.name|escapejs }}')">
+                                    <i class="bi bi-cart-plus"></i> Order
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Alerts -->
+{% if pending_alerts %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-bell me-2"></i>Active Stock Alerts ({{ pending_alerts.count }})
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Medication</th>
+                        <th>Current Stock</th>
+                        <th>Reorder Level</th>
+                        <th>Created Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in pending_alerts %}
+                    <tr>
+                        <td><strong>{{ alert.medication.name }}</strong></td>
+                        <td>
+                            <span class="fw-semibold text-warning text-dark">{{ alert.current_stock }}</span>
+                        </td>
+                        <td>{{ alert.reorder_level }}</td>
+                        <td>{{ alert.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <span class="fw-semibold text-warning">{{ alert.get_status_display }}</span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-success" onclick="resolveAlert({{ alert.id }})">
+                                <i class="bi bi-check"></i> Resolve
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+        <h3 class="mt-3">All Stock Levels Normal!</h3>
+        <p class="text-muted">All medications are above their reorder levels. No action required at this time.</p>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function createPurchaseOrder(medicationId, medicationName) {
+    if (confirm(`Create purchase order for ${medicationName}?`)) {
+        // Redirect to purchase order creation page with medication pre-selected
+        window.location.href = `/pharmacy/purchase-orders/create/?medication=${medicationId}`;
+    }
+}
+
+function resolveAlert(alertId) {
+    if (confirm('Mark this alert as resolved?')) {
+        fetch(`/pharmacy/alerts/stock/${alertId}/resolve/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to resolve alert');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+}
+</script>
+
+{% endblock %}

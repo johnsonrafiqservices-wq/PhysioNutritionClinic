@@ -1,0 +1,187 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - {{ clinic_settings.clinic_name|default:"Excellence Med Care" }}</title>
+    <link href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+
+        .login-wrapper{display:flex;min-height:100vh;}
+
+        /* ── Left branding panel ── */
+        .brand-panel{
+            flex:0 0 50%;position:relative;overflow:hidden;
+            background:linear-gradient(135deg,var(--alafia-primary,#1B5E96) 0%,var(--alafia-primary-dark,#154a7a) 50%,#0a3a5e 100%);
+            color:#fff;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            padding:2.5rem 3rem;
+        }
+        .brand-panel .brand-logo{
+            display:flex;flex-direction:column;align-items:center;gap:12px;font-weight:700;font-size:1.05rem;letter-spacing:.5px;
+            margin-bottom:2rem;z-index:1;
+        }
+        .brand-panel .brand-logo .logo-circle{
+            width:110px;height:110px;border-radius:50%;background:#fff;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 8px 32px rgba(0,0,0,.15);
+        }
+        .brand-panel .brand-logo .logo-circle img{max-height:70px;border-radius:6px;}
+        .brand-panel .brand-logo .logo-circle i{font-size:3rem;color:var(--alafia-primary,#1B5E96);}
+        .brand-center{z-index:1;padding:0 .5rem;text-align:center;}
+        .brand-subtitle{font-size:1rem;font-weight:300;opacity:.85;margin-bottom:.25rem;}
+        .brand-title{font-size:2.6rem;font-weight:800;letter-spacing:1px;line-height:1.15;margin-bottom:0;}
+        .brand-desc{font-size:.82rem;opacity:.65;max-width:380px;line-height:1.65;margin-top:1.5rem;padding:0 .5rem;z-index:1;text-align:center;}
+
+        /* Decorative SVG background shapes */
+        .brand-panel svg.bg-shapes{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+
+        /* Floating circles */
+        .brand-panel .circle{position:absolute;border-radius:50%;background:rgba(255,255,255,.07);}
+        .c1{width:200px;height:200px;top:-40px;right:-50px;}
+        .c2{width:120px;height:120px;top:30%;right:15%;background:rgba(255,255,255,.05);}
+        .c3{width:80px;height:80px;bottom:25%;left:10%;background:rgba(255,255,255,.06);}
+        .c4{width:160px;height:160px;bottom:-50px;left:30%;background:rgba(255,255,255,.04);}
+
+        /* ── Right form panel ── */
+        .form-panel{
+            flex:1;display:flex;align-items:center;justify-content:center;
+            background:#fff;padding:3rem 2.5rem;
+        }
+        .form-inner{width:100%;max-width:380px;}
+        .form-inner h2{font-size:1.6rem;font-weight:700;color:#1a1a2e;margin-bottom:.5rem;}
+        .form-inner .form-hint{font-size:.82rem;color:#999;margin-bottom:2rem;line-height:1.5;}
+
+        /* Inputs with left accent border */
+        .accent-input{
+            position:relative;margin-bottom:1.25rem;
+        }
+        .accent-input::before{
+            content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+            background:var(--alafia-primary,#1B5E96);border-radius:3px;
+        }
+        .accent-input input{
+            width:100%;border:none;border-bottom:1px solid #e0e0e0;
+            padding:10px 12px 10px 16px;font-size:.92rem;
+            outline:none;transition:border-color .2s;background:transparent;
+        }
+        .accent-input input:focus{border-bottom-color:var(--alafia-primary,#1B5E96);}
+        .accent-input input::placeholder{color:#bbb;}
+
+        .form-options{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;font-size:.82rem;}
+        .form-options label{color:#666;cursor:pointer;display:flex;align-items:center;gap:5px;}
+        .form-options a{color:var(--alafia-primary,#1B5E96);text-decoration:none;font-weight:500;}
+        .form-options a:hover{text-decoration:underline;}
+
+        .btn-submit{
+            display:block;width:100%;padding:13px;border:none;border-radius:30px;
+            background:linear-gradient(135deg,var(--alafia-primary,#1B5E96),var(--alafia-primary-dark,#154a7a));color:#fff;
+            font-size:.95rem;font-weight:600;letter-spacing:.5px;cursor:pointer;
+            transition:box-shadow .2s,transform .15s;
+        }
+        .btn-submit:hover{
+            box-shadow:0 6px 20px rgba(27,94,150,.35);transform:translateY(-1px);
+        }
+
+        .login-footer{margin-top:1.5rem;text-align:center;font-size:.75rem;color:#bbb;}
+
+        /* Alerts */
+        .login-alert{margin-bottom:1rem;}
+
+        /* ── Responsive ── */
+        @media(max-width:768px){
+            .login-wrapper{flex-direction:column;}
+            .brand-panel{flex:none;min-height:220px;padding:2rem 1.5rem;text-align:center;align-items:center;}
+            .brand-panel .brand-logo{position:static;margin-bottom:1rem;justify-content:center;}
+            .brand-title{font-size:1.8rem;}
+            .brand-desc{display:none;}
+            .form-panel{padding:2rem 1.5rem;}
+        }
+    </style>
+</head>
+<body>
+<div class="login-wrapper">
+    <!-- Left Panel — Branding -->
+    <div class="brand-panel">
+        <!-- Decorative wave SVG -->
+        <svg class="bg-shapes" viewBox="0 0 600 700" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 550 Q150 480 300 530 T600 500 L600 700 L0 700Z" fill="rgba(255,255,255,.06)"/>
+            <path d="M0 590 Q200 530 400 580 T600 550 L600 700 L0 700Z" fill="rgba(255,255,255,.04)"/>
+            <circle cx="480" cy="100" r="90" fill="rgba(255,255,255,.05)"/>
+            <circle cx="100" cy="180" r="40" fill="rgba(255,255,255,.06)"/>
+            <circle cx="520" cy="320" r="55" fill="rgba(255,255,255,.04)"/>
+        </svg>
+
+        <!-- Floating circles -->
+        <div class="circle c1"></div>
+        <div class="circle c2"></div>
+        <div class="circle c3"></div>
+        <div class="circle c4"></div>
+
+        <!-- Logo -->
+        <div class="brand-logo">
+            <div class="logo-circle">
+                {% if clinic_settings.logo %}
+                <img src="{{ clinic_settings.logo.url }}" alt="Logo">
+                {% else %}
+                <i class="bi bi-heart-pulse"></i>
+                {% endif %}
+            </div>
+            <span>{{ clinic_settings.clinic_name|default:"Excellence Med Care" }}</span>
+        </div>
+
+        <!-- Headline -->
+        <div class="brand-center">
+            <p class="brand-subtitle">Nice to see you again</p>
+            <h1 class="brand-title">WELCOME<br>BACK</h1>
+        </div>
+
+        <!-- Bottom description -->
+        <p class="brand-desc">Your trusted partner in health and wellness. Providing excellent medical care with compassion and dedication to every patient.</p>
+    </div>
+
+    <!-- Right Panel — Login Form -->
+    <div class="form-panel">
+        <div class="form-inner">
+            <h2>Login Account</h2>
+            <p class="form-hint">Sign in to access your dashboard, manage patients, and continue providing excellent care.</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show login-alert" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" autocomplete="off">
+                {% csrf_token %}
+                <div class="accent-input">
+                    <input type="text" id="username" name="username" placeholder="Username" required autofocus>
+                </div>
+                <div class="accent-input">
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                </div>
+                <div class="form-options">
+                    <label>
+                        <input type="checkbox" name="remember" style="accent-color:var(--alafia-primary,#1B5E96);"> Keep me signed in
+                    </label>
+                </div>
+                <button type="submit" class="btn-submit">SIGN IN</button>
+            </form>
+
+            <div class="login-footer">
+                &copy; {{ clinic_settings.clinic_name|default:"Excellence Med Care" }} &middot; Passionate about your health
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>

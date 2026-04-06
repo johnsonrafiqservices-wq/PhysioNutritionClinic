@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 700">
+  <defs>
+    <style>
+      .body-outline { fill: #f0f0f0; stroke: #ccc; stroke-width: 2; }
+    </style>
+  </defs>
+  
+  <!-- Realistic human body silhouette -->
+  <path class="body-outline" d="M 200 50 
+           C 185 45, 175 50, 170 65
+           C 165 75, 168 85, 170 95
+           L 170 110
+           C 165 115, 155 120, 145 125
+           C 140 130, 135 140, 130 150
+           L 125 180
+           C 120 200, 115 220, 118 240
+           L 120 280
+           C 122 300, 125 320, 128 340
+           L 130 380
+           C 132 420, 135 460, 138 500
+           L 140 540
+           C 142 560, 145 580, 148 600
+           L 150 640
+           C 152 655, 155 665, 160 670
+           L 170 675
+           C 175 678, 180 680, 185 680
+           L 200 680
+           L 215 680
+           C 220 680, 225 678, 230 675
+           L 240 670
+           C 245 665, 248 655, 250 640
+           L 252 600
+           C 255 580, 258 560, 260 540
+           L 262 500
+           C 265 460, 268 420, 270 380
+           L 272 340
+           C 275 320, 278 300, 280 280
+           L 282 240
+           C 285 220, 280 200, 275 180
+           L 270 150
+           C 265 140, 260 130, 255 125
+           C 245 120, 235 115, 230 110
+           L 230 95
+           C 232 85, 235 75, 230 65
+           C 225 50, 215 45, 200 50 Z"/>
+  
+  <!-- Head -->
+  <ellipse cx="200" cy="70" rx="30" ry="35" class="body-outline"/>
+  
+  <!-- Arms -->
+  <ellipse cx="115" cy="180" rx="15" ry="60" class="body-outline" transform="rotate(-15 115 180)"/>
+  <ellipse cx="285" cy="180" rx="15" ry="60" class="body-outline" transform="rotate(15 285 180)"/>
+  
+  <!-- Forearms -->
+  <ellipse cx="95" cy="260" rx="12" ry="50" class="body-outline" transform="rotate(-10 95 260)"/>
+  <ellipse cx="305" cy="260" rx="12" ry="50" class="body-outline" transform="rotate(10 305 260)"/>
+  
+  <!-- Hands -->
+  <ellipse cx="85" cy="320" rx="8" ry="20" class="body-outline"/>
+  <ellipse cx="315" cy="320" rx="8" ry="20" class="body-outline"/>
+  
+  <!-- Legs -->
+  <ellipse cx="175" cy="450" rx="20" ry="80" class="body-outline"/>
+  <ellipse cx="225" cy="450" rx="20" ry="80" class="body-outline"/>
+  
+  <!-- Lower legs -->
+  <ellipse cx="170" cy="570" rx="15" ry="70" class="body-outline"/>
+  <ellipse cx="230" cy="570" rx="15" ry="70" class="body-outline"/>
+  
+  <!-- Feet -->
+  <ellipse cx="165" cy="650" rx="12" ry="25" class="body-outline"/>
+  <ellipse cx="235" cy="650" rx="12" ry="25" class="body-outline"/>
+</svg>

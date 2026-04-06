@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment {{ payment.payment_id }} - {{ payment.patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-credit-card me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Payment Details - {{ payment.payment_id }}</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'billing:payment_receipt' payment.pk %}" class="btn btn-info" target="_blank">
+        <i class="bi bi-receipt"></i> View Receipt
+    </a>
+    {% if payment.invoice %}
+    <a href="{% url 'billing:invoice_detail' payment.invoice.pk %}" class="btn btn-primary">
+        <i class="bi bi-receipt"></i> View Invoice
+    </a>
+    {% endif %}
+    {% if payment.status == 'completed' %}
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#refundModal">
+        <i class="bi bi-arrow-counterclockwise"></i> Refund
+    </button>
+    {% endif %}
+    <a href="{% url 'billing:payment_list' %}" class="btn btn-secondary">
+        <i class="bi bi-list"></i> Back to Payments
+    </a>
+</div>
+
+<!-- Refund Confirmation Modal -->
+<div class="modal fade" id="refundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Refund</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:payment_refund' payment.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>You are about to mark <strong>{{ payment.payment_id }}</strong> (UGX {{ payment.amount|floatformat:0 }}) as <span class="text-danger fw-bold">refunded</span>.</p>
+                    {% if payment.invoice and payment.invoice.status == 'paid' %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Invoice <strong>{{ payment.invoice.invoice_number }}</strong> will be re-opened to <em>Sent</em> status.
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reason for Refund</label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Optional: describe why this payment is being refunded..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-arrow-counterclockwise me-1"></i>Process Refund</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Payment Information -->
+    <div class="col-lg-8">
+        <!-- Payment Header -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Information</h6>
+                <span class="fw-semibold text-{% if payment.status == 'completed' %}success{% elif payment.status == 'pending' %}warning{% elif payment.status == 'failed' %}danger{% else %}secondary{% endif %} fs-6">
+                    {{ payment.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Payment ID:</strong></td>
+                                <td><span class="fw-semibold text-primary">{{ payment.payment_id }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Patient:</strong></td>
+                                <td>
+                                    <a href="{% url 'patients:patient_detail' payment.patient.patient_id %}" class="text-decoration-none">
+                                        {{ payment.patient.get_full_name }}
+                                    </a>
+                                    <br><small class="text-muted">{{ payment.patient.patient_id }}</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Amount:</strong></td>
+                                <td><h5 class="text-success mb-0">UGX {{ payment.amount|floatformat:0 }}</h5></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Payment Method:</strong></td>
+                                <td>{{ payment.get_payment_method_display }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Payment Date:</strong></td>
+                                <td>{{ payment.payment_date|date:"F d, Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Processed By:</strong></td>
+                                <td>{{ payment.processed_by.get_full_name }}</td>
+                            </tr>
+                            {% if payment.reference_number %}
+                            <tr>
+                                <td><strong>Reference Number:</strong></td>
+                                <td><code>{{ payment.reference_number }}</code></td>
+                            </tr>
+                            {% endif %}
+                            {% if payment.invoice %}
+                            <tr>
+                                <td><strong>Related Invoice:</strong></td>
+                                <td>
+                                    <a href="{% url 'billing:invoice_detail' payment.invoice.pk %}" class="text-decoration-none">
+                                        {{ payment.invoice.invoice_number }}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+                {% if payment.notes %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <strong>Notes:</strong>
+                        <p class="mt-1">{{ payment.notes|linebreaks }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if payment.invoice %}
+        <!-- Related Invoice -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Related Invoice</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless table-sm">
+                            <tr>
+                                <td><strong>Invoice Number:</strong></td>
+                                <td>
+                                    <a href="{% url 'billing:invoice_detail' payment.invoice.pk %}" class="text-decoration-none">
+                                        {{ payment.invoice.invoice_number }}
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Invoice Total:</strong></td>
+                                <td>UGX {{ payment.invoice.total_amount|floatformat:0 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Invoice Status:</strong></td>
+                                <td>
+                                    <span class="fw-semibold text-{% if payment.invoice.status == 'paid' %}success{% elif payment.invoice.status == 'sent' %}primary{% elif payment.invoice.status == 'overdue' %}danger{% else %}warning{% endif %}">
+                                        {{ payment.invoice.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless table-sm">
+                            <tr>
+                                <td><strong>Issue Date:</strong></td>
+                                <td>{{ payment.invoice.issue_date|date:"F d, Y" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Due Date:</strong></td>
+                                <td>{{ payment.invoice.due_date|date:"F d, Y" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'billing:payment_receipt' payment.pk %}" class="btn btn-outline-info" target="_blank">
+                        <i class="bi bi-receipt"></i> View Receipt
+                    </a>
+                    {% if payment.invoice %}
+                    <a href="{% url 'billing:invoice_detail' payment.invoice.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-receipt"></i> View Invoice
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'patients:patient_detail' payment.patient.patient_id %}" class="btn btn-outline-success">
+                        <i class="bi bi-person"></i> View Patient
+                    </a>
+                    <a href="{% url 'billing:payment_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-list"></i> All Payments
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient Summary -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Information</h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ payment.patient.get_full_name }}</h6>
+                <p class="text-muted mb-2">{{ payment.patient.patient_id }}</p>
+                
+                <div class="mb-2">
+                    <small><strong>Phone:</strong> {{ payment.patient.phone }}</small>
+                </div>
+                {% if payment.patient.email %}
+                <div class="mb-2">
+                    <small><strong>Email:</strong> {{ payment.patient.email }}</small>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <small><strong>Address:</strong></small><br>
+                    <small class="text-muted">
+                        {{ payment.patient.address_line1 }}<br>
+                        {% if payment.patient.address_line2 %}{{ payment.patient.address_line2 }}<br>{% endif %}
+                        {{ payment.patient.city }}, {{ payment.patient.state }} {{ payment.patient.postal_code }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Summary -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Payment Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h3 class="text-success">UGX {{ payment.amount|floatformat:0 }}</h3>
+                    <small class="text-muted">Payment Amount</small>
+                </div>
+                
+                <hr>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h6 class="text-primary">{{ payment.get_payment_method_display }}</h6>
+                            <small class="text-muted">Method</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-info">
+                            {{ payment.payment_date|timesince }} ago
+                        </h6>
+                        <small class="text-muted">Processed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

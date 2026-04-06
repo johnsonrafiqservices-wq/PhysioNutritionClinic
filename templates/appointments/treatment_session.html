@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Treatment Session - {{ appointment.patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-clipboard2-heart-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Treatment Session - {{ appointment.patient.get_full_name }}</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    Treatment Session for {{ appointment.service.name }}
+                    <span class="fw-semibold text-primary ms-2">{{ appointment.appointment_date|date:"M d, Y" }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Chief Complaint -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Chief Complaint</h5>
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.chief_complaint|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Assessment and Findings -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Assessment & Findings</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.assessment_findings|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.pain_level_before|as_crispy_field }}
+                            <small class="text-muted">Rate from 0 (no pain) to 10 (severe pain)</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.pain_level_after|as_crispy_field }}
+                            <small class="text-muted">Rate from 0 (no pain) to 10 (severe pain)</small>
+                        </div>
+                    </div>
+
+                    <!-- Treatment Provided -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Treatment Information</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.treatment_provided|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.patient_response|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.functional_improvement|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Exercises and Recommendations -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Home Care & Exercises</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.home_exercises|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            {{ form.recommendations|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Follow-up and Completion -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2">Follow-up & Session Status</h5>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            {{ form.next_appointment_notes|as_crispy_field }}
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                {{ form.session_completed }}
+                                <label class="form-check-label" for="id_session_completed">
+                                    Mark session as completed
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'appointments:appointment_detail' appointment.id %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Appointment
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Complete Session
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Patient Summary -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Summary</h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ appointment.patient.get_full_name }}</h6>
+                <p class="text-muted mb-2">{{ appointment.patient.patient_id }}</p>
+                <div class="row">
+                    <div class="col-6">
+                        <small><strong>Age:</strong> {{ appointment.patient.get_age }}</small>
+                    </div>
+                    <div class="col-6">
+                        <small><strong>Gender:</strong> {{ appointment.patient.get_gender_display }}</small>
+                    </div>
+                </div>
+                {% if appointment.patient.allergies %}
+                <div class="alert alert-warning mt-2">
+                    <small><strong>Allergies:</strong> {{ appointment.patient.allergies }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Current Appointment -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Current Appointment</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Service:</strong> {{ appointment.service.name }}</p>
+                <p><strong>Scheduled Duration:</strong> {{ appointment.duration_minutes }} minutes</p>
+                <p><strong>Time:</strong> {{ appointment.appointment_time|time:"g:i A" }}</p>
+                {% if appointment.notes %}
+                    <p><strong>Notes:</strong> {{ appointment.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Vitals -->
+        {% if recent_vitals %}
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Vitals</h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">{{ recent_vitals.recorded_date|date:"M d, Y" }}</small>
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <small><strong>BP:</strong> {{ recent_vitals.blood_pressure_systolic }}/{{ recent_vitals.blood_pressure_diastolic }}</small><br>
+                        <small><strong>HR:</strong> {{ recent_vitals.heart_rate }} bpm</small><br>
+                        <small><strong>Weight:</strong> {{ recent_vitals.weight }} kg</small>
+                    </div>
+                    <div class="col-6">
+                        <small><strong>Height:</strong> {{ recent_vitals.height }} cm</small><br>
+                        <small><strong>BMI:</strong> {{ recent_vitals.bmi|floatformat:1 }}</small><br>
+                        <small><strong>Temp:</strong> {{ recent_vitals.temperature }}°C</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Treatment Guidelines -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Treatment Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Document all treatments provided
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Record patient's response to treatment
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Note any adverse reactions
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Provide clear home care instructions
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#vitalSignsModal" onclick="setVitalSignsPatient('{{ appointment.patient.patient_id }}')">
+                        <i class="bi bi-heart-pulse"></i> Record Vitals
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#appointmentCreateModal" onclick="openAppointmentModal('{{ appointment.patient.id }}')">
+                        <i class="bi bi-calendar-plus"></i> Schedule Follow-up
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#medicalRecordModal" onclick="setMedicalRecordPatient('{{ appointment.patient.patient_id }}')">
+                        <i class="bi bi-file-medical"></i> Add Medical Record
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calculate pain improvement
+    const painBefore = document.getElementById('id_pain_level_before');
+    const painAfter = document.getElementById('id_pain_level_after');
+    
+    function calculatePainImprovement() {
+        if (painBefore.value && painAfter.value) {
+            const improvement = painBefore.value - painAfter.value;
+            if (improvement > 0) {
+                console.log(`Pain improved by ${improvement} points`);
+            }
+        }
+    }
+    
+    if (painBefore && painAfter) {
+        painBefore.addEventListener('change', calculatePainImprovement);
+        painAfter.addEventListener('change', calculatePainImprovement);
+    }
+});
+</script>
+{% endblock %}

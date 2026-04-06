@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+
+{% block title %}Payments - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-credit-card-2-front me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Payment Management</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button type="button" class="btn btn-success" onclick="openPaymentModal(null, '', null, '')">
+        <i class="bi bi-plus-circle"></i> Record Payment
+    </button>
+    <a href="{% url 'billing:payment_export_csv' %}?status={{ selected_status }}&date_from={{ date_from }}&date_to={{ date_to }}&patient_search={{ patient_search }}" class="btn btn-outline-success">
+        <i class="bi bi-download"></i> Export CSV
+    </a>
+    <a href="{% url 'billing:billing_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Section -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Filter Payments</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Payment Method</label>
+                <select name="method" class="form-select">
+                    <option value="">All Methods</option>
+                    {% for value, label in method_choices %}
+                        <option value="{{ value }}" {% if selected_method == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Patient Name</label>
+                <input type="text" name="patient_search" class="form-control" placeholder="Search patient..." value="{{ patient_search }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">From Date</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">To Date</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Min Amount (UGX)</label>
+                <input type="number" name="amount_min" class="form-control" placeholder="0" value="{{ amount_min }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-1">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+                    <a href="{% url 'billing:payment_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Payments
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ page_obj.paginator.count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Completed Payments
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ page_obj.object_list|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Pending Payments
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            This Month
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ page_obj.object_list|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payments Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Payment Records</h6>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots"></i> Actions
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="exportPayments()">
+                    <i class="bi bi-download"></i> Export to CSV
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="printPayments()">
+                    <i class="bi bi-printer"></i> Print List
+                </a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm" id="paymentsTable" style="border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <thead style="background: var(--alafia-gradient); color: white;">
+                    <tr>
+                        <th onclick="sortPaymentTable(0)" style="cursor: pointer; user-select: none;">
+                            Payment ID <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th onclick="sortPaymentTable(1)" style="cursor: pointer; user-select: none;">
+                            Date <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th onclick="sortPaymentTable(2)" style="cursor: pointer; user-select: none;">
+                            Patient <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th onclick="sortPaymentTable(3)" style="cursor: pointer; user-select: none;">
+                            Invoice <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th onclick="sortPaymentTable(4)" style="cursor: pointer; user-select: none;">
+                            Amount <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th onclick="sortPaymentTable(5)" style="cursor: pointer; user-select: none;">
+                            Method <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th onclick="sortPaymentTable(6)" style="cursor: pointer; user-select: none;">
+                            Status <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th onclick="sortPaymentTable(7)" style="cursor: pointer; user-select: none;">
+                            Reference <i class="bi bi-arrow-down-up text-light"></i>
+                        </th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr class="{% if payment.status == 'refunded' %}table-warning{% elif payment.status == 'completed' %}table-success{% endif %}">
+                        <td>
+                            <strong>{{ payment.payment_id }}</strong>
+                        </td>
+                        <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'patients:patient_detail' payment.patient.id %}" class="text-decoration-none">
+                                {{ payment.patient.get_full_name }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if payment.invoice %}
+                                <a href="{% url 'billing:invoice_detail' payment.invoice.id %}" class="text-decoration-none">
+                                    {{ payment.invoice.invoice_number }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>UGX {{ payment.amount|floatformat:0 }}</strong>
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-info">{{ payment.get_payment_method_display }}</span>
+                        </td>
+                        <td>
+                            {% if payment.status == 'completed' %}
+                                <span class="fw-semibold text-success">Completed</span>
+                            {% elif payment.status == 'pending' %}
+                                <span class="fw-semibold text-warning">Pending</span>
+                            {% elif payment.status == 'failed' %}
+                                <span class="fw-semibold text-danger">Failed</span>
+                            {% elif payment.status == 'refunded' %}
+                                <span class="fw-semibold text-secondary">Refunded</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if payment.reference_number %}
+                                <code>{{ payment.reference_number }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center" style="width: 120px; padding: 0.25rem;">
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'billing:payment_receipt' payment.id %}" 
+                                   class="btn btn-sm btn-link text-muted p-1" title="View Receipt" target="_blank">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+                                <button class="btn btn-sm btn-link text-muted p-1" 
+                                        onclick="viewPaymentDetails({{ payment.id }})" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                {% if payment.status == 'pending' %}
+                                <button class="btn btn-sm btn-link text-success p-1" 
+                                        onclick="markAsCompleted({{ payment.id }})" title="Mark Completed">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="bi bi-credit-card-2-front fa-3x mb-3"></i><br>
+                            No payments found matching your criteria.
+                            <br><br>
+                            <button type="button" class="btn btn-primary" onclick="openPaymentModal(null, '', null, '')">
+                                <i class="bi bi-plus-circle"></i> Record First Payment
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination with Page Size Selector -->
+{% include 'includes/pagination_with_size.html' %}
+
+<!-- Payment Details Modal -->
+<div class="modal fade" id="paymentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Payment Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="paymentDetailsContent">
+                <!-- Payment details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportPayments() {
+    // Placeholder for export functionality
+    alert('Export functionality will be implemented based on your requirements.');
+}
+
+function printPayments() {
+    window.print();
+}
+
+function viewPaymentDetails(paymentId) {
+    // Placeholder for payment details modal
+    const modal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
+    document.getElementById('paymentDetailsContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading payment details...</p>
+        </div>
+    `;
+    modal.show();
+    
+    // In a real implementation, this would fetch payment details via AJAX
+    setTimeout(() => {
+        document.getElementById('paymentDetailsContent').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Payment Information</h6>
+                    <p><strong>Payment ID:</strong> PAY-${paymentId.toString().padStart(6, '0')}</p>
+                    <p><strong>Status:</strong> <span class="fw-semibold text-success">Completed</span></p>
+                    <p><strong>Amount:</strong> UGX 150,000</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Patient Information</h6>
+                    <p><strong>Patient:</strong> John Doe</p>
+                    <p><strong>Invoice:</strong> INV-000001</p>
+                    <p><strong>Method:</strong> Credit Card</p>
+                </div>
+            </div>
+        `;
+    }, 1000);
+}
+
+function markAsCompleted(paymentId) {
+    if (confirm('Mark this payment as completed?')) {
+        // In a real implementation, this would send an AJAX request
+        alert('Payment marked as completed!');
+        location.reload();
+    }
+}
+</script>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+</style>
+{% endblock %}

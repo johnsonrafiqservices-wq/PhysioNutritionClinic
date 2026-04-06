@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+
+{% block title %}Documents - {{ patient.get_full_name }}{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-folder-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Documents - {{ patient.get_full_name }}</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'medical_records:document_upload' patient.patient_id %}" class="btn btn-primary">
+        <i class="bi bi-upload"></i> Upload Document
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Patient Summary -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Patient Information</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h5>{{ patient.get_full_name }} <span class="fw-semibold text-primary">{{ patient.patient_id }}</span></h5>
+                <p class="text-muted mb-0">
+                    Age: {{ patient.get_age }} | Gender: {{ patient.get_gender_display }} | 
+                    Phone: {{ patient.phone }}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'medical_records:record_list' patient.patient_id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-file-medical"></i> Medical Records
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter and Search -->
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Document Type</label>
+                <select class="form-select" name="document_type">
+                    <option value="">All Types</option>
+                    <option value="lab_result" {% if document_type == 'lab_result' %}selected{% endif %}>Lab Result</option>
+                    <option value="imaging" {% if document_type == 'imaging' %}selected{% endif %}>Imaging</option>
+                    <option value="report" {% if document_type == 'report' %}selected{% endif %}>Report</option>
+                    <option value="prescription" {% if document_type == 'prescription' %}selected{% endif %}>Prescription</option>
+                    <option value="insurance" {% if document_type == 'insurance' %}selected{% endif %}>Insurance</option>
+                    <option value="consent" {% if document_type == 'consent' %}selected{% endif %}>Consent Form</option>
+                    <option value="other" {% if document_type == 'other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Date From</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" name="search" placeholder="Document title..." value="{{ search_query }}">
+                    <button type="submit" class="btn btn-outline-primary">Filter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Documents Grid -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Patient Documents
+            {% if document_type or date_from or search_query %}
+                - Filtered Results
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body">
+        {% if documents %}
+            <div class="row">
+                {% for document in documents %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card border-left-{% if document.document_type == 'lab_result' %}success{% elif document.document_type == 'imaging' %}info{% elif document.document_type == 'report' %}primary{% elif document.document_type == 'prescription' %}warning{% else %}secondary{% endif %} h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="fw-semibold text-{% if document.document_type == 'lab_result' %}success{% elif document.document_type == 'imaging' %}info{% elif document.document_type == 'report' %}primary{% elif document.document_type == 'prescription' %}warning{% else %}secondary{% endif %}">
+                                    {{ document.get_document_type_display }}
+                                </span>
+                                <small class="text-muted">{{ document.upload_date|date:"M d, Y" }}</small>
+                            </div>
+                            
+                            <h6 class="card-title">{{ document.title }}</h6>
+                            
+                            {% if document.description %}
+                                <p class="card-text text-muted">{{ document.description|truncatewords:15 }}</p>
+                            {% endif %}
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="bi bi-file-earmark"></i>
+                                    {{ document.file.name|slice:"-10:" }}
+                                </small>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ document.file.url }}" class="btn btn-outline-primary" target="_blank" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ document.file.url }}" class="btn btn-outline-secondary" download title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger" onclick="deleteDocument({{ document.id }})" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Uploaded by {{ document.uploaded_by.get_full_name }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Documents pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if document_type %}&document_type={{ document_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if document_type %}&document_type={{ document_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if document_type %}&document_type={{ document_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if document_type %}&document_type={{ document_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-files text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No Documents Found</h4>
+                {% if document_type or date_from or search_query %}
+                    <p class="text-muted">No documents match your filter criteria.</p>
+                    <a href="{% url 'medical_records:document_list' patient.patient_id %}" class="btn btn-outline-primary">Clear Filters</a>
+                {% else %}
+                    <p class="text-muted">Start by uploading the first document for this patient.</p>
+                    <a href="{% url 'medical_records:document_upload' patient.patient_id %}" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload First Document
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Document Type Summary -->
+<div class="row mt-4">
+    <div class="col-md-2">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Lab Results</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ lab_results_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clipboard-data fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Imaging</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ imaging_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-camera fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Reports</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ reports_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-file-text fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Prescriptions</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ prescriptions_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-prescription fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-left-secondary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Insurance</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ insurance_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-shield-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-left-dark shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">Other</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ other_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-file-earmark fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteDocument(documentId) {
+    if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+        // In a real implementation, make AJAX call to delete
+        fetch(`/medical-records/document/${documentId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error deleting document. Please try again.');
+            }
+        })
+        .catch(error => {
+            alert('Error deleting document. Please try again.');
+        });
+    }
+}
+</script>
+
+<style>
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-secondary {
+    border-left: 0.25rem solid #858796 !important;
+}
+.border-left-dark {
+    border-left: 0.25rem solid #5a5c69 !important;
+}
+</style>
+{% endblock %}

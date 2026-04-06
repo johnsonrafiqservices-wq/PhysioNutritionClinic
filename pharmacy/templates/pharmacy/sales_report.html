@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-file-earmark-bar-graph me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Sales Report</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+</a>
+<a href="{% url 'pharmacy:sales_list' %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-list-ul me-1"></i> Sales List
+</a>
+<button onclick="window.print()" class="btn btn-success btn-sm">
+    <i class="bi bi-printer me-1"></i> Print Report
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Date Range Filter -->
+<div class="card border-0 shadow-sm mb-4 no-print">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="start_date" class="form-label">Report Period</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label for="end_date" class="form-label">&nbsp;</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label d-block">&nbsp;</label>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> Generate Report
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Report Header -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body text-center">
+        <h2 class="mb-3">Sales Performance Report</h2>
+        <p class="text-muted mb-0">
+            <i class="bi bi-calendar-range"></i>
+            Period: <strong>{{ start_date|date:"M d, Y" }}</strong> to <strong>{{ end_date|date:"M d, Y" }}</strong>
+        </p>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
+                    <i class="bi bi-cart-check fs-3 text-primary"></i>
+                </div>
+                <h3 class="mb-1">{{ total_sales|intcomma }}</h3>
+                <p class="text-muted mb-0">Total Sales</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
+                    <i class="bi bi-cash-stack fs-3 text-success"></i>
+                </div>
+                <h3 class="mb-1">UGX {{ total_revenue|floatformat:0|intcomma }}</h3>
+                <p class="text-muted mb-0">Total Revenue</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body">
+                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
+                    <i class="bi bi-box-seam fs-3 text-info"></i>
+                </div>
+                <h3 class="mb-1">{{ total_quantity|intcomma }}</h3>
+                <p class="text-muted mb-0">Units Sold</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
+                    <i class="bi bi-graph-up fs-3 text-warning"></i>
+                </div>
+                <h3 class="mb-1">UGX {{ avg_sale_value|floatformat:0|intcomma }}</h3>
+                <p class="text-muted mb-0">Avg Sale Value</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales by Drug -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="bi bi-pie-chart text-primary me-2"></i>Sales by Drug
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if sales_by_drug %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Drug Name</th>
+                        <th class="text-center">Quantity Sold</th>
+                        <th class="text-center">Number of Sales</th>
+                        <th class="text-end">Total Revenue</th>
+                        <th class="text-center">% of Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for drug in sales_by_drug %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ drug.batch__medication__name }}</strong></td>
+                        <td class="text-center">
+                            <span class="badge bg-primary">{{ drug.quantity }}</span>
+                        </td>
+                        <td class="text-center">{{ drug.count }}</td>
+                        <td class="text-end">
+                            <strong class="text-success">UGX {{ drug.revenue|floatformat:0|intcomma }}</strong>
+                        </td>
+                        <td class="text-center">
+                            {% widthratio drug.revenue total_revenue 100 as percentage %}
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ percentage }}%" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ percentage }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-1"></i>
+            <p class="mt-2">No sales data available for this period.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Daily Sales Trend -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="bi bi-graph-up-arrow text-success me-2"></i>Daily Sales Trend
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if daily_sales %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th class="text-center">Number of Sales</th>
+                        <th class="text-end">Daily Revenue</th>
+                        <th style="width: 40%;">Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in daily_sales %}
+                    <tr>
+                        <td>
+                            <i class="bi bi-calendar3"></i>
+                            {{ day.date|date:"M d, Y" }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info">{{ day.count }}</span>
+                        </td>
+                        <td class="text-end">
+                            <strong>UGX {{ day.revenue|floatformat:0|intcomma }}</strong>
+                        </td>
+                        <td>
+                            {% widthratio day.revenue total_revenue 100 as day_percentage %}
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio day_percentage 1 10 %}%" aria-valuenow="{{ day_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ day.revenue|floatformat:0|intcomma %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-1"></i>
+            <p class="mt-2">No daily sales data available.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    
+    .sidebar {
+        display: none;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.table th {
+    font-weight: 600;
+}
+</style>
+{% endblock %}

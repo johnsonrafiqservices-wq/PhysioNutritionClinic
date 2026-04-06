@@ -1,0 +1,700 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Patient Groups - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .groups-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .groups-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+        padding: 12px;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .groups-table td {
+        padding: 12px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f3f5;
+    }
+    
+    .groups-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .group-name-cell {
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    .action-btn {
+        padding: 4px 8px;
+        font-size: 0.875rem;
+    }
+    
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-people-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Patient Groups</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-0">Manage patient groups for differential pricing and categorization</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignPatientsModal">
+                        <i class="bi bi-person-plus me-2"></i>Assign Patients
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">
+                        <i class="bi bi-plus-circle me-2"></i>Create New Group
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <div class="input-group input-group-sm" style="max-width:280px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="groupSearchInput" class="form-control border-start-0 ps-0" placeholder="Search groups…">
+                        </div>
+                        <select id="groupStatusFilter" class="form-select form-select-sm" style="max-width:150px;">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        <span id="groupFilterCount" class="text-muted ms-auto" style="font-size:.82rem;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Groups Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Patient Groups</h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if groups %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0" id="groupsTable" style="border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                            <thead style="background: var(--alafia-gradient); color: white;">
+                                <tr>
+                                    <th onclick="sortGroupTable(0)" style="cursor: pointer; user-select: none; width: 25%;">Group Name <i class="bi bi-arrow-down-up text-light"></i></th>
+                                    <th onclick="sortGroupTable(1)" style="cursor: pointer; user-select: none; width: 20%;">Category <i class="bi bi-arrow-down-up text-light"></i></th>
+                                    <th onclick="sortGroupTable(2)" style="cursor: pointer; user-select: none; width: 30%;">Description <i class="bi bi-arrow-down-up text-light"></i></th>
+                                    <th onclick="sortGroupTable(3)" style="cursor: pointer; user-select: none; width: 12%;">Patients <i class="bi bi-arrow-down-up text-light"></i></th>
+                                    <th onclick="sortGroupTable(4)" style="cursor: pointer; user-select: none; width: 10%;">Status <i class="bi bi-arrow-down-up text-light"></i></th>
+                                    <th onclick="sortGroupTable(5)" style="cursor: pointer; user-select: none; width: 13%;">Created <i class="bi bi-arrow-down-up text-light"></i></th>
+                                    <th style="width: 15%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for group in groups %}
+                                <tr class="group-row" data-name="{{ group.name|lower }}" data-status="{% if group.is_active %}active{% else %}inactive{% endif %}">
+                                    <td class="group-name-cell">{{ group.name }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ group.get_category_display }}</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ group.description|default:"No description"|truncatewords:10 }}
+                                        </small>
+                                        {% if group.contact_phone or group.contact_email %}
+                                        <div class="text-muted" style="font-size: 0.8rem;">
+                                            {% if group.contact_phone %}<i class="bi bi-telephone me-1"></i>{{ group.contact_phone }}{% endif %}
+                                            {% if group.contact_email %}<br><i class="bi bi-envelope me-1"></i>{{ group.contact_email }}{% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="stat-badge">
+                                            <i class="bi bi-people-fill"></i>
+                                            {{ group.patient_count }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if group.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ group.created_at|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td class="text-center" style="width: 120px; padding: 0.25rem;">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'patients:patient_group_detail' group.pk %}" class="btn btn-sm btn-link text-muted p-1" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-link text-muted p-1" 
+                                                    onclick="viewGroupPatients({{ group.id }}, '{{ group.name }}')"
+                                                    title="View Patients">
+                                                <i class="bi bi-people"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-link text-primary p-1" 
+                                                    onclick="editGroup({{ group.id }})"
+                                                    title="Edit Group">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-1" 
+                                                    onclick="deleteGroup({{ group.id }}, '{{ group.name }}')"
+                                                    title="Delete Group">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-5 text-center">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+                        <p class="text-muted mt-3 mb-0">No patient groups found. Create your first group to get started!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Patient Group
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createGroupForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="create_name" class="form-label">Group Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="create_name" name="name" required placeholder="e.g., Corporate, VIP, Insurance">
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_category" class="form-label">Category</label>
+                        <select class="form-select" id="create_category" name="category">
+                            {% for value, label in group_categories %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="create_description" name="description" rows="3" placeholder="Optional description of this group"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="create_contact_name" class="form-label">Contact Name</label>
+                            <input type="text" class="form-control" id="create_contact_name" name="contact_name" placeholder="Billing or HR contact">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="create_contact_phone" class="form-label">Contact Phone</label>
+                            <input type="text" class="form-control" id="create_contact_phone" name="contact_phone" placeholder="+256...">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="create_contact_email" class="form-label">Contact Email</label>
+                            <input type="email" class="form-control" id="create_contact_email" name="contact_email" placeholder="contact@example.com">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="create_contact_address" class="form-label">Contact Address</label>
+                            <textarea class="form-control" id="create_contact_address" name="contact_address" rows="2" placeholder="Physical address"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="create_is_active" name="is_active" checked>
+                        <label class="form-check-label" for="create_is_active">
+                            Active (available for assignment)
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCreateGroup()">
+                    <i class="bi bi-check-circle me-1"></i>Create Group
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Group Modal -->
+<div class="modal fade" id="editGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-pencil me-2"></i>Edit Patient Group
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editGroupForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="edit_group_id" name="group_id">
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Group Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_category" class="form-label">Category</label>
+                        <select class="form-select" id="edit_category" name="category">
+                            {% for value, label in group_categories %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_contact_name" class="form-label">Contact Name</label>
+                            <input type="text" class="form-control" id="edit_contact_name" name="contact_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_contact_phone" class="form-label">Contact Phone</label>
+                            <input type="text" class="form-control" id="edit_contact_phone" name="contact_phone">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_contact_email" class="form-label">Contact Email</label>
+                            <input type="email" class="form-control" id="edit_contact_email" name="contact_email">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_contact_address" class="form-label">Contact Address</label>
+                            <textarea class="form-control" id="edit_contact_address" name="contact_address" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active">
+                        <label class="form-check-label" for="edit_is_active">
+                            Active (available for assignment)
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditGroup()">
+                    <i class="bi bi-check-circle me-1"></i>Update Group
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Patients Modal -->
+<div class="modal fade" id="assignPatientsModal" tabindex="-1">
+    <div class="modal-dialog" style="max-width: 800px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-plus me-2"></i>Assign Patients to Groups
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Search Patient</label>
+                    <input type="text" id="patientSearchInput" class="form-control" placeholder="Search by name or ID...">
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 40%;">Patient Name</th>
+                                <th style="width: 20%;">Patient ID</th>
+                                <th style="width: 25%;">Current Group</th>
+                                <th style="width: 15%;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsTableBody">
+                            {% for patient in all_patients %}
+                            <tr class="patient-row" data-name="{{ patient.get_full_name|lower }}" data-id="{{ patient.patient_id|lower }}">
+                                <td>{{ patient.get_full_name }}</td>
+                                <td><small class="text-muted">{{ patient.patient_id }}</small></td>
+                                <td>
+                                    <select class="form-select form-select-sm patient-group-select" data-patient-id="{{ patient.id }}">
+                                        <option value="">No Group</option>
+                                        {% for group in groups %}
+                                        <option value="{{ group.id }}" {% if patient.patient_group_id == group.id %}selected{% endif %}>
+                                            {{ group.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-success assign-patient-btn" 
+                                            data-patient-id="{{ patient.id }}"
+                                            onclick="assignPatientToGroup({{ patient.id }})">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Group Patients Modal -->
+<div class="modal fade" id="viewGroupPatientsModal" tabindex="-1">
+    <div class="modal-dialog" style="max-width: 700px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-people me-2"></i><span id="groupPatientsTitle">Group Patients</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="groupPatientsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAlert(message, type = 'success') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row'));
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+function submitCreateGroup() {
+    const form = document.getElementById('createGroupForm');
+    const formData = new FormData(form);
+    
+    fetch('{% url "patients:patient_group_create" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
+            modal.hide();
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('An error occurred. Please try again.', 'danger');
+    });
+}
+
+function editGroup(groupId) {
+    fetch(`/patients/groups/${groupId}/get/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('edit_group_id').value = data.group.id;
+            document.getElementById('edit_name').value = data.group.name;
+            document.getElementById('edit_description').value = data.group.description || '';
+            document.getElementById('edit_is_active').checked = data.group.is_active;
+            document.getElementById('edit_category').value = data.group.category || 'other';
+            document.getElementById('edit_contact_name').value = data.group.contact_name || '';
+            document.getElementById('edit_contact_email').value = data.group.contact_email || '';
+            document.getElementById('edit_contact_phone').value = data.group.contact_phone || '';
+            document.getElementById('edit_contact_address').value = data.group.contact_address || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('editGroupModal'));
+            modal.show();
+        } else {
+            showAlert('Error loading group data.', 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('An error occurred while loading group data.', 'danger');
+    });
+}
+
+function submitEditGroup() {
+    const groupId = document.getElementById('edit_group_id').value;
+    const form = document.getElementById('editGroupForm');
+    const formData = new FormData(form);
+    
+    fetch(`/patients/groups/${groupId}/update/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editGroupModal'));
+            modal.hide();
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('An error occurred. Please try again.', 'danger');
+    });
+}
+
+function deleteGroup(groupId, groupName) {
+    if (!confirm(`Are you sure you want to delete the group "${groupName}"?\n\nThis action cannot be undone. Patients in this group will be unassigned.`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`/patients/groups/${groupId}/delete/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('An error occurred. Please try again.', 'danger');
+    });
+}
+
+// Groups table search & filter
+function applyGroupFilters() {
+    var term = (document.getElementById('groupSearchInput').value || '').toLowerCase();
+    var status = (document.getElementById('groupStatusFilter').value || '').toLowerCase();
+    var rows = document.querySelectorAll('.group-row');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var nameMatch = !term || row.dataset.name.includes(term);
+        var statusMatch = !status || row.dataset.status === status;
+        var show = nameMatch && statusMatch;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    var countEl = document.getElementById('groupFilterCount');
+    if (countEl) countEl.textContent = visible + ' of ' + rows.length + ' group' + (rows.length !== 1 ? 's' : '');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var groupSearch = document.getElementById('groupSearchInput');
+    var groupStatus = document.getElementById('groupStatusFilter');
+    if (groupSearch) groupSearch.addEventListener('input', applyGroupFilters);
+    if (groupStatus) groupStatus.addEventListener('change', applyGroupFilters);
+    applyGroupFilters();
+
+    // Patient assign-modal search
+    const searchInput = document.getElementById('patientSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            document.querySelectorAll('.patient-row').forEach(row => {
+                const name = row.dataset.name;
+                const id = row.dataset.id;
+                row.style.display = (name.includes(searchTerm) || id.includes(searchTerm)) ? '' : 'none';
+            });
+        });
+    }
+});
+
+// Assign patient to group
+function assignPatientToGroup(patientId) {
+    const select = document.querySelector(`.patient-group-select[data-patient-id="${patientId}"]`);
+    const groupId = select.value;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    formData.append('patient_id', patientId);
+    formData.append('group_id', groupId);
+    
+    fetch('{% url "patients:assign_patient_to_group" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            select.style.backgroundColor = '#dcfce7';
+            setTimeout(() => {
+                select.style.backgroundColor = '';
+                window.location.reload();
+            }, 1500);
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('An error occurred. Please try again.', 'danger');
+    });
+}
+
+// View group patients
+function viewGroupPatients(groupId, groupName) {
+    document.getElementById('groupPatientsTitle').textContent = groupName + ' - Patients';
+    const modal = new bootstrap.Modal(document.getElementById('viewGroupPatientsModal'));
+    modal.show();
+    
+    fetch(`/patients/groups/${groupId}/patients/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const content = document.getElementById('groupPatientsContent');
+            if (data.patients.length > 0) {
+                let html = '<div class="table-responsive"><table class="table table-sm table-hover">';
+                html += '<thead class="table-light"><tr><th>Patient Name</th><th>Patient ID</th><th>Phone</th><th>Action</th></tr></thead><tbody>';
+                
+                data.patients.forEach(patient => {
+                    html += `<tr>
+                        <td>${patient.full_name}</td>
+                        <td><small class="text-muted">${patient.patient_id}</small></td>
+                        <td><small>${patient.phone || 'N/A'}</small></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removePatientFromGroup(${patient.id}, ${groupId}, '${patient.full_name}')">
+                                <i class="bi bi-x-circle"></i> Remove
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                content.innerHTML = html;
+            } else {
+                content.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>No patients in this group yet.</div>';
+            }
+        } else {
+            document.getElementById('groupPatientsContent').innerHTML = '<div class="alert alert-danger">Error loading patients.</div>';
+        }
+    })
+    .catch(error => {
+        document.getElementById('groupPatientsContent').innerHTML = '<div class="alert alert-danger">An error occurred.</div>';
+    });
+}
+
+// Remove patient from group
+function removePatientFromGroup(patientId, groupId, patientName) {
+    if (!confirm(`Remove ${patientName} from this group?`)) return;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    formData.append('patient_id', patientId);
+    formData.append('group_id', '');
+    
+    fetch('{% url "patients:assign_patient_to_group" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('An error occurred.', 'danger');
+    });
+}
+</script>
+{% endblock %}

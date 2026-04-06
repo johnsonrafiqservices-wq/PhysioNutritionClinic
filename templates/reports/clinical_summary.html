@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Clinical Summary Report{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-clipboard2-pulse me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Clinical Summary Report</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#customClinicalModal">
+    <i class="bi bi-funnel"></i> Custom Report
+</button>
+<a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Dashboard
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Date Filter -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label small mb-0">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-auto">
+                <label class="form-label small mb-0">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold text-primary mb-0">{{ unique_patients }}</div>
+                <div class="text-muted small">Unique Patients</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold mb-0" style="color:#2E86C1;">{{ physio_count }}</div>
+                <div class="text-muted small">Physiotherapy</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold text-success mb-0">{{ nutrition_count }}</div>
+                <div class="text-muted small">Nutrition</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold text-info mb-0">{{ general_count }}</div>
+                <div class="text-muted small">General</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold text-warning mb-0">{{ vital_signs_count }}</div>
+                <div class="text-muted small">Vital Signs</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h4 fw-bold mb-0" style="color:#6f42c1;">{{ first_visits|add:follow_ups }}</div>
+                <div class="text-muted small">Total Assessments</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Department Distribution Chart -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart me-1"></i> Department Distribution</h6></div>
+            <div class="card-body">
+                <canvas id="deptChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <!-- Assessment Types -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart me-1"></i> Assessment Types</h6></div>
+            <div class="card-body">
+                <canvas id="typeChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Assessments -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Recent Assessments</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Patient</th><th>Department</th><th>Type</th><th>Assessed By</th><th>Date</th><th>Follow-up</th></tr>
+                </thead>
+                <tbody>
+                {% for a in recent_assessments %}
+                <tr>
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td>{{ a.patient.get_full_name }}</td>
+                    <td><span class="badge bg-{% if a.department == 'physiotherapy' %}primary{% elif a.department == 'nutrition' %}success{% else %}secondary{% endif %}">{{ a.department|title }}</span></td>
+                    <td>{{ a.get_assessment_type_display }}</td>
+                    <td>{% if a.assessed_by %}{{ a.assessed_by.get_full_name }}{% else %}N/A{% endif %}</td>
+                    <td>{{ a.assessment_date|date:"Y-m-d" }}</td>
+                    <td>{% if a.follow_up_required %}<span class="badge bg-warning bg-opacity-10 text-warning">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center py-5 text-muted">No assessments in this period</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Clinical Report Modal -->
+<div class="modal fade" id="customClinicalModal" tabindex="-1" aria-labelledby="customClinicalModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-lg modal-dialog-scrollable">
+<div class="modal-content">
+    <div class="modal-header" style="background: var(--alafia-gradient);">
+        <h5 class="modal-title text-white" id="customClinicalModalLabel"><i class="bi bi-funnel me-2"></i>Generate Custom Clinical Report</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    </div>
+    <form method="get" action="{% url 'reports:custom_department_report' %}">
+    <div class="modal-body">
+        <p class="text-muted small mb-3">Select your criteria below. Only filled fields are applied as filters.</p>
+
+        <div class="card mb-3 border">
+            <div class="card-header bg-light py-2"><h6 class="mb-0"><i class="bi bi-calendar3 me-1"></i> Date Range</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small">From</label>
+                        <input type="date" name="date_from" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">To</label>
+                        <input type="date" name="date_to" class="form-control form-control-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3 border">
+            <div class="card-header bg-light py-2"><h6 class="mb-0"><i class="bi bi-clipboard2-pulse me-1"></i> Assessment Filters</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small">Department</label>
+                        <select name="department" class="form-select form-select-sm">
+                            <option value="">All Departments</option>
+                            <option value="physiotherapy">Physiotherapy</option>
+                            <option value="nutrition">Nutrition</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Assessment Type</label>
+                        <select name="assessment_type" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="first_visit">First Visit</option>
+                            <option value="follow_up">Follow-up</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Follow-up Required</label>
+                        <select name="follow_up" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Diagnosis Contains</label>
+                        <input type="text" name="diagnosis" class="form-control form-control-sm" placeholder="e.g. lower back pain">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Patient Name</label>
+                        <input type="text" name="patient_name" class="form-control form-control-sm" placeholder="Search by name...">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-bar-chart me-1"></i> Generate Report</button>
+    </div>
+    </form>
+</div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // Department pie chart
+    var deptCtx = document.getElementById('deptChart');
+    if(deptCtx){
+        new Chart(deptCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: {{ dept_labels|safe }},
+                datasets: [{
+                    data: {{ dept_data|safe }},
+                    backgroundColor: ['#2E86C1', '#27ae60', '#95a5a6'],
+                    borderWidth: 2
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+    // Assessment type chart
+    var typeCtx = document.getElementById('typeChart');
+    if(typeCtx){
+        new Chart(typeCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['First Visits', 'Follow-ups'],
+                datasets: [{
+                    label: 'Count',
+                    data: [{{ first_visits }}, {{ follow_ups }}],
+                    backgroundColor: ['#3498db', '#2ecc71'],
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+});
+</script>
+{% endblock %}

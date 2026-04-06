@@ -1,0 +1,841 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Reports - Physio & Nutrition Clinic{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-people-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Patient Reports & Analytics</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <button type="button" class="btn btn-outline-secondary dropdown-toggle" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-download"></i> Export
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportReport('patient', 'pdf'); return false;">
+            <i class="bi bi-file-pdf"></i> Export as PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="exportReport('patient', 'excel'); return false;">
+            <i class="bi bi-file-excel"></i> Export as Excel
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Controls -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Report Filters</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Date Range</label>
+                <select class="form-select" name="date_range" id="date-range">
+                    <option value="last_30_days" {% if date_range == 'last_30_days' %}selected{% endif %}>Last 30 Days</option>
+                    <option value="last_3_months" {% if date_range == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+                    <option value="last_6_months" {% if date_range == 'last_6_months' %}selected{% endif %}>Last 6 Months</option>
+                    <option value="last_year" {% if date_range == 'last_year' %}selected{% endif %}>Last Year</option>
+                    <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            <div class="col-md-2" id="custom-from" style="display: none;">
+                <label class="form-label">From Date</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2" id="custom-to" style="display: none;">
+                <label class="form-label">To Date</label>
+                <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Age Group</label>
+                <select class="form-select" name="age_group">
+                    <option value="">All Ages</option>
+                    <option value="0-18" {% if age_group == '0-18' %}selected{% endif %}>0-18 years</option>
+                    <option value="19-35" {% if age_group == '19-35' %}selected{% endif %}>19-35 years</option>
+                    <option value="36-55" {% if age_group == '36-55' %}selected{% endif %}>36-55 years</option>
+                    <option value="56+" {% if age_group == '56+' %}selected{% endif %}>56+ years</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Gender</label>
+                <select class="form-select" name="gender">
+                    <option value="">All Genders</option>
+                    <option value="M" {% if gender == 'M' %}selected{% endif %}>Male</option>
+                    <option value="F" {% if gender == 'F' %}selected{% endif %}>Female</option>
+                    <option value="O" {% if gender == 'O' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary d-block w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Patients
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_patients }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            New Patients
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ new_patients }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-person-plus fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Active Patients
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_patients }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-person-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Avg Age
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ average_age }} years</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Patient Demographics Chart -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Age Distribution</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="ageDistributionChart" width="100%" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gender Distribution -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Gender Distribution</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="genderChart" width="100%" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Patient Registration Trend -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Registration Trend</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="registrationTrendChart" width="100%" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Conditions -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Most Common Conditions</h6>
+            </div>
+            <div class="card-body">
+                {% if common_conditions %}
+                    {% for condition in common_conditions %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-0">{{ condition.name }}</h6>
+                            <small class="text-muted">{{ condition.patient_count }} patients</small>
+                        </div>
+                        <div class="progress" style="width: 80px; height: 8px;">
+                            <div class="progress-bar" style="width: {{ condition.percentage }}%; background-color: var(--alafia-chart-1);"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No condition data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient List -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Patient Details</h6>
+    </div>
+    <div class="card-body">
+        {% if patients %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="patients-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Registration Date</th>
+                            <th>Last Visit</th>
+                            <th>Total Visits</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'patients:patient_detail' patient.patient_id %}" class="text-decoration-none">
+                                    {{ patient.patient_id }}
+                                </a>
+                            </td>
+                            <td>{{ patient.get_full_name }}</td>
+                            <td>{{ patient.get_age }}</td>
+                            <td>{{ patient.get_gender_display }}</td>
+                            <td>{{ patient.registration_date|date:"M d, Y" }}</td>
+                            <td>
+                                {% if patient.last_visit %}
+                                    {{ patient.last_visit|date:"M d, Y" }}
+                                {% else %}
+                                    <span class="text-muted">No visits</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ patient.total_visits }}</td>
+                            <td>
+                                <span class="fw-semibold text-{% if patient.is_active %}success{% else %}secondary{% endif %}">
+                                    {% if patient.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-2">No patients found matching the selected criteria.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Department & Provider Statistics -->
+<div class="row">
+    <!-- Department Distribution -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-building"></i> Patients by Department
+                </h6>
+                <span class="fw-semibold text-info">All Time</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-4 text-center">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-heart-pulse" style="font-size: 2rem; color: var(--alafia-chart-1);"></i>
+                            <h3 class="mt-2 mb-0" style="color: var(--alafia-chart-1);">{{ physio_patients }}</h3>
+                            <small class="text-muted">Physiotherapy</small>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-apple" style="font-size: 2rem; color: var(--alafia-chart-2);"></i>
+                            <h3 class="mt-2 mb-0" style="color: var(--alafia-chart-2);">{{ nutrition_patients }}</h3>
+                            <small class="text-muted">Nutrition</small>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-hospital" style="font-size: 2rem; color: var(--alafia-chart-3);"></i>
+                            <h3 class="mt-2 mb-0" style="color: var(--alafia-chart-3);">{{ general_patients }}</h3>
+                            <small class="text-muted">General</small>
+                        </div>
+                    </div>
+                </div>
+                <div style="position: relative; height: 250px;">
+                    <canvas id="departmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider Statistics -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-person-badge"></i> Patients by Provider
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if provider_data %}
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Provider Name</th>
+                                    <th>Department</th>
+                                    <th class="text-center">Patients</th>
+                                    <th class="text-center">Assessments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for provider in provider_data %}
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-person-circle text-primary me-1"></i>
+                                        <strong>{{ provider.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if provider.department == 'Physiotherapy' %}primary{% elif provider.department == 'Nutrition' %}success{% else %}info{% endif %}">
+                                            {{ provider.department }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-semibold text-secondary">{{ provider.patient_count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-semibold text-light text-dark">{{ provider.assessment_count }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-person-x text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No provider data available for the selected period.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Insurance Analysis -->
+<div class="row">
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Insurance Providers</h6>
+            </div>
+            <div class="card-body">
+                {% if insurance_data %}
+                    <canvas id="insuranceChart" width="100%" height="200"></canvas>
+                {% else %}
+                    <p class="text-muted">No insurance data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Patient Retention</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 class="text-success">{{ retention_1_month }}%</h4>
+                        <small class="text-muted">1 Month</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-info">{{ retention_3_months }}%</h4>
+                        <small class="text-muted">3 Months</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-warning">{{ retention_6_months }}%</h4>
+                        <small class="text-muted">6 Months</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <h5 class="text-primary">{{ retention_1_year }}%</h5>
+                    <small class="text-muted">1 Year Retention Rate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patients with No Assessments -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-exclamation-triangle"></i> Patients Requiring Assessment
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="no-general-tab" data-bs-toggle="tab" 
+                                data-bs-target="#no-general" type="button" role="tab">
+                            <i class="bi bi-hospital"></i> No General Assessment 
+                            <span class="fw-semibold text-danger">{{ patients_no_general|length }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="no-physio-tab" data-bs-toggle="tab" 
+                                data-bs-target="#no-physio" type="button" role="tab">
+                            <i class="bi bi-heart-pulse"></i> No Physiotherapy Assessment 
+                            <span class="fw-semibold text-warning">{{ patients_no_physio|length }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="no-nutrition-tab" data-bs-toggle="tab" 
+                                data-bs-target="#no-nutrition" type="button" role="tab">
+                            <i class="bi bi-apple"></i> No Nutrition Assessment 
+                            <span class="fw-semibold text-info">{{ patients_no_nutrition|length }}</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content mt-3">
+                    <!-- No General Assessment -->
+                    <div class="tab-pane fade show active" id="no-general" role="tabpanel">
+                        {% if patients_no_general %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient ID</th>
+                                            <th>Name</th>
+                                            <th>Age</th>
+                                            <th>Gender</th>
+                                            <th>Registration Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in patients_no_general %}
+                                        <tr>
+                                            <td><strong>{{ patient.patient_id }}</strong></td>
+                                            <td>{{ patient.get_full_name }}</td>
+                                            <td>{{ patient.get_age }} years</td>
+                                            <td>{{ patient.get_gender_display }}</td>
+                                            <td>{{ patient.registration_date|date:"M d, Y" }}</td>
+                                            <td>
+                                                <a href="{% url 'patients:patient_detail' patient.patient_id %}" 
+                                                   class="btn btn-sm btn-primary" title="View Patient">
+                                                    <i class="bi bi-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted mt-2"><small>Showing up to 50 patients</small></p>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> All patients have general assessments!
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- No Physiotherapy Assessment -->
+                    <div class="tab-pane fade" id="no-physio" role="tabpanel">
+                        {% if patients_no_physio %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient ID</th>
+                                            <th>Name</th>
+                                            <th>Age</th>
+                                            <th>Gender</th>
+                                            <th>Registration Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in patients_no_physio %}
+                                        <tr>
+                                            <td><strong>{{ patient.patient_id }}</strong></td>
+                                            <td>{{ patient.get_full_name }}</td>
+                                            <td>{{ patient.get_age }} years</td>
+                                            <td>{{ patient.get_gender_display }}</td>
+                                            <td>{{ patient.registration_date|date:"M d, Y" }}</td>
+                                            <td>
+                                                <a href="{% url 'patients:patient_detail' patient.patient_id %}" 
+                                                   class="btn btn-sm btn-primary" title="View Patient">
+                                                    <i class="bi bi-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted mt-2"><small>Showing up to 50 patients</small></p>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> All patients have physiotherapy assessments!
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- No Nutrition Assessment -->
+                    <div class="tab-pane fade" id="no-nutrition" role="tabpanel">
+                        {% if patients_no_nutrition %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient ID</th>
+                                            <th>Name</th>
+                                            <th>Age</th>
+                                            <th>Gender</th>
+                                            <th>Registration Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in patients_no_nutrition %}
+                                        <tr>
+                                            <td><strong>{{ patient.patient_id }}</strong></td>
+                                            <td>{{ patient.get_full_name }}</td>
+                                            <td>{{ patient.get_age }} years</td>
+                                            <td>{{ patient.get_gender_display }}</td>
+                                            <td>{{ patient.registration_date|date:"M d, Y" }}</td>
+                                            <td>
+                                                <a href="{% url 'patients:patient_detail' patient.patient_id %}" 
+                                                   class="btn btn-sm btn-primary" title="View Patient">
+                                                    <i class="bi bi-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted mt-2"><small>Showing up to 50 patients</small></p>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> All patients have nutrition assessments!
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Helper function to get CSS variable values
+function getCSSVariable(name) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Date range handler
+    const dateRange = document.getElementById('date-range');
+    const customFrom = document.getElementById('custom-from');
+    const customTo = document.getElementById('custom-to');
+    
+    dateRange.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customFrom.style.display = 'block';
+            customTo.style.display = 'block';
+        } else {
+            customFrom.style.display = 'none';
+            customTo.style.display = 'none';
+        }
+    });
+    
+    // Initialize display
+    if (dateRange.value === 'custom') {
+        customFrom.style.display = 'block';
+        customTo.style.display = 'block';
+    }
+});
+
+// Age Distribution Chart
+const ageCtx = document.getElementById('ageDistributionChart').getContext('2d');
+const ageChart = new Chart(ageCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ age_labels|safe }},
+        datasets: [{
+            label: 'Patients',
+            data: {{ age_data|safe }},
+            backgroundColor: getCSSVariable('--alafia-chart-1') || '#4e73df'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Gender Chart
+const genderCtx = document.getElementById('genderChart').getContext('2d');
+const genderChart = new Chart(genderCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ gender_labels|safe }},
+        datasets: [{
+            data: {{ gender_data|safe }},
+            backgroundColor: [
+                getCSSVariable('--alafia-chart-1') || '#4e73df',
+                getCSSVariable('--alafia-chart-2') || '#1cc88a',
+                getCSSVariable('--alafia-chart-3') || '#36b9cc'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Registration Trend Chart
+const trendCtx = document.getElementById('registrationTrendChart').getContext('2d');
+const trendChart = new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: {{ trend_labels|safe }},
+        datasets: [{
+            label: 'New Registrations',
+            data: {{ trend_data|safe }},
+            borderColor: getCSSVariable('--alafia-chart-2') || '#1cc88a',
+            backgroundColor: (getCSSVariable('--alafia-chart-2') || '#1cc88a') + '33',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Department Distribution Chart
+const deptCtx = document.getElementById('departmentChart').getContext('2d');
+const deptChart = new Chart(deptCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ dept_labels|safe }},
+        datasets: [{
+            data: {{ dept_data|safe }},
+            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Insurance Chart
+{% if insurance_data %}
+const insuranceCtx = document.getElementById('insuranceChart').getContext('2d');
+const insuranceChart = new Chart(insuranceCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ insurance_labels|safe }},
+        datasets: [{
+            data: {{ insurance_data|safe }},
+            backgroundColor: [
+                getCSSVariable('--alafia-chart-1') || '#4e73df',
+                getCSSVariable('--alafia-chart-2') || '#1cc88a',
+                getCSSVariable('--alafia-chart-3') || '#36b9cc',
+                getCSSVariable('--alafia-chart-4') || '#f6c23e',
+                getCSSVariable('--alafia-chart-5') || '#e74a3b'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+{% endif %}
+
+function generateReport() {
+    // In a real implementation, generate comprehensive PDF report
+    alert('Generating comprehensive patient report...');
+}
+
+function exportReport(reportType, format) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "reports:export_report" %}';
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add report type
+    const reportTypeInput = document.createElement('input');
+    reportTypeInput.type = 'hidden';
+    reportTypeInput.name = 'report_type';
+    reportTypeInput.value = reportType;
+    form.appendChild(reportTypeInput);
+    
+    // Add export format
+    const formatInput = document.createElement('input');
+    formatInput.type = 'hidden';
+    formatInput.name = 'export_format';
+    formatInput.value = format;
+    form.appendChild(formatInput);
+    
+    // Add report name
+    const nameInput = document.createElement('input');
+    nameInput.type = 'hidden';
+    nameInput.name = 'report_name';
+    nameInput.value = 'Patient Report';
+    form.appendChild(nameInput);
+    
+    // Add date range filter
+    const dateRangeInput = document.createElement('input');
+    dateRangeInput.type = 'hidden';
+    dateRangeInput.name = 'date_range';
+    dateRangeInput.value = '{{ date_range }}';
+    form.appendChild(dateRangeInput);
+    
+    // Add gender filter if selected
+    const genderInput = document.createElement('input');
+    genderInput.type = 'hidden';
+    genderInput.name = 'gender';
+    genderInput.value = '{{ gender }}';
+    form.appendChild(genderInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+</script>
+
+<!-- Hidden form for CSRF token -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+</style>
+{% endblock %}

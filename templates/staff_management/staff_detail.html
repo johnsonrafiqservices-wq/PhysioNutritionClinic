@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Staff Details - {{ staff.full_name }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-person-badge me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">
+        Staff Member: {{ staff.full_name }}
+    </span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'staff_management:staff_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Staff List
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row mb-3">
+        <!-- Profile Card -->
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-person"></i> Profile
+                </div>
+                <div class="card-body">
+                    <h5 class="mb-1">{{ staff.full_name }}</h5>
+                    <p class="text-muted mb-2">{{ staff.position }}</p>
+                    <p class="mb-1"><strong>Employee ID:</strong> {{ staff.employee_id }}</p>
+                    <p class="mb-1"><strong>Department:</strong> {{ staff.department.name|default:'Unassigned' }}</p>
+                    <p class="mb-1"><strong>Employment:</strong> {{ staff.get_employment_status_display }}</p>
+                    <p class="mb-1"><strong>Joined:</strong> {{ staff.joining_date|date:'M d, Y' }}</p>
+                    <p class="mb-1"><strong>Status:</strong>
+                        {% if staff.is_active %}
+                            <span class="fw-semibold text-success">Active</span>
+                        {% else %}
+                            <span class="fw-semibold text-secondary">Inactive</span>
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="mb-1"><strong>User Account:</strong> {{ staff.user.username }}</p>
+                    <p class="mb-1"><strong>Email:</strong> {{ staff.user.email }}</p>
+                    <p class="mb-1"><strong>Role:</strong> {{ staff.user.get_role_display|default:'-' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Shifts -->
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-calendar-event"></i> Upcoming Shifts
+                </div>
+                <div class="card-body">
+                    {% if upcoming_shifts %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Shift</th>
+                                    <th>Department</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for shift in upcoming_shifts %}
+                                <tr>
+                                    <td>{{ shift.date|date:'M d, Y' }}</td>
+                                    <td>{{ shift.get_shift_type_display }}</td>
+                                    <td>{{ shift.department.name|default:'-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No upcoming shifts scheduled.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Attendance -->
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-clipboard-check"></i> Recent Attendance
+                </div>
+                <div class="card-body">
+                    {% if recent_attendance %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for att in recent_attendance %}
+                                <tr>
+                                    <td>{{ att.date|date:'M d, Y' }}</td>
+                                    <td>{{ att.get_status_display }}</td>
+                                    <td>{{ att.hours_worked }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No recent attendance records.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Requests -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-airplane"></i> Recent Leave Requests
+                </div>
+                <div class="card-body">
+                    {% if leave_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Period</th>
+                                    <th>Days</th>
+                                    <th>Status</th>
+                                    <th>Requested On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leave_requests %}
+                                <tr>
+                                    <td>{{ leave.get_leave_type_display }}</td>
+                                    <td>{{ leave.start_date|date:'M d, Y' }} - {{ leave.end_date|date:'M d, Y' }}</td>
+                                    <td>{{ leave.number_of_days }}</td>
+                                    <td>
+                                        {% if leave.status == 'pending' %}
+                                            <span class="fw-semibold text-warning">Pending</span>
+                                        {% elif leave.status == 'approved' %}
+                                            <span class="fw-semibold text-success">Approved</span>
+                                        {% elif leave.status == 'rejected' %}
+                                            <span class="fw-semibold text-danger">Rejected</span>
+                                        {% elif leave.status == 'cancelled' %}
+                                            <span class="fw-semibold text-secondary">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ leave.created_at|date:'M d, Y H:i' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No leave requests found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

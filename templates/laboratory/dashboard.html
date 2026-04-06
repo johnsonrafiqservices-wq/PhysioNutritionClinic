@@ -1,0 +1,682 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-flask me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Laboratory Dashboard</span>
+    </div>
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#requestTestModal">
+    <i class="bi bi-plus-circle"></i> Request Test
+</button>
+<button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addTestModal">
+    <i class="bi bi-plus"></i> Add Test Type
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Available Tests</div>
+                        <div class="metric-value">{{ total_tests }}</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="bi bi-clipboard-data"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Pending Tests</div>
+                        <div class="metric-value">{{ pending_requests }}</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Completed Today</div>
+                        <div class="metric-value">{{ completed_today }}</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card danger h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-label">Urgent Tests</div>
+                        <div class="metric-value">{{ urgent_tests }}</div>
+                    </div>
+                    <div class="metric-icon danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<style>
+.lab-qa .alafia-action-btn{padding:8px 6px;min-height:0;flex:1;min-width:80px;}
+.lab-qa .alafia-action-btn i{font-size:1.15rem;margin-bottom:4px;}
+.lab-qa .alafia-action-btn span{font-size:.73rem;}
+</style>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
+            </div>
+            <div class="card-body py-2 lab-qa">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#requestTestModal">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Request Test</span>
+                    </button>
+                    <a href="{% url 'laboratory:request_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-list-ul"></i>
+                        <span>View Requests</span>
+                    </a>
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#addResultModal">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Add Result</span>
+                    </button>
+                    <a href="{% url 'laboratory:labtest_results' %}" class="alafia-action-btn">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>View Results</span>
+                    </a>
+                    <a href="{% url 'laboratory:labtest_list' %}" class="alafia-action-btn">
+                        <i class="bi bi-clipboard-data"></i>
+                        <span>Test Catalog</span>
+                    </a>
+                    <button type="button" class="alafia-action-btn" data-bs-toggle="modal" data-bs-target="#addTestModal">
+                        <i class="bi bi-plus-square"></i>
+                        <span>Add Test Type</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Test Requests -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Recent Test Requests
+            </div>
+            <div class="card-body">
+                {% if recent_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Test</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in recent_requests %}
+                                <tr onclick="window.location='{% url 'laboratory:request_detail' request.pk %}'" style="cursor: pointer;">
+                                    <td>{{ request.patient.get_full_name }}</td>
+                                    <td>{{ request.test.name }}</td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if request.status == 'completed' %}success{% elif request.status == 'in_progress' %}info{% elif request.status == 'sample_collected' %}primary{% else %}warning{% endif %}">
+                                            {{ request.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if request.priority == 'stat' %}danger{% elif request.priority == 'urgent' %}warning{% else %}secondary{% endif %}">
+                                            {{ request.get_priority_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'laboratory:request_list' %}" class="btn btn-sm btn-outline-primary">
+                            View All Requests <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: var(--alafia-secondary);"></i>
+                        <p class="text-muted mt-3">No test requests yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Results -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-hourglass-split"></i> Pending Results
+            </div>
+            <div class="card-body">
+                {% if pending_results %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Test</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in pending_results %}
+                                <tr>
+                                    <td>{{ request.patient.get_full_name }}</td>
+                                    <td>{{ request.test.name }}</td>
+                                    <td>
+                                        <span class="fw-semibold text-{% if request.status == 'in_progress' %}info{% elif request.status == 'sample_collected' %}primary{% else %}warning{% endif %}">
+                                            {{ request.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'laboratory:labtest_result_add_for_request' request.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-plus"></i> Add Result
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--alafia-success);"></i>
+                        <p class="text-muted mt-3">All tests have results</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tests by Category -->
+{% if tests_by_category %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white py-2 border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart text-info me-1"></i>Tests by Category</h6>
+    </div>
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2">
+            {% for category in tests_by_category %}
+            <div class="d-flex align-items-center gap-2 px-3 py-2 rounded border" style="background:#f8f9fa;flex:1;min-width:100px;">
+                <span class="fw-bold" style="font-size:1rem;color:var(--alafia-primary);">{{ category.count }}</span>
+                <span class="text-muted" style="font-size:.78rem;">{{ category.category|title }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add Test Modal -->
+<div class="modal fade" id="addTestModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form id="addTestForm" method="post" action="{% url 'laboratory:labtest_add' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-flask"></i> Add Laboratory Test</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Test Info -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Test Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Test Code <span class="text-danger">*</span></label>
+                            <input type="text" name="code" class="form-control" placeholder="e.g., CBC001" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                            <select name="category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                <option value="hematology">Hematology</option>
+                                <option value="biochemistry">Biochemistry</option>
+                                <option value="microbiology">Microbiology</option>
+                                <option value="serology">Serology</option>
+                                <option value="immunology">Immunology</option>
+                                <option value="pathology">Pathology</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Sample Type</label>
+                            <input type="text" name="sample_type" class="form-control" placeholder="e.g., Blood, Urine">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Price <span class="text-danger">*</span></label>
+                            <input type="number" name="price" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Currency</label>
+                            <input type="text" name="currency" class="form-control" value="UGX">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Duration (hours)</label>
+                            <input type="number" name="duration_hours" class="form-control" value="24">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea name="description" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <input type="hidden" name="is_active" value="on">
+
+                    <!-- Parameters Section -->
+                    <div class="border rounded p-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0"><i class="bi bi-list-check me-1"></i>Test Parameters</h6>
+                            <button type="button" class="btn btn-success btn-sm" id="modalAddParamBtn">
+                                <i class="bi bi-plus-circle"></i> Add Parameter
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm mb-0" id="modalParamsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width:130px;">Name <span class="text-danger">*</span></th>
+                                        <th style="min-width:90px;">Code <span class="text-danger">*</span></th>
+                                        <th style="min-width:145px;">Result Type</th>
+                                        <th style="min-width:80px;">Unit</th>
+                                        <th style="min-width:80px;">Ref Min</th>
+                                        <th style="min-width:80px;">Ref Max</th>
+                                        <th style="min-width:120px;">Range Text</th>
+                                        <th style="min-width:140px;">Flag Criteria</th>
+                                        <th style="width:44px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalParamsBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="modalNoParamMsg" class="text-center text-muted py-2 small">
+                            <i class="bi bi-info-circle me-1"></i>No parameters yet — click <strong>Add Parameter</strong> above.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="addTestSubmitBtn">
+                        <i class="bi bi-save"></i> Save Test &amp; Parameters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var modalRowIdx = 0;
+
+    var RESULT_TYPES = [
+        {% for val, label in result_types %}{value:"{{ val }}",label:"{{ label }}"},{% endfor %}
+    ];
+    var FLAG_CRITERIA = [
+        {% for val, label in flag_criteria %}{value:"{{ val }}",label:"{{ label }}"},{% endfor %}
+    ];
+
+    var RESULT_FLAG_MAP = {
+        'positive_negative':'positive_negative','reactive_nonreactive':'reactive_nonreactive',
+        'present_absent':'present_absent','detected_not_detected':'detected_not_detected',
+        'normal_abnormal':'normal_abnormal','numeric':'range','percentage':'range',
+        'ratio':'range','titer':'range'
+    };
+
+    function buildSel(name, opts, def) {
+        return '<select name="'+name+'" class="form-select form-select-sm">'
+            + opts.map(function(o){return '<option value="'+o.value+'"'+(o.value===def?' selected':'')+'>'+o.label+'</option>';}).join('')
+            + '</select>';
+    }
+
+    function addModalRow() {
+        var i = modalRowIdx++;
+        var tr = document.createElement('tr');
+        tr.dataset.idx = i;
+        tr.innerHTML =
+            '<td><input type="text" name="param_'+i+'_name" class="form-control form-control-sm" placeholder="e.g., Haemoglobin" required></td>'+
+            '<td><input type="text" name="param_'+i+'_code" class="form-control form-control-sm" placeholder="HGB" required></td>'+
+            '<td>'+buildSel('param_'+i+'_result_type', RESULT_TYPES, 'numeric')+'</td>'+
+            '<td><input type="text" name="param_'+i+'_unit" class="form-control form-control-sm" placeholder="g/dL"></td>'+
+            '<td><input type="number" name="param_'+i+'_ref_min" class="form-control form-control-sm" step="any"></td>'+
+            '<td><input type="number" name="param_'+i+'_ref_max" class="form-control form-control-sm" step="any"></td>'+
+            '<td><input type="text" name="param_'+i+'_ref_text" class="form-control form-control-sm" placeholder="12–16 g/dL"></td>'+
+            '<td>'+buildSel('param_'+i+'_flag_criteria', FLAG_CRITERIA, 'range')+'</td>'+
+            '<td><button type="button" class="btn btn-outline-danger btn-sm modal-rm-param"><i class="bi bi-trash"></i></button></td>';
+        document.getElementById('modalParamsBody').appendChild(tr);
+
+        var rts = tr.querySelector('[name="param_'+i+'_result_type"]');
+        var fcs = tr.querySelector('[name="param_'+i+'_flag_criteria"]');
+        rts.addEventListener('change', function(){ if(RESULT_FLAG_MAP[this.value]) fcs.value=RESULT_FLAG_MAP[this.value]; });
+        updateModalMsg();
+    }
+
+    function reindexModalRows() {
+        document.querySelectorAll('#modalParamsBody tr').forEach(function(tr, idx) {
+            var old = tr.dataset.idx;
+            tr.dataset.idx = idx;
+            tr.querySelectorAll('[name]').forEach(function(el){
+                el.name = el.name.replace('param_'+old+'_','param_'+idx+'_');
+            });
+        });
+        modalRowIdx = document.querySelectorAll('#modalParamsBody tr').length;
+    }
+
+    function updateModalMsg() {
+        var empty = document.querySelectorAll('#modalParamsBody tr').length === 0;
+        document.getElementById('modalNoParamMsg').style.display = empty ? 'block' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var addBtn = document.getElementById('modalAddParamBtn');
+        if (addBtn) addBtn.addEventListener('click', addModalRow);
+
+        var body = document.getElementById('modalParamsBody');
+        if (body) {
+            body.addEventListener('click', function(e) {
+                var btn = e.target.closest('.modal-rm-param');
+                if (btn) { btn.closest('tr').remove(); reindexModalRows(); updateModalMsg(); }
+            });
+        }
+
+        var modalEl = document.getElementById('addTestModal');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                document.getElementById('addTestForm').reset();
+                document.getElementById('modalParamsBody').innerHTML = '';
+                modalRowIdx = 0;
+                updateModalMsg();
+            });
+        }
+
+        var form = document.getElementById('addTestForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var submitBtn = document.getElementById('addTestSubmitBtn');
+                var origText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(data) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origText;
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('addTestModal')).hide();
+                        showToast(data.message, 'success');
+                        setTimeout(function(){ window.location.reload(); }, 1200);
+                    } else {
+                        showToast('Please fix the errors and try again.', 'error');
+                    }
+                })
+                .catch(function() {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origText;
+                    showToast('An error occurred. Please try again.', 'error');
+                });
+            });
+        }
+    });
+})();
+</script>
+
+<!-- Request Test Modal (Multi-Test) -->
+<div class="modal fade" id="requestTestModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="dashRequestTestForm" method="post" action="{% url 'laboratory:labtest_request_bulk' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Request Laboratory Tests</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-7">
+                            <div class="mb-3">
+                                <label class="form-label">Patient *</label>
+                                <select name="patient" id="dash_patient" class="form-select" required>
+                                    <option value="">Select Patient</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.get_full_name }} ({{ patient.patient_id }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tests *</label>
+                                <input type="text" id="dash_test_search" class="form-control form-control-sm mb-1" placeholder="Search tests...">
+                                <div id="dash_test_list" style="max-height:180px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:6px;">
+                                    {% if available_tests %}
+                                        {% for test in available_tests %}
+                                        <label class="d-flex align-items-center gap-2 px-2 py-1 rounded dash-test-item" style="cursor:pointer;font-size:.85rem;" data-name="{{ test.name|lower }}">
+                                            <input type="checkbox" name="tests" value="{{ test.id }}" class="form-check-input mt-0 dash-test-cb" data-price="{{ test.price }}" data-currency="{{ test.currency }}" data-test-name="{{ test.name }}">
+                                            <span class="flex-grow-1">{{ test.name }} <small class="text-muted">({{ test.code }})</small></span>
+                                            <span class="badge bg-light text-dark border" style="font-size:.72rem;">{{ test.currency }} {{ test.price }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-danger small mb-0">No tests available. Add test types first.</p>
+                                    {% endif %}
+                                </div>
+                                <div id="dash_selected_count" class="mt-1 text-muted" style="font-size:.75rem;">0 tests selected</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Priority</label>
+                                <select name="priority" class="form-select">
+                                    <option value="routine">Routine</option>
+                                    <option value="urgent">Urgent</option>
+                                    <option value="stat">STAT</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Test *</label>
+                                <textarea class="form-control" name="reason_for_test" rows="2" placeholder="Clinical indication..." required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Samples Required</label>
+                                <input type="text" class="form-control" name="samples_required" placeholder="e.g., Blood, Urine, Stool">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Sample ID</label>
+                                <input type="text" name="sample_id" class="form-control" placeholder="Optional">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Clinical Notes</label>
+                                <textarea name="clinical_notes" class="form-control" rows="2" placeholder="Optional"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-5" style="background:#f8fafc;border-radius:8px;padding:16px;">
+                            <p class="fw-semibold text-uppercase text-muted mb-2" style="font-size:.72rem;">Selected Tests</p>
+                            <div id="dash_selected_summary" style="max-height:200px;overflow-y:auto;font-size:.85rem;">
+                                <p class="text-muted fst-italic" style="font-size:.8rem;">No tests selected yet</p>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>Total</span>
+                                <span id="dash_total_price">UGX 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span id="dash_footer_count" class="me-auto text-muted" style="font-size:.78rem;">0 tests selected</span>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="dash_submit_btn" disabled>
+                        <i class="bi bi-check-circle"></i> Request Tests
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Result Modal -->
+<div class="modal fade" id="addResultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form data-modal-form method="post" action="{% url 'laboratory:labtest_result_add' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-text"></i> Add Laboratory Result</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Test Request *</label>
+                        <select name="request" class="form-select" required id="testRequestSelect">
+                            <option value="">Select Pending Request</option>
+                            {% for req in pending_test_requests %}
+                            <option value="{{ req.id }}" 
+                                    data-normal-range="{{ req.test.normal_range }}"
+                                    data-test-name="{{ req.test.name }}">
+                                {{ req.patient.get_full_name }} - {{ req.test.name }} ({{ req.sample_id }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            {% if not pending_test_requests %}
+                            <span class="text-warning">No pending test requests available</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div id="normalRangeInfo" class="alert alert-info d-none mb-3">
+                        <strong>Normal Range:</strong> <span id="normalRangeValue"></span>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Result Value *</label>
+                                <textarea name="result_value" class="form-control" rows="2" required placeholder="Enter test result values"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Unit</label>
+                                <input type="text" name="result_unit" class="form-control" placeholder="e.g., g/dL, mg/dL">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Interpretation</label>
+                        <textarea name="interpretation" class="form-control" rows="2" placeholder="Clinical interpretation of results"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Remarks</label>
+                        <textarea name="remarks" class="form-control" rows="2" placeholder="Additional remarks or notes"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_abnormal" class="form-check-input" id="isAbnormal">
+                            <label class="form-check-label" for="isAbnormal">
+                                Mark as Abnormal
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-save"></i> Save Result
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show normal range when test request is selected
+document.addEventListener('DOMContentLoaded', function() {
+    const testRequestSelect = document.getElementById('testRequestSelect');
+    if (testRequestSelect) {
+        testRequestSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const normalRange = selectedOption.getAttribute('data-normal-range');
+            const normalRangeInfo = document.getElementById('normalRangeInfo');
+            const normalRangeValue = document.getElementById('normalRangeValue');
+            
+            if (normalRange && normalRange !== 'None' && normalRange !== '') {
+                normalRangeValue.textContent = normalRange;
+                normalRangeInfo.classList.remove('d-none');
+            } else {
+                normalRangeInfo.classList.add('d-none');
+            }
+        });
+    }
+    
+    // Debug: Log dropdown data when modal opens
+    const requestTestModal = document.getElementById('requestTestModal');
+    if (requestTestModal) {
+        requestTestModal.addEventListener('shown.bs.modal', function() {
+            console.log('Request Test Modal opened');
+            const testSelect = document.getElementById('testSelect');
+            if (testSelect) {
+                console.log('Test dropdown found');
+                console.log('Total test options:', testSelect.options.length);
+                console.log('Test options:', Array.from(testSelect.options).map(opt => ({
+                    value: opt.value,
+                    text: opt.text
+                })));
+                
+                if (testSelect.options.length <= 1) {
+                    console.warn('WARNING: No test types available! Please add laboratory tests first.');
+                }
+            } else {
+                console.error('Test dropdown not found!');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

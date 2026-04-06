@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard - Clinic Management System{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --secondary: #0d9488;
+        --accent: #16a34a;
+        --danger: #dc2626;
+        --warning: #d97706;
+        --success: #16a34a;
+        --info: #0d9488;
+        --neutral-50: #f8fafc;
+        --neutral-100: #f1f5f9;
+        --neutral-200: #e2e8f0;
+        --neutral-500: #64748b;
+        --neutral-700: #334155;
+        --neutral-800: #1e293b;
+    }
+
+    .dashboard-header {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-top: 4px solid var(--primary);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+
+    .stat-card.appointments { border-top-color: var(--accent); }
+    .stat-card.claims { border-top-color: var(--warning); }
+    .stat-card.revenue { border-top-color: var(--secondary); }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+    }
+
+    .action-card {
+        background: var(--neutral-50);
+        border: 1px solid var(--neutral-200);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .action-card:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+
+    .action-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        background: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin: 0 auto 0.75rem;
+    }
+
+    .action-card:hover .action-icon {
+        background: white;
+        color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="mb-2">Welcome back, {{ user.get_full_name|default:user.username }}! 👋</h1>
+                <p class="text-muted mb-0">Here's what's happening at your clinic today</p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <div class="fw-semibold">{{ current_date|default:"Today" }}</div>
+                <div class="text-muted" id="currentTime">{{ current_time|default:"" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-lg-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <small class="text-muted text-uppercase fw-bold">Total Patients</small>
+                        <h2 class="mb-0 mt-1">{{ patient_count|default:0|intcomma }}</h2>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #60A5FA);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="stat-card appointments h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <small class="text-muted text-uppercase fw-bold">Appointments Today</small>
+                        <h2 class="mb-0 mt-1">{{ appointment_count|default:0 }}</h2>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #16a34a, #22c55e);">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="stat-card claims h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <small class="text-muted text-uppercase fw-bold">Pending Bills</small>
+                        <h2 class="mb-0 mt-1">{{ pending_invoices|default:0 }}</h2>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #d97706, #f59e0b);">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="stat-card revenue h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <small class="text-muted text-uppercase fw-bold">Lab Tests Pending</small>
+                        <h2 class="mb-0 mt-1">{{ pending_lab_tests|default:0 }}</h2>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #0d9488, #14b8a6);">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h5 class="card-title mb-4">Quick Actions</h5>
+            <div class="row g-3">
+                <div class="col-lg-2 col-md-4 col-sm-6">
+                    <a href="{% url 'appointments:appointment_create' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-calendar-plus"></i>
+                        </div>
+                        <h6 class="mb-0">New Appointment</h6>
+                    </a>
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-sm-6">
+                    <a href="{% url 'patients:patient_register' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h6 class="mb-0">Register Patient</h6>
+                    </a>
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-sm-6">
+                    <a href="{% url 'billing:create_invoice' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <h6 class="mb-0">Create Invoice</h6>
+                    </a>
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-sm-6">
+                    <a href="{% url 'laboratory:request_list' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-flask"></i>
+                        </div>
+                        <h6 class="mb-0">Request Lab Test</h6>
+                    </a>
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-sm-6">
+                    <a href="{% url 'pharmacy:medication_list' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <h6 class="mb-0">Pharmacy</h6>
+                    </a>
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-sm-6">
+                    <a href="{% url 'reports:dashboard' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h6 class="mb-0">Reports</h6>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Cards -->
+    <div class="row g-4">
+        <!-- Today's Appointments -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">Today's Appointments</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_appointments %}
+                        {% for appointment in today_appointments|slice:":5" %}
+                        <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                            <div class="me-3">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ appointment.patient.get_full_name|default:"Unknown Patient" }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ appointment.appointment_date|time:"H:i"|default:"Time not set" }}
+                                </small>
+                            </div>
+                            <span class="fw-semibold text-{{ appointment.status|default:'secondary' }}">
+                                {{ appointment.get_status_display|default:"Scheduled" }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No appointments scheduled for today</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_payments %}
+                        {% for payment in recent_payments|slice:":5" %}
+                        <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                            <div class="me-3">
+                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-money-bill"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Payment Received</h6>
+                                <small class="text-muted">{{ payment.created_at|timesince|default:"Recently" }} ago</small>
+                            </div>
+                            <strong class="text-success">UGX {{ payment.amount|floatformat:0|intcomma|default:"0" }}</strong>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No recent activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update time every second
+setInterval(function() {
+    const timeElement = document.getElementById('currentTime');
+    if (timeElement) {
+        const now = new Date();
+        timeElement.textContent = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+}, 1000);
+</script>
+{% endblock %}
