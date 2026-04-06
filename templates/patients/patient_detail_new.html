@@ -4382,112 +4382,221 @@
 </div>
 
 {% if 'laboratory' in enabled_modules %}
+<style>
+#requestLabTestModal .pd-modal-header {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: #fff;
+    padding: .75rem 1.25rem;
+    border-radius: .375rem .375rem 0 0;
+}
+#requestLabTestModal .pd-modal-header .btn-close { filter: brightness(0) invert(1); }
+#requestLabTestModal .pd-section-label {
+    font-size: .68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: #6b7280; margin-bottom: .5rem;
+}
+#requestLabTestModal .pd-test-item {
+    cursor: pointer; font-size: .82rem; border-radius: 6px;
+    transition: background .15s;
+}
+#requestLabTestModal .pd-test-item:hover { background: #f0f5ff; }
+#requestLabTestModal .pd-test-item.selected { background: #e0edff; }
+#requestLabTestModal .pd-right-panel {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-left: 1px solid #e2e8f0;
+}
+#requestLabTestModal .pd-summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .35rem 0; font-size: .8rem; border-bottom: 1px dashed #e5e7eb;
+}
+#requestLabTestModal .pd-summary-row:last-child { border-bottom: none; }
+#requestLabTestModal .pd-price-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: .75rem; margin-bottom: .75rem;
+}
+#requestLabTestModal .pd-total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 700; font-size: 1rem; padding-top: .5rem;
+    border-top: 2px solid #1a73e8;
+}
+#requestLabTestModal .pd-discount-pills .btn {
+    font-size: .72rem; padding: .2rem .65rem; border-radius: 20px;
+}
+#requestLabTestModal .pd-discount-pills .btn.active {
+    background: #1a73e8; color: #fff; border-color: #1a73e8;
+}
+</style>
+
 <div class="modal fade" id="requestLabTestModal" tabindex="-1" aria-labelledby="requestLabTestModalLabel" aria-hidden="true" style="z-index: 10060;">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header py-2 border-bottom">
-                <h5 class="modal-title" id="requestLabTestModalLabel">
-                    <i class="bi bi-flask text-primary me-2"></i>Request Lab Test — {{ patient.get_full_name }}
-                </h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border:none;border-radius:.5rem;overflow:hidden;">
+            <!-- Header -->
+            <div class="pd-modal-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-flask" style="font-size:1.1rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold" style="font-size:.95rem;" id="requestLabTestModalLabel">Request Lab Test</h6>
+                        <span style="font-size:.72rem;opacity:.85;">{{ patient.get_full_name }} &middot; {{ patient.patient_id }}</span>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0">
+
+            <!-- Body -->
+            <div class="modal-body p-0" style="max-height:75vh;overflow:hidden;">
                 <form id="labTestRequestForm" method="post" action="{% url 'laboratory:labtest_request_bulk' %}">
                     {% csrf_token %}
                     <input type="hidden" name="patient" value="{{ patient.id }}">
-                    
-                    <div class="p-3">
-                        <p class="fw-semibold text-uppercase text-muted mb-2" style="font-size:.72rem;letter-spacing:.5px;">Select Tests</p>
-                        <!-- Search filter -->
-                        <div class="mb-2">
-                            <input type="text" id="pd_test_search" class="form-control form-control-sm" placeholder="Search tests...">
-                        </div>
-                        <!-- Test checkbox list -->
-                        <div id="pd_test_list" style="max-height:200px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:6px;">
-                            {% for test in available_lab_tests %}
-                            <label class="d-flex align-items-center gap-2 px-2 py-1 rounded test-check-item" style="cursor:pointer;font-size:.82rem;" data-name="{{ test.name|lower }}">
-                                <input type="checkbox" name="tests" value="{{ test.id }}" class="form-check-input mt-0 pd-test-cb" data-price="{{ test.price }}" data-currency="{{ test.currency }}" data-test-name="{{ test.name }}">
-                                <span class="flex-grow-1">{{ test.name }} <small class="text-muted">({{ test.code }})</small></span>
-                                <span class="badge bg-light text-dark border" style="font-size:.72rem;">{{ test.currency }} {{ test.price }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
-                            <span id="pd_selected_count" class="text-muted" style="font-size:.72rem;">0 tests selected</span>
-                            <span class="fw-bold" style="font-size:.85rem;">Total: <span id="pd_total_price" class="text-primary">UGX 0</span></span>
+                    <div class="row g-0" style="min-height:420px;">
+
+                        <!-- LEFT PANEL: Test Selection + Clinical -->
+                        <div class="col-md-7 d-flex flex-column" style="overflow-y:auto;max-height:75vh;">
+                            <div class="p-3 flex-grow-1">
+                                <p class="pd-section-label"><i class="bi bi-search me-1"></i>Select Tests</p>
+                                <div class="position-relative mb-2">
+                                    <i class="bi bi-search position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:.8rem;"></i>
+                                    <input type="text" id="pd_test_search" class="form-control form-control-sm" placeholder="Search by name or code..." style="padding-left:30px;border-radius:8px;">
+                                </div>
+                                <div id="pd_test_list" style="max-height:180px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:4px;">
+                                    {% for test in available_lab_tests %}
+                                    <label class="d-flex align-items-center gap-2 px-2 py-1 pd-test-item test-check-item" data-name="{{ test.name|lower }}">
+                                        <input type="checkbox" name="tests" value="{{ test.id }}" class="form-check-input mt-0 pd-test-cb" data-price="{{ test.price }}" data-currency="{{ test.currency }}" data-test-name="{{ test.name }}">
+                                        <span class="flex-grow-1">{{ test.name }} <small class="text-muted">({{ test.code }})</small></span>
+                                        <span class="badge text-dark" style="font-size:.7rem;background:#f1f5f9;border:1px solid #e2e8f0;">{{ test.currency }}&nbsp;{{ test.price|floatformat:0 }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-1 mb-1">
+                                    <span id="pd_selected_count" class="text-muted" style="font-size:.7rem;">0 tests selected</span>
+                                </div>
+
+                                <hr class="my-2" style="border-color:#e5e7eb;">
+                                <p class="pd-section-label"><i class="bi bi-clipboard2-pulse me-1"></i>Clinical Details</p>
+
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold mb-1" style="font-size:.75rem;">Priority</label>
+                                        <select class="form-select form-select-sm" name="priority" style="border-radius:6px;">
+                                            <option value="routine">Routine</option>
+                                            <option value="urgent">Urgent</option>
+                                            <option value="stat">STAT</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold mb-1" style="font-size:.75rem;">Sample ID</label>
+                                        <input type="text" class="form-control form-control-sm" name="sample_id" placeholder="Auto-generated" style="border-radius:6px;">
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label fw-semibold mb-1" style="font-size:.75rem;">Reason for Test <span class="text-danger">*</span></label>
+                                    <textarea class="form-control form-control-sm" name="reason_for_test" rows="2" placeholder="Clinical indication..." required style="border-radius:6px;"></textarea>
+                                </div>
+                                <div class="row g-2 mb-0">
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold mb-1" style="font-size:.75rem;">Samples Required</label>
+                                        <input type="text" class="form-control form-control-sm" name="samples_required" placeholder="Blood, Urine..." style="border-radius:6px;">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold mb-1" style="font-size:.75rem;">Clinical Notes</label>
+                                        <textarea class="form-control form-control-sm" name="clinical_notes" rows="1" placeholder="Additional info..." style="border-radius:6px;"></textarea>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <hr class="my-2">
-                        <div class="row g-2 mb-2">
-                            <div class="col-md-3 col-6">
-                                <label class="form-label form-label-sm fw-semibold mb-1">Priority</label>
-                                <select class="form-select form-select-sm" name="priority">
-                                    <option value="routine">Routine</option>
-                                    <option value="urgent">Urgent</option>
-                                    <option value="stat">STAT</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3 col-6">
-                                <label class="form-label form-label-sm fw-semibold mb-1">Sample ID</label>
-                                <input type="text" class="form-control form-control-sm" name="sample_id" placeholder="Optional">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label form-label-sm fw-semibold mb-1">Patient Group</label>
-                                <select class="form-select form-select-sm" id="pd_override_group" name="override_group_id">
-                                    <option value="">Auto (from patient profile)</option>
-                                    {% for g in patient_groups %}
-                                    <option value="{{ g.id }}" {% if patient.patient_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
-                                    {% endfor %}
-                                </select>
+                        <!-- RIGHT PANEL: Pricing & Discount -->
+                        <div class="col-md-5 pd-right-panel d-flex flex-column" style="overflow-y:auto;max-height:75vh;">
+                            <div class="p-3 flex-grow-1">
+                                <p class="pd-section-label"><i class="bi bi-receipt me-1"></i>Order Summary</p>
+
+                                <!-- Selected tests list -->
+                                <div class="pd-price-card">
+                                    <div id="pd_selected_summary" style="min-height:60px;max-height:150px;overflow-y:auto;">
+                                        <div class="text-center py-3">
+                                            <i class="bi bi-inbox text-muted" style="font-size:1.5rem;"></i>
+                                            <p class="text-muted mb-0" style="font-size:.78rem;">Select tests from the left panel</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pricing breakdown -->
+                                <div class="pd-price-card">
+                                    <div class="d-flex justify-content-between" style="font-size:.82rem;">
+                                        <span class="text-muted">Subtotal</span>
+                                        <span class="fw-semibold" id="pd_subtotal">UGX 0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-1" style="font-size:.82rem;">
+                                        <span class="text-muted">Discount</span>
+                                        <span class="fw-semibold text-danger" id="pd_discount_display">- UGX 0</span>
+                                    </div>
+                                    <div class="pd-total-row mt-2">
+                                        <span>Total</span>
+                                        <span id="pd_total_price" style="color:#1a73e8;">UGX 0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Patient Group -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold mb-1" style="font-size:.75rem;"><i class="bi bi-people me-1"></i>Patient Group</label>
+                                    <select class="form-select form-select-sm" id="pd_override_group" name="override_group_id" style="border-radius:6px;">
+                                        <option value="">Auto (from patient profile)</option>
+                                        {% for g in patient_groups %}
+                                        <option value="{{ g.id }}" {% if patient.patient_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-muted" style="font-size:.68rem;">
+                                        {% if patient.patient_group %}Current: {{ patient.patient_group.name }}{% else %}No group assigned{% endif %}
+                                    </small>
+                                </div>
+
+                                <!-- Discount -->
+                                <div class="mb-2">
+                                    <label class="form-label fw-semibold mb-1" style="font-size:.75rem;"><i class="bi bi-tag me-1"></i>Discount</label>
+                                    <div class="pd-discount-pills btn-group w-100 mb-2" role="group">
+                                        <input type="radio" class="btn-check" name="discount_type" id="pd_disc_none" value="none" checked autocomplete="off">
+                                        <label class="btn btn-outline-secondary active" for="pd_disc_none">None</label>
+                                        <input type="radio" class="btn-check" name="discount_type" id="pd_disc_pct" value="percentage" autocomplete="off">
+                                        <label class="btn btn-outline-secondary" for="pd_disc_pct"><i class="bi bi-percent"></i> Percentage</label>
+                                        <input type="radio" class="btn-check" name="discount_type" id="pd_disc_flat" value="flat" autocomplete="off">
+                                        <label class="btn btn-outline-secondary" for="pd_disc_flat"><i class="bi bi-cash"></i> Flat</label>
+                                    </div>
+                                    <!-- Discount scope & value (hidden until a discount type is chosen) -->
+                                    <div id="pdDiscountDetailWrap" style="display:none;">
+                                        <div class="mb-2">
+                                            <label class="form-label mb-1" style="font-size:.72rem;color:#6b7280;">Apply to</label>
+                                            <div class="btn-group w-100 btn-group-sm" role="group">
+                                                <input type="radio" class="btn-check" name="discount_scope" id="pd_scope_all" value="all" checked autocomplete="off">
+                                                <label class="btn btn-outline-primary btn-sm active" for="pd_scope_all" style="font-size:.72rem;border-radius:6px 0 0 6px;"><i class="bi bi-collection me-1"></i>All Tests</label>
+                                                <input type="radio" class="btn-check" name="discount_scope" id="pd_scope_single" value="single" autocomplete="off">
+                                                <label class="btn btn-outline-primary btn-sm" for="pd_scope_single" style="font-size:.72rem;border-radius:0 6px 6px 0;"><i class="bi bi-1-circle me-1"></i>Single Test</label>
+                                            </div>
+                                        </div>
+                                        <div id="pdSingleTestWrap" style="display:none;" class="mb-2">
+                                            <select class="form-select form-select-sm" id="pd_discount_test_id" name="discount_test_id" style="border-radius:6px;font-size:.78rem;">
+                                                <option value="">-- pick a test --</option>
+                                            </select>
+                                        </div>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text" id="pdDiscSymbol" style="border-radius:6px 0 0 6px;background:#f8fafc;">%</span>
+                                            <input type="number" class="form-control form-control-sm" id="pd_discount_value" name="discount_value" min="0" step="0.01" value="" placeholder="Enter amount" style="border-radius:0 6px 6px 0;">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label form-label-sm fw-semibold mb-1">Reason for Test <span class="text-danger">*</span></label>
-                            <textarea class="form-control form-control-sm" name="reason_for_test" rows="2" placeholder="Clinical indication..." required></textarea>
-                        </div>
-                        <div class="row g-2 mb-0">
-                            <div class="col-md-6">
-                                <label class="form-label form-label-sm fw-semibold mb-1">Samples Required</label>
-                                <input type="text" class="form-control form-control-sm" name="samples_required" placeholder="e.g., Blood, Urine, Stool">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label form-label-sm fw-semibold mb-1">Clinical Notes <small class="text-muted fw-normal">(optional)</small></label>
-                                <textarea class="form-control form-control-sm" name="clinical_notes" rows="1" placeholder="Additional clinical information"></textarea>
-                            </div>
-                        </div>
-                        <hr class="my-2">
-                        <!-- Discount Section -->
-                        <div class="mb-2">
-                            <label class="form-label form-label-sm fw-semibold mb-1">Discount</label>
-                            <div class="d-flex flex-wrap gap-3 mb-2">
-                                <div class="form-check form-check-sm">
-                                    <input class="form-check-input" type="radio" name="discount_type" id="pd_disc_none" value="none" checked>
-                                    <label class="form-check-label" for="pd_disc_none" style="font-size:.82rem;">None</label>
-                                </div>
-                                <div class="form-check form-check-sm">
-                                    <input class="form-check-input" type="radio" name="discount_type" id="pd_disc_pct" value="percentage">
-                                    <label class="form-check-label" for="pd_disc_pct" style="font-size:.82rem;">Percentage (%)</label>
-                                </div>
-                                <div class="form-check form-check-sm">
-                                    <input class="form-check-input" type="radio" name="discount_type" id="pd_disc_flat" value="flat">
-                                    <label class="form-check-label" for="pd_disc_flat" style="font-size:.82rem;">Flat Amount</label>
-                                </div>
-                            </div>
-                            <div id="pdDiscountValueWrap" style="display:none;">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text" id="pdDiscSymbol">%</span>
-                                    <input type="number" class="form-control form-control-sm" id="pd_discount_value" name="discount_value" min="0" step="0.01" value="" placeholder="0">
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </form>
             </div>
-            <div class="modal-footer py-2 border-top">
-                <span id="pd_footer_count" class="me-auto text-muted" style="font-size:.78rem;">0 tests selected</span>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary btn-sm px-4" id="pd_submit_btn" onclick="submitLabTestRequestForm()" disabled>
-                    <i class="bi bi-check-circle me-1"></i> Request Tests
+
+            <!-- Footer -->
+            <div class="modal-footer py-2 border-top" style="background:#fafbfc;">
+                <span id="pd_footer_count" class="me-auto text-muted" style="font-size:.78rem;"><i class="bi bi-check2-square me-1"></i>0 tests selected</span>
+                <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal" style="border-radius:6px;">Cancel</button>
+                <button type="button" class="btn btn-sm px-4" id="pd_submit_btn" onclick="submitLabTestRequestForm()" disabled
+                    style="border-radius:6px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;font-weight:600;">
+                    <i class="bi bi-send me-1"></i> Submit Request
                 </button>
             </div>
         </div>
@@ -4612,39 +4721,160 @@
 </div>
 <script>
 (function () {
-    // Multi-test selection: search, summary, pricing
     document.addEventListener('DOMContentLoaded', function () {
+        var M = '#requestLabTestModal';
         var checkboxes = document.querySelectorAll('.pd-test-cb');
         var searchInput = document.getElementById('pd_test_search');
+        var summaryDiv = document.getElementById('pd_selected_summary');
+        var subtotalEl = document.getElementById('pd_subtotal');
+        var discountDisplayEl = document.getElementById('pd_discount_display');
         var totalEl = document.getElementById('pd_total_price');
         var countEl = document.getElementById('pd_selected_count');
         var footerCountEl = document.getElementById('pd_footer_count');
         var submitBtn = document.getElementById('pd_submit_btn');
+        var detailWrap = document.getElementById('pdDiscountDetailWrap');
+        var singleTestWrap = document.getElementById('pdSingleTestWrap');
+        var singleTestSel = document.getElementById('pd_discount_test_id');
+        var discSym = document.getElementById('pdDiscSymbol');
+        var discValInp = document.getElementById('pd_discount_value');
 
+        // --- helpers ---
+        function getDiscType() {
+            var r = document.querySelector(M + ' input[name="discount_type"]:checked');
+            return r ? r.value : 'none';
+        }
+        function getDiscScope() {
+            var r = document.querySelector(M + ' input[name="discount_scope"]:checked');
+            return r ? r.value : 'all';
+        }
+        function discAmountFor(price) {
+            var val = parseFloat(discValInp ? discValInp.value : 0) || 0;
+            var type = getDiscType();
+            if (type === 'percentage' && val > 0 && val <= 100) return Math.round(price * val / 100);
+            if (type === 'flat' && val > 0) return Math.min(val, price);
+            return 0;
+        }
+
+        // Rebuild the single-test dropdown from currently checked tests
+        function rebuildSingleTestDropdown() {
+            if (!singleTestSel) return;
+            var prev = singleTestSel.value;
+            singleTestSel.innerHTML = '<option value="">-- pick a test --</option>';
+            document.querySelectorAll('.pd-test-cb:checked').forEach(function (cb) {
+                var opt = document.createElement('option');
+                opt.value = cb.value;
+                opt.textContent = cb.dataset.testName || 'Test';
+                singleTestSel.appendChild(opt);
+            });
+            // restore previous selection if still valid
+            if (prev) singleTestSel.value = prev;
+            if (!singleTestSel.value && singleTestSel.options.length > 1) {
+                singleTestSel.selectedIndex = 1;
+            }
+        }
+
+        // --- main summary & pricing ---
         function updateSummary() {
             var selected = document.querySelectorAll('.pd-test-cb:checked');
             var count = selected.length;
-            var total = 0;
+            var discType = getDiscType();
+            var scope = getDiscScope();
+            var singleId = (singleTestSel ? singleTestSel.value : '');
+            var discVal = parseFloat(discValInp ? discValInp.value : 0) || 0;
+
+            // Pass 1: gather prices & compute subtotal
+            var items = [];
+            var subtotal = 0;
             selected.forEach(function (cb) {
-                total += parseFloat(cb.dataset.price) || 0;
+                var price = parseFloat(cb.dataset.price) || 0;
+                items.push({ id: cb.value, price: price, currency: cb.dataset.currency || 'UGX', name: cb.dataset.testName || '' });
+                subtotal += price;
             });
-            if (totalEl) totalEl.textContent = 'UGX ' + total.toFixed(0);
+
+            // Compute total discount on the WHOLE amount (scope=all) or on a single test
+            var totalDiscount = 0;
+            if (discType !== 'none' && discVal > 0) {
+                if (scope === 'all') {
+                    if (discType === 'percentage' && discVal <= 100) {
+                        totalDiscount = Math.round(subtotal * discVal / 100);
+                    } else if (discType === 'flat') {
+                        totalDiscount = Math.min(discVal, subtotal);
+                    }
+                } else if (scope === 'single') {
+                    // find single test price
+                    for (var s = 0; s < items.length; s++) {
+                        if (items[s].id === singleId) {
+                            if (discType === 'percentage' && discVal <= 100) {
+                                totalDiscount = Math.round(items[s].price * discVal / 100);
+                            } else if (discType === 'flat') {
+                                totalDiscount = Math.min(discVal, items[s].price);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Pass 2: build summary rows with proportional discount distribution
+            var html = '';
+            var discAssigned = 0;
+            for (var i = 0; i < items.length; i++) {
+                var it = items[i];
+                var rowDisc = 0;
+
+                if (totalDiscount > 0) {
+                    if (scope === 'all') {
+                        // distribute proportionally; last item gets remainder to avoid rounding drift
+                        if (i === items.length - 1) {
+                            rowDisc = totalDiscount - discAssigned;
+                        } else {
+                            rowDisc = subtotal > 0 ? Math.round(totalDiscount * it.price / subtotal) : 0;
+                        }
+                        discAssigned += rowDisc;
+                    } else if (scope === 'single' && it.id === singleId) {
+                        rowDisc = totalDiscount;
+                    }
+                }
+                var effectivePrice = Math.max(0, it.price - rowDisc);
+
+                html += '<div class="pd-summary-row">';
+                html += '<span>' + it.name;
+                if (rowDisc > 0) html += ' <small class="text-danger">(-' + it.currency + ' ' + rowDisc.toLocaleString() + ')</small>';
+                html += '</span>';
+                html += '<span class="fw-semibold">' + it.currency + ' ' + effectivePrice.toLocaleString() + '</span>';
+                html += '</div>';
+            }
+
+            if (count === 0) {
+                summaryDiv.innerHTML = '<div class="text-center py-3"><i class="bi bi-inbox text-muted" style="font-size:1.5rem;"></i><p class="text-muted mb-0" style="font-size:.78rem;">Select tests from the left panel</p></div>';
+            } else {
+                summaryDiv.innerHTML = html;
+            }
+
+            var total = Math.max(0, subtotal - totalDiscount);
+            if (subtotalEl) subtotalEl.textContent = 'UGX ' + subtotal.toLocaleString();
+            if (discountDisplayEl) discountDisplayEl.textContent = totalDiscount > 0 ? '- UGX ' + totalDiscount.toLocaleString() : '- UGX 0';
+            if (totalEl) totalEl.textContent = 'UGX ' + total.toLocaleString();
+
             var label = count + ' test' + (count !== 1 ? 's' : '') + ' selected';
             if (countEl) countEl.textContent = label;
-            if (footerCountEl) footerCountEl.textContent = label;
+            if (footerCountEl) footerCountEl.innerHTML = '<i class="bi bi-check2-square me-1"></i>' + label;
             if (submitBtn) submitBtn.disabled = count === 0;
         }
 
+        // --- checkbox changes ---
         checkboxes.forEach(function (cb) {
             cb.addEventListener('change', function () {
-                // Highlight row
-                var lbl = this.closest('.test-check-item');
-                if (lbl) lbl.style.background = this.checked ? '#e6f1fa' : '';
+                var lbl = this.closest('.pd-test-item');
+                if (lbl) {
+                    if (this.checked) { lbl.classList.add('selected'); } else { lbl.classList.remove('selected'); }
+                }
+                rebuildSingleTestDropdown();
                 updateSummary();
             });
         });
 
-        // Search filter
+        // --- search ---
         if (searchInput) {
             searchInput.addEventListener('input', function () {
                 var q = this.value.toLowerCase();
@@ -4654,27 +4884,53 @@
             });
         }
 
-        // Discount toggle
-        var discWrap = document.getElementById('pdDiscountValueWrap');
-        var discSym = document.getElementById('pdDiscSymbol');
-        var discValInp = document.getElementById('pd_discount_value');
-
-        document.querySelectorAll('#requestLabTestModal input[name="discount_type"]').forEach(function (r) {
+        // --- discount type pills ---
+        document.querySelectorAll(M + ' input[name="discount_type"]').forEach(function (r) {
             r.addEventListener('change', function () {
+                // active class
+                document.querySelectorAll(M + ' .pd-discount-pills label').forEach(function (lbl) { lbl.classList.remove('active'); });
+                var activeLbl = document.querySelector(M + ' label[for="' + this.id + '"]');
+                if (activeLbl) activeLbl.classList.add('active');
+
                 if (this.value === 'none') {
-                    if (discWrap) discWrap.style.display = 'none';
+                    if (detailWrap) detailWrap.style.display = 'none';
                     if (discValInp) discValInp.value = '';
                 } else {
-                    if (discWrap) discWrap.style.display = 'block';
+                    if (detailWrap) detailWrap.style.display = 'block';
                     if (discSym) discSym.textContent = this.value === 'percentage' ? '%' : 'UGX';
                     if (discValInp && this.value === 'percentage') {
-                        discValInp.max = '100'; discValInp.placeholder = '0-100';
+                        discValInp.max = '100'; discValInp.placeholder = '0 - 100';
                     } else if (discValInp) {
-                        discValInp.removeAttribute('max'); discValInp.placeholder = '0';
+                        discValInp.removeAttribute('max'); discValInp.placeholder = 'Enter amount';
                     }
                 }
+                updateSummary();
             });
         });
+
+        // --- discount scope toggle ---
+        document.querySelectorAll(M + ' input[name="discount_scope"]').forEach(function (r) {
+            r.addEventListener('change', function () {
+                // active class on scope labels
+                document.querySelectorAll(M + ' label[for="pd_scope_all"], ' + M + ' label[for="pd_scope_single"]').forEach(function (lbl) { lbl.classList.remove('active'); });
+                var activeLbl = document.querySelector(M + ' label[for="' + this.id + '"]');
+                if (activeLbl) activeLbl.classList.add('active');
+
+                if (this.value === 'single') {
+                    if (singleTestWrap) singleTestWrap.style.display = 'block';
+                    rebuildSingleTestDropdown();
+                } else {
+                    if (singleTestWrap) singleTestWrap.style.display = 'none';
+                }
+                updateSummary();
+            });
+        });
+
+        // single test selector change
+        if (singleTestSel) singleTestSel.addEventListener('change', updateSummary);
+
+        // discount value input
+        if (discValInp) discValInp.addEventListener('input', updateSummary);
     });
 }());
 </script>

@@ -480,6 +480,8 @@ def labtest_request_bulk(request):
 	sample_id = request.POST.get('sample_id', '')
 	override_group_id = request.POST.get('override_group_id', '').strip()
 	discount_type = request.POST.get('discount_type', 'none')
+	discount_scope = request.POST.get('discount_scope', 'all')  # 'all' or 'single'
+	discount_test_id = request.POST.get('discount_test_id', '').strip()
 	try:
 		discount_value = Decimal(request.POST.get('discount_value', '0') or '0')
 	except Exception:
@@ -505,13 +507,48 @@ def labtest_request_bulk(request):
 			created_by=request.user
 		)
 
-	created_count = 0
+	# --- Pass 1: resolve base prices for all requested tests ---
+	test_data = []  # list of (lab_test, base_price)
 	for test_id in test_ids:
 		try:
 			lab_test = LabTest.objects.get(id=test_id, is_active=True)
 		except LabTest.DoesNotExist:
 			continue
+		if override_group_id:
+			try:
+				gp = LabTestPriceGroup.objects.get(lab_test=lab_test, patient_group_id=override_group_id)
+				base = gp.price
+			except LabTestPriceGroup.DoesNotExist:
+				base = lab_test.price
+		else:
+			base = LabTestPriceGroup.get_price_for_patient(lab_test, patient)
+		test_data.append((lab_test, base))
 
+	if not test_data:
+		return JsonResponse({'success': False, 'message': 'No valid tests were found.'}, status=400)
+
+	# --- Compute total discount amount (applied to whole order for scope=all) ---
+	total_base = sum(bp for _, bp in test_data)
+	total_disc = Decimal('0')
+	if discount_type != 'none' and discount_value > Decimal('0'):
+		if discount_scope == 'all':
+			if discount_type == 'percentage' and discount_value <= Decimal('100'):
+				total_disc = (total_base * discount_value / 100).quantize(Decimal('0.01'))
+			elif discount_type == 'flat':
+				total_disc = min(discount_value, total_base)
+		elif discount_scope == 'single' and discount_test_id:
+			for lt, bp in test_data:
+				if str(lt.id) == discount_test_id:
+					if discount_type == 'percentage' and discount_value <= Decimal('100'):
+						total_disc = (bp * discount_value / 100).quantize(Decimal('0.01'))
+					elif discount_type == 'flat':
+						total_disc = min(discount_value, bp)
+					break
+
+	# --- Pass 2: create requests and invoice line items ---
+	created_count = 0
+	disc_assigned = Decimal('0')
+	for idx, (lab_test, base_price) in enumerate(test_data):
 		lab_request = LabTestRequest.objects.create(
 			patient=patient,
 			test=lab_test,
@@ -523,20 +560,19 @@ def labtest_request_bulk(request):
 			sample_id=sample_id,
 		)
 
-		# Pricing
-		if override_group_id:
-			try:
-				gp = LabTestPriceGroup.objects.get(lab_test=lab_test, patient_group_id=override_group_id)
-				unit_price = gp.price
-			except LabTestPriceGroup.DoesNotExist:
-				unit_price = lab_test.price
-		else:
-			unit_price = LabTestPriceGroup.get_price_for_patient(lab_test, patient)
+		row_disc = Decimal('0')
+		if total_disc > Decimal('0'):
+			if discount_scope == 'all':
+				# distribute proportionally; last item gets remainder
+				if idx == len(test_data) - 1:
+					row_disc = total_disc - disc_assigned
+				elif total_base > Decimal('0'):
+					row_disc = (total_disc * base_price / total_base).quantize(Decimal('0.01'))
+				disc_assigned += row_disc
+			elif discount_scope == 'single' and str(lab_test.id) == discount_test_id:
+				row_disc = total_disc
 
-		if discount_type == 'percentage' and Decimal('0') < discount_value <= Decimal('100'):
-			unit_price = (unit_price * (1 - discount_value / 100)).quantize(Decimal('0.01'))
-		elif discount_type == 'flat' and discount_value > Decimal('0'):
-			unit_price = max(Decimal('0'), unit_price - discount_value)
+		unit_price = max(Decimal('0'), base_price - row_disc)
 
 		InvoiceLineItem.objects.create(
 			invoice=draft_invoice,
