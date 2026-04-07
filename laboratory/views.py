@@ -100,12 +100,28 @@ def labtest_list(request):
 		if count > 0:
 			tests_by_category.append({
 				'category': cat.code,
+				'code': cat.code,
 				'label': cat.name,
 				'count': count
 			})
 	
+	# Quick info stats
+	from django.db.models import Avg, Count
+	profile_tests_count = all_tests.filter(profile__isnull=False).count()
+	agg = all_tests.filter(is_active=True).aggregate(avg_price=Avg('price'), avg_tat=Avg('duration_hours'))
+	avg_price = agg.get('avg_price')
+	avg_tat = agg.get('avg_tat')
+	
+	# Most used tests (top 5 by request count)
+	most_used_tests = LabTestRequest.objects.values('test', 'test__name').annotate(
+		count=Count('id')
+	).order_by('-count')[:5]
+	
+	# Total requests count
+	total_requests = LabTestRequest.objects.count()
+	
 	context = {
-		'tests': tests,
+		'tests': tests.select_related('category'),
 		'categories': categories,
 		'selected_category': category,
 		'search_query': search,
@@ -116,6 +132,11 @@ def labtest_list(request):
 		'active_tests': active_tests,
 		'inactive_tests': inactive_tests,
 		'tests_by_category': tests_by_category,
+		'profile_tests_count': profile_tests_count,
+		'avg_price': avg_price,
+		'avg_tat': avg_tat,
+		'most_used_tests': most_used_tests,
+		'total_requests': total_requests,
 	}
 	return render(request, 'laboratory/labtest_list.html', context)
 

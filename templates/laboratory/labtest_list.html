@@ -3,264 +3,316 @@
 
 {% block page_title %}
     <div class="d-flex align-items-center">
-        <i class="bi bi-clipboard-data me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
-        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Laboratory Test Catalog</span>
+        <i class="bi bi-clipboard2-pulse me-2" style="font-size: 1.3rem; color: #1a5276;"></i>
+        <span style="color: #1a5276; font-weight: 700;">Lab Test Catalog</span>
     </div>
 {% endblock %}
 
 {% block page_actions %}
 <div class="d-flex flex-wrap gap-2 align-items-center">
-    <button type="button" class="btn btn-success btn-sm px-3" id="addTestBtn">
-        <i class="bi bi-plus-circle me-1"></i> Add Test
+    <button type="button" class="btn px-3" id="addTestBtn" data-bs-toggle="modal" data-bs-target="#testModal" onclick="openAddModal()" style="background:#27ae60;color:#fff;font-size:.8rem;">
+        <i class="bi bi-plus-lg me-1"></i> New Test
     </button>
-    <a href="{% url 'laboratory:dashboard' %}" class="btn btn-outline-secondary btn-sm px-3">
-        <i class="bi bi-arrow-left me-1"></i> Dashboard
+    <a href="{% url 'laboratory:dashboard' %}" class="btn btn-outline-secondary px-3" style="font-size:.8rem;">
+        <i class="bi bi-speedometer2 me-1"></i> Dashboard
     </a>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- ============================================================ -->
-<!-- Statistics Cards                                              -->
-<!-- ============================================================ -->
-<div class="row mb-4">
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card metric-card primary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="metric-label">Total Tests</div>
-                        <div class="metric-value">{{ total_tests }}</div>
-                    </div>
-                    <div class="metric-icon primary">
-                        <i class="bi bi-clipboard-data"></i>
-                    </div>
-                </div>
-            </div>
+<style>
+/* Dashboard-style stats cards */
+.db-stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.db-stat { background: #fff; border-radius: 10px; padding: .9rem 1.1rem; box-shadow: 0 2px 8px rgba(0,0,0,.04); display: flex; align-items: center; gap: .8rem; flex: 1; min-width: 150px; }
+.db-stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.db-stat-icon.blue { background: #e8f4fc; color: #1a5276; }
+.db-stat-icon.green { background: #e8f8f0; color: #27ae60; }
+.db-stat-icon.orange { background: #fef5e7; color: #f39c12; }
+.db-stat-icon.purple { background: #f4ecf7; color: #8e44ad; }
+.db-stat-icon.teal { background: #e0f7fa; color: #00838f; }
+.db-stat-val { font-size: 1.4rem; font-weight: 700; color: #1a5276; line-height: 1; }
+.db-stat-lbl { font-size: .7rem; color: #7f8c8d; margin-top: 2px; }
+.db-stat-sub { font-size: .65rem; color: #27ae60; margin-top: 1px; }
+
+/* Card styling */
+.db-card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.04); overflow: hidden; margin-bottom: 1rem; }
+.db-card-hdr { background: #1a5276; color: #fff; padding: .65rem 1rem; display: flex; justify-content: space-between; align-items: center; }
+.db-card-hdr h6 { margin: 0; font-size: .85rem; font-weight: 600; }
+.db-card-hdr .view-all { color: #fff; font-size: .72rem; text-decoration: none; opacity: .85; }
+.db-card-hdr .view-all:hover { opacity: 1; }
+
+/* Table styling */
+.db-tbl { width: 100%; font-size: .8rem; border-collapse: collapse; }
+.db-tbl th { background: #f8f9fa; color: #5d6d7e; font-weight: 600; text-transform: uppercase; font-size: .68rem; letter-spacing: .3px; padding: .55rem .7rem; border-bottom: 1px solid #ecf0f1; }
+.db-tbl td { padding: .5rem .7rem; border-bottom: 1px solid #f4f6f7; vertical-align: middle; color: #2c3e50; }
+.db-tbl tbody tr:hover { background: #f8f9fa; }
+.db-tbl .code { font-family: monospace; font-size: .72rem; color: #1a5276; background: #e8f4fc; padding: .15rem .4rem; border-radius: 4px; }
+.db-tbl .test-name { font-weight: 500; color: #1a5276; }
+.db-tbl .test-name:hover { color: #2980b9; }
+.db-tbl .cat-badge { font-size: .68rem; padding: .2rem .5rem; border-radius: 4px; background: #ecf0f1; color: #5d6d7e; }
+.db-tbl .price { font-weight: 600; color: #27ae60; }
+.db-tbl .status-active { color: #27ae60; }
+.db-tbl .status-inactive { color: #e74c3c; }
+.db-tbl .btn-action { width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: .75rem; border: none; }
+.db-tbl .btn-action.view { background: #e8f4fc; color: #1a5276; }
+.db-tbl .btn-action.view:hover { background: #1a5276; color: #fff; }
+
+/* Footer */
+.db-footer { background: #f8f9fa; padding: .5rem .75rem; display: flex; justify-content: space-between; align-items: center; font-size: .72rem; color: #7f8c8d; }
+.db-footer .pagination { margin: 0; }
+.db-footer .page-link { padding: .25rem .5rem; font-size: .7rem; }
+
+/* Sidebar cards */
+.db-sidebar { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.04); overflow: hidden; margin-bottom: 1rem; }
+.db-sidebar-hdr { background: #1a5276; color: #fff; padding: .55rem .85rem; display: flex; justify-content: space-between; align-items: center; }
+.db-sidebar-hdr h6 { margin: 0; font-size: .8rem; font-weight: 600; }
+.db-sidebar-hdr .all-link { color: rgba(255,255,255,.8); font-size: .68rem; text-decoration: none; }
+.db-sidebar-hdr .all-link:hover { color: #fff; }
+
+/* Category list */
+.db-cat-item { display: flex; justify-content: space-between; align-items: center; padding: .5rem .85rem; border-bottom: 1px solid #f4f6f7; font-size: .78rem; text-decoration: none; color: #2c3e50; }
+.db-cat-item:last-child { border-bottom: none; }
+.db-cat-item:hover { background: #f8f9fa; }
+.db-cat-count { background: #1a5276; color: #fff; font-size: .65rem; padding: .15rem .45rem; border-radius: 10px; min-width: 24px; text-align: center; }
+
+/* Most used tests */
+.db-top-item { display: flex; align-items: center; padding: .5rem .85rem; border-bottom: 1px solid #f4f6f7; gap: .6rem; }
+.db-top-item:last-child { border-bottom: none; }
+.db-top-rank { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; }
+.db-top-rank.gold { background: #f39c12; color: #fff; }
+.db-top-rank.silver { background: #95a5a6; color: #fff; }
+.db-top-rank.bronze { background: #d35400; color: #fff; }
+.db-top-rank.other { background: #ecf0f1; color: #7f8c8d; }
+.db-top-info { flex: 1; min-width: 0; }
+.db-top-name { font-size: .78rem; font-weight: 500; color: #2c3e50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-top-count { font-size: .68rem; color: #7f8c8d; }
+
+/* Filter bar */
+.db-filter { background: #fff; border-radius: 10px; padding: .7rem .9rem; margin-bottom: .85rem; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+.db-filter .form-control, .db-filter .form-select { font-size: .8rem; padding: .45rem .65rem; border-color: #dfe6e9; }
+.db-filter .form-control:focus, .db-filter .form-select:focus { border-color: #1a5276; box-shadow: 0 0 0 2px rgba(26,82,118,.1); }
+.db-filter .btn { font-size: .78rem; padding: .45rem .85rem; }
+.db-filter label { font-size: .68rem; color: #7f8c8d; text-transform: uppercase; letter-spacing: .3px; margin-bottom: .25rem; font-weight: 500; }
+
+/* Empty state */
+.db-empty { text-align: center; padding: 2.5rem 1rem; }
+.db-empty-icon { width: 60px; height: 60px; background: #ecf0f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto .85rem; }
+.db-empty-icon i { font-size: 1.5rem; color: #95a5a6; }
+</style>
+
+<!-- Stats Row (Dashboard Style) -->
+<div class="db-stats">
+    <div class="db-stat">
+        <div class="db-stat-icon blue"><i class="bi bi-clipboard2-data"></i></div>
+        <div>
+            <div class="db-stat-val">{{ total_tests }}</div>
+            <div class="db-stat-lbl">Total Tests</div>
         </div>
     </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card metric-card success h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="metric-label">Active Tests</div>
-                        <div class="metric-value">{{ active_tests }}</div>
-                    </div>
-                    <div class="metric-icon success">
-                        <i class="bi bi-check-circle"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="db-stat">
+        <div class="db-stat-icon green"><i class="bi bi-check-circle"></i></div>
+        <div>
+            <div class="db-stat-val">{{ active_tests }}</div>
+            <div class="db-stat-lbl">Active</div>
+            <div class="db-stat-sub"><i class="bi bi-circle-fill" style="font-size:.4rem;"></i> Available</div>
         </div>
     </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card metric-card warning h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="metric-label">Inactive Tests</div>
-                        <div class="metric-value">{{ inactive_tests }}</div>
-                    </div>
-                    <div class="metric-icon warning">
-                        <i class="bi bi-pause-circle"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="db-stat">
+        <div class="db-stat-icon orange"><i class="bi bi-pause-circle"></i></div>
+        <div>
+            <div class="db-stat-val">{{ inactive_tests }}</div>
+            <div class="db-stat-lbl">Inactive</div>
         </div>
     </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card metric-card info h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="metric-label">Categories</div>
-                        <div class="metric-value">{{ tests_by_category|length }}</div>
-                    </div>
-                    <div class="metric-icon info">
-                        <i class="bi bi-diagram-3"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="db-stat">
+        <div class="db-stat-icon purple"><i class="bi bi-diagram-3"></i></div>
+        <div>
+            <div class="db-stat-val">{{ tests_by_category|length }}</div>
+            <div class="db-stat-lbl">Categories</div>
+        </div>
+    </div>
+    <div class="db-stat">
+        <div class="db-stat-icon teal"><i class="bi bi-layers"></i></div>
+        <div>
+            <div class="db-stat-val">{{ profile_tests_count|default:0 }}</div>
+            <div class="db-stat-lbl">Profile Tests</div>
         </div>
     </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- Filters & Search                                              -->
-<!-- ============================================================ -->
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body py-3">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label small fw-semibold text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Search</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="search" class="form-control border-start-0" value="{{ search_query }}" placeholder="Search by name, code, description...">
+<div class="row g-3">
+    <!-- Main Table Column -->
+    <div class="col-lg-9">
+        <!-- Filter Bar -->
+        <div class="db-filter">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label>Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted" style="font-size:.75rem;"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0" value="{{ search_query }}" placeholder="Name, code, description...">
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Category</label>
-                <select name="category" class="form-select">
-                    <option value="">All Categories</option>
-                    {% for category in categories %}
+                <div class="col-md-4">
+                    <label>Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
                         <option value="{{ category.code }}" {% if selected_category == category.code %}selected{% endif %}>{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary flex-grow-1">
-                        <i class="bi bi-search me-1"></i> Filter
-                    </button>
-                    <a href="{% url 'laboratory:labtest_list' %}" class="btn btn-outline-secondary" title="Clear filters">
-                        <i class="bi bi-x-circle"></i>
-                    </a>
+                        {% endfor %}
+                    </select>
                 </div>
-            </div>
-        </form>
-    </div>
-</div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn flex-grow-1" style="background:#1a5276;color:#fff;"><i class="bi bi-funnel me-1"></i>Filter</button>
+                    <a href="{% url 'laboratory:labtest_list' %}" class="btn btn-outline-secondary" title="Clear"><i class="bi bi-x-lg"></i></a>
+                </div>
+            </form>
+        </div>
 
-<!-- ============================================================ -->
-<!-- Two Column Layout: Available Tests & Tests by Category       -->
-<!-- ============================================================ -->
-<div class="row">
-    <!-- Left Column: Available Tests -->
-    <div class="col-lg-8 mb-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-list-ul me-2"></i>Available Tests</h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-white text-dark">{{ tests|length }} test{{ tests|length|pluralize }}</span>
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="text-white mb-0" style="font-size: 0.75rem;">Show:</label>
-                            <select id="rowsPerPage" class="form-select form-select-sm" style="width: 70px; font-size: 0.75rem;">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                        </div>
-                    </div>
+        <!-- Tests Table Card -->
+        <div class="db-card">
+            <div class="db-card-hdr">
+                <h6><i class="bi bi-list-ul me-2"></i>Laboratory Tests</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:.72rem;opacity:.85;">{{ tests|length }} test{{ tests|length|pluralize }}</span>
+                    <select id="rowsPerPage" class="form-select form-select-sm" style="width:55px;font-size:.68rem;padding:.2rem .35rem;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">All</option>
+                    </select>
                 </div>
             </div>
-            <div class="card-body p-0">
-                {% if tests %}
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0" style="font-size: 0.875rem;" id="testsTable">
-                            <thead>
-                                <tr style="background: #fff; border-bottom: 1px solid #e9ecef;">
-                                    <th class="ps-4 py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Test Name</th>
-                                    <th class="py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Code</th>
-                                    <th class="py-3 text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Category</th>
-                                    <th class="py-3 text-uppercase text-end" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Price</th>
-                                    <th class="pe-4 py-3 text-uppercase text-center" style="font-size: 0.75rem; font-weight: 600; color: #6c757d; letter-spacing: 0.5px;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="testsTableBody">
-                                {% for test in tests %}
-                                <tr class="test-row" style="border-bottom: 1px solid #f1f3f5;">
-                                    <td class="ps-4 py-3">
-                                        <a href="{% url 'laboratory:labtest_detail' test.pk %}" class="text-decoration-none text-dark" style="font-size: 0.875rem; font-weight: 500;">
-                                            {{ test.name }}
-                                        </a>
-                                    </td>
-                                    <td class="py-3">
-                                        <span style="font-size: 0.875rem; color: #495057;">{{ test.code }}</span>
-                                    </td>
-                                    <td class="py-3">
-                                        <span style="font-size: 0.875rem; color: #495057;">{{ test.get_category_display }}</span>
-                                    </td>
-                                    <td class="py-3 text-end">
-                                        <span style="font-size: 0.875rem; color: #495057;">{{ test.price|intcomma }} {{ test.currency }}</span>
-                                    </td>
-                                    <td class="pe-4 py-3 text-center">
-                                        <a href="{% url 'laboratory:labtest_detail' test.pk %}" class="btn btn-sm btn-outline-primary rounded-circle" title="View Details" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
-                                            <i class="bi bi-eye" style="font-size: 0.875rem;"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="px-3 py-2 border-top d-flex justify-content-between align-items-center" style="background: #f8f9fa;">
-                        <div>
-                            <small class="text-muted" id="showingInfo">Showing <span id="showingStart">1</span>-<span id="showingEnd">10</span> of <span id="totalRows">{{ tests|length }}</span></small>
-                        </div>
-                        <div>
-                            <nav>
-                                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
-                            </nav>
-                        </div>
-                    </div>
-                {% else %}
-                    <div class="text-center py-5">
-                        <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-inbox" style="font-size: 2rem; color: #95a5a6;"></i>
-                        </div>
-                        <h5 class="fw-bold mb-2" style="color: #2c3e50;">No Tests Found</h5>
-                        <p class="text-muted mb-4">No laboratory tests match your search criteria.</p>
-                        <button type="button" class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#testModal" onclick="openAddModal()">
-                            <i class="bi bi-plus-circle me-1"></i> Add First Test
-                        </button>
-                    </div>
-                {% endif %}
+            {% if tests %}
+            <div class="table-responsive">
+                <table class="db-tbl" id="testsTable">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Code</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Sample</th>
+                            <th>TAT</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="testsTableBody">
+                        {% for test in tests %}
+                        <tr class="test-row">
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td><span class="code">{{ test.code }}</span></td>
+                            <td>
+                                <a href="{% url 'laboratory:labtest_detail' test.pk %}" class="test-name text-decoration-none">{{ test.name }}</a>
+                                {% if test.is_profile_test %}<i class="bi bi-layers ms-1" title="Profile Test" style="font-size:.68rem;color:#00838f;"></i>{% endif %}
+                            </td>
+                            <td><span class="cat-badge">{{ test.category.name|default:"-" }}</span></td>
+                            <td style="font-size:.75rem;color:#7f8c8d;">{{ test.sample_type|default:"-"|truncatechars:12 }}</td>
+                            <td style="font-size:.75rem;color:#7f8c8d;">{{ test.duration_hours }}h</td>
+                            <td class="text-end price">{{ test.price|intcomma }} <small style="color:#95a5a6;">{{ test.currency }}</small></td>
+                            <td class="text-center">
+                                {% if test.is_active %}
+                                <i class="bi bi-circle-fill status-active" style="font-size:.45rem;" title="Active"></i>
+                                {% else %}
+                                <i class="bi bi-circle-fill status-inactive" style="font-size:.45rem;" title="Inactive"></i>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'laboratory:labtest_detail' test.pk %}" class="btn-action view" title="View"><i class="bi bi-eye"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+            <div class="db-footer">
+                <div>Showing <span id="showingStart">1</span>-<span id="showingEnd">10</span> of <span id="totalRows">{{ tests|length }}</span></div>
+                <nav><ul class="pagination pagination-sm" id="pagination"></ul></nav>
+            </div>
+            {% else %}
+            <div class="db-empty">
+                <div class="db-empty-icon"><i class="bi bi-inbox"></i></div>
+                <h6 class="fw-semibold mb-1" style="color:#2c3e50;">No Tests Found</h6>
+                <p class="text-muted mb-3" style="font-size:.8rem;">No laboratory tests match your criteria.</p>
+                <button type="button" class="btn" style="background:#27ae60;color:#fff;" data-bs-toggle="modal" data-bs-target="#testModal" onclick="openAddModal()">
+                    <i class="bi bi-plus-lg me-1"></i> Add First Test
+                </button>
+            </div>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Right Column: Tests by Category -->
-    <div class="col-lg-4 mb-4">
-        {% if tests_by_category %}
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-2" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
-                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-pie-chart me-2"></i>Tests by Category</h6>
+    <!-- Sidebar -->
+    <div class="col-lg-3">
+        <!-- Categories Card -->
+        <div class="db-sidebar">
+            <div class="db-sidebar-hdr">
+                <h6><i class="bi bi-folder me-2"></i>Categories</h6>
             </div>
-            <div class="card-body p-2">
-                <div class="list-group list-group-flush">
-                    {% for cat in tests_by_category %}
-                    <div class="list-group-item border-0 px-2 py-2" style="background: transparent;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
-                                    <i class="bi bi-folder text-white" style="font-size: 0.7rem;"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-semibold text-dark" style="font-size: 0.8rem;">{{ cat.label }}</div>
-                                    <small class="text-muted" style="font-size: 0.65rem;">{{ cat.count }} test{{ cat.count|pluralize }}</small>
-                                </div>
-                            </div>
-                            <div>
-                                <span class="badge rounded-pill" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); font-size: 0.75rem; padding: 0.35rem 0.6rem;">{{ cat.count }}</span>
-                            </div>
-                        </div>
+            {% if tests_by_category %}
+            <div>
+                {% for cat in tests_by_category %}
+                <a href="?category={{ cat.code }}" class="db-cat-item">
+                    <span>{{ cat.label }}</span>
+                    <span class="db-cat-count">{{ cat.count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="db-empty" style="padding:1.5rem;">
+                <p class="text-muted mb-0" style="font-size:.78rem;">No categories</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Most Used Tests Card -->
+        <div class="db-sidebar">
+            <div class="db-sidebar-hdr" style="background:#27ae60;">
+                <h6><i class="bi bi-bar-chart me-2"></i>Most Used Tests</h6>
+                <a href="{% url 'laboratory:request_list' %}" class="all-link">View All →</a>
+            </div>
+            {% if most_used_tests %}
+            <div>
+                {% for item in most_used_tests %}
+                <div class="db-top-item">
+                    <div class="db-top-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% else %}other{% endif %}">{{ forloop.counter }}</div>
+                    <div class="db-top-info">
+                        <div class="db-top-name" title="{{ item.test__name }}">{{ item.test__name }}</div>
+                        <div class="db-top-count">{{ item.count }} request{{ item.count|pluralize }}</div>
                     </div>
-                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="db-empty" style="padding:1.5rem;">
+                <i class="bi bi-bar-chart" style="font-size:1.5rem;color:#bdc3c7;"></i>
+                <p class="text-muted mb-0 mt-2" style="font-size:.78rem;">No usage data yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Stats Card -->
+        <div class="db-sidebar">
+            <div class="db-sidebar-hdr" style="background:#f39c12;">
+                <h6><i class="bi bi-lightning me-2"></i>Quick Stats</h6>
+            </div>
+            <div style="padding:.75rem .85rem;font-size:.78rem;color:#5d6d7e;">
+                <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom:1px solid #f4f6f7;">
+                    <span>Avg. Price</span>
+                    <strong style="color:#27ae60;">{{ avg_price|floatformat:0|intcomma|default:"-" }} UGX</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom:1px solid #f4f6f7;">
+                    <span>Avg. Turnaround</span>
+                    <strong style="color:#1a5276;">{{ avg_tat|floatformat:0|default:"-" }}h</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Total Requests</span>
+                    <strong style="color:#8e44ad;">{{ total_requests|default:0|intcomma }}</strong>
                 </div>
             </div>
         </div>
-        {% else %}
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-2" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
-                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-pie-chart me-2"></i>Tests by Category</h6>
-            </div>
-            <div class="card-body">
-                <div class="text-center py-4">
-                    <div class="mb-2" style="width: 50px; height: 50px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items-center; justify-content: center;">
-                        <i class="bi bi-diagram-3" style="font-size: 1.2rem; color: #95a5a6;"></i>
-                    </div>
-                    <p class="text-muted mb-0" style="font-size: 0.8rem;">No categories yet</p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 
