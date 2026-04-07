@@ -1,22 +1,418 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
+{% block extra_css %}
+<style>
+/* Dashboard-style layout */
+.result-page { background: #f4f6f9; min-height: calc(100vh - 120px); padding: .5rem 0; }
+.result-container { max-width: 100%; margin: 0; padding: 0 .5rem; }
+
+/* Info cards row */
+.info-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; margin-bottom: .6rem; }
+.info-card { background: #fff; border-radius: 8px; padding: .6rem .75rem; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+.info-card-header { display: flex; align-items: center; gap: .4rem; margin-bottom: .4rem; padding-bottom: .3rem; border-bottom: 2px solid #ecf0f1; }
+.info-card-header i { font-size: .85rem; color: #1a5276; }
+.info-card-header span { font-size: .68rem; font-weight: 600; color: #1a5276; text-transform: uppercase; letter-spacing: .3px; }
+.info-item { display: flex; justify-content: space-between; padding: .2rem 0; font-size: .75rem; }
+.info-item .label { color: #7f8c8d; }
+.info-item .value { color: #2c3e50; font-weight: 500; text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Status badges */
+.status-verified { background: #27ae60; color: #fff; padding: .15rem .45rem; border-radius: 12px; font-size: .62rem; font-weight: 600; }
+.status-pending { background: #f39c12; color: #fff; padding: .15rem .45rem; border-radius: 12px; font-size: .62rem; font-weight: 600; }
+.priority-badge { padding: .12rem .35rem; border-radius: 3px; font-size: .6rem; font-weight: 600; }
+.priority-stat { background: #e74c3c; color: #fff; }
+.priority-urgent { background: #f39c12; color: #fff; }
+.priority-normal { background: #95a5a6; color: #fff; }
+
+/* Responsive for smaller screens */
+@media (max-width: 1200px) { .info-cards { grid-template-columns: repeat(2, 1fr); } }
+
+/* Main content area */
+.result-main { display: grid; grid-template-columns: 1fr 220px; gap: .6rem; }
+@media (max-width: 992px) { .result-main { grid-template-columns: 1fr; } }
+
+/* Report card */
+.report-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.04); overflow: hidden; }
+.report-card-header { background: #1a5276; color: #fff; padding: .5rem .9rem; display: flex; justify-content: space-between; align-items: center; }
+.report-card-header h2 { font-size: .8rem; font-weight: 600; margin: 0; }
+.report-card-body { padding: 0; }
+
+/* Results table */
+.results-tbl { width: 100%; border-collapse: collapse; font-size: .75rem; }
+.results-tbl th { background: #f8f9fa; color: #5d6d7e; font-weight: 600; text-transform: uppercase; font-size: .62rem; letter-spacing: .3px; padding: .4rem .5rem; border-bottom: 2px solid #ecf0f1; text-align: left; }
+.results-tbl td { padding: .35rem .5rem; border-bottom: 1px solid #f4f6f7; color: #2c3e50; }
+.results-tbl .param-name { font-weight: 500; color: #1a5276; }
+.results-tbl .result-val { font-weight: 600; text-align: center; }
+.results-tbl .flag-cell { text-align: center; }
+.results-tbl .unit-cell, .results-tbl .range-cell { text-align: center; color: #7f8c8d; font-size: .72rem; }
+.flag-badge { display: inline-block; width: 18px; height: 18px; border-radius: 50%; font-size: .58rem; font-weight: 700; line-height: 18px; text-align: center; }
+.flag-normal { background: #e8f8f0; color: #27ae60; }
+.flag-high { background: #fef5e7; color: #f39c12; }
+.flag-low { background: #e8f4fc; color: #3498db; }
+.flag-critical { background: #fdedec; color: #e74c3c; }
+.category-row { background: #f8f9fa; }
+.category-row td { font-weight: 600; color: #1a5276; padding: .35rem .5rem; }
+
+/* Sidebar */
+.result-sidebar { display: flex; flex-direction: column; gap: .5rem; }
+.sidebar-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.04); overflow: hidden; }
+.sidebar-card-header { padding: .4rem .65rem; color: #fff; }
+.sidebar-card-header h3 { font-size: .7rem; font-weight: 600; margin: 0; }
+.sidebar-card-body { padding: .5rem .65rem; }
+.sidebar-item { display: flex; justify-content: space-between; align-items: center; padding: .25rem 0; font-size: .7rem; border-bottom: 1px solid #f4f6f7; }
+.sidebar-item:last-child { border-bottom: none; }
+.sidebar-item .label { color: #7f8c8d; }
+.sidebar-item .value { color: #2c3e50; font-weight: 500; font-size: .68rem; }
+
+/* Interpretation */
+.interpretation-box { background: #fef9e7; border-left: 3px solid #f39c12; padding: .5rem .75rem; margin: .5rem; border-radius: 0 6px 6px 0; }
+.interpretation-box h4 { font-size: .7rem; font-weight: 600; color: #f39c12; margin: 0 0 .3rem 0; }
+.interpretation-box p { font-size: .75rem; color: #5d6d7e; margin: 0; line-height: 1.4; }
+
+/* Print button floating */
+.print-float { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; }
+.print-float .btn { width: 44px; height: 44px; border-radius: 50%; box-shadow: 0 3px 10px rgba(39,174,96,.4); display: flex; align-items: center; justify-content: center; }
+.print-float .btn i { font-size: 1.2rem; }
+
+/* Print styles */
+@media print {
+    .result-page { background: #fff; padding: 0; }
+    .result-header, .info-cards, .result-sidebar, .print-float, .result-actions, nav, .sidebar, .no-print { display: none !important; }
+    .result-main { grid-template-columns: 1fr; }
+    .report-card { box-shadow: none; border: 1px solid #ddd; }
+}
+</style>
+{% endblock %}
+
 {% block page_title %}
     <div class="d-flex align-items-center">
-        <i class="bi bi-clipboard-check me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
-        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Lab Test Result Details</span>
+        <i class="bi bi-clipboard-check me-2" style="font-size: 1.3rem; color: #1a5276;"></i>
+        <span style="color: #1a5276; font-weight: 700;">Lab Result</span>
+        <span class="ms-2 badge" style="background:#1a5276;font-size:.7rem;">LAB-{{ result.id|stringformat:"05d" }}</span>
     </div>
 {% endblock %}
 
 {% block page_actions %}
-<button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
-    <i class="bi bi-printer"></i> Print
-</button>
-<a href="{% url 'laboratory:labtest_results' %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left"></i> Back to Results
-</a>
+<div class="d-flex flex-wrap gap-2 align-items-center">
+    <button type="button" class="btn px-3" onclick="printReport()" style="background:#27ae60;color:#fff;font-size:.78rem;">
+        <i class="bi bi-printer me-1"></i> Print Report
+    </button>
+    <a href="{% url 'laboratory:request_detail' result.request.pk %}" class="btn btn-outline-primary px-3" style="font-size:.78rem;">
+        <i class="bi bi-file-earmark-medical me-1"></i> View Request
+    </a>
+    <a href="{% url 'laboratory:labtest_results' %}" class="btn btn-outline-secondary px-3" style="font-size:.78rem;">
+        <i class="bi bi-arrow-left me-1"></i> All Results
+    </a>
+</div>
 {% endblock %}
 
 {% block content %}
-{% include 'laboratory/result_detail_partial.html' %}
+<div class="result-page">
+    <div class="result-container">
+        <!-- Info Cards Row -->
+        <div class="info-cards">
+            <!-- Patient Info -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <i class="bi bi-person"></i>
+                    <span>Patient</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Name</span>
+                    <span class="value">{{ result.request.patient.get_full_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">ID</span>
+                    <span class="value">{{ result.request.patient.patient_id }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Age/Gender</span>
+                    <span class="value">{% if result.request.patient.age %}{{ result.request.patient.age }}y{% else %}-{% endif %} / {{ result.request.patient.get_gender_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Phone</span>
+                    <span class="value">{{ result.request.patient.phone|default:"-" }}</span>
+                </div>
+            </div>
+
+            <!-- Test Info -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <i class="bi bi-clipboard2-pulse"></i>
+                    <span>Test</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Test Name</span>
+                    <span class="value">{{ result.request.test.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Code</span>
+                    <span class="value" style="font-family:monospace;">{{ result.request.test.code }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Category</span>
+                    <span class="value">{{ result.request.test.category.name|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Type</span>
+                    <span class="value">{% if result.request.test.is_profile_test %}Profile{% else %}Single{% endif %}</span>
+                </div>
+            </div>
+
+            <!-- Request Info -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Request</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Request Date</span>
+                    <span class="value">{{ result.request.date_requested|date:"d M Y" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Report Date</span>
+                    <span class="value">{{ result.date_reported|date:"d M Y" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Priority</span>
+                    <span class="value">
+                        {% if result.request.priority == 'stat' %}
+                        <span class="priority-badge priority-stat">STAT</span>
+                        {% elif result.request.priority == 'urgent' %}
+                        <span class="priority-badge priority-urgent">Urgent</span>
+                        {% else %}
+                        <span class="priority-badge priority-normal">Normal</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Status</span>
+                    <span class="value">
+                        {% if result.verified %}
+                        <span class="status-verified"><i class="bi bi-check-circle me-1"></i>Verified</span>
+                        {% else %}
+                        <span class="status-pending"><i class="bi bi-clock me-1"></i>Pending</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Staff Info -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <i class="bi bi-people"></i>
+                    <span>Staff</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Requested By</span>
+                    <span class="value">{{ result.request.requested_by.get_full_name|default:"System" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Reported By</span>
+                    <span class="value">{{ result.reported_by.get_full_name|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Verified By</span>
+                    <span class="value">{{ result.verified_by.get_full_name|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="result-main">
+            <!-- Results Table -->
+            <div class="report-card">
+                <div class="report-card-header">
+                    <h2><i class="bi bi-table me-2"></i>Test Results</h2>
+                    <span style="font-size:.7rem;opacity:.8;">{{ result.request.test.name }}</span>
+                </div>
+                <div class="report-card-body">
+                    {% if result.request.test.is_profile_test and result.parameter_results.exists %}
+                    <!-- Profile Test Results -->
+                    <table class="results-tbl">
+                        <thead>
+                            <tr>
+                                <th style="width:35%;">Parameter</th>
+                                <th style="width:15%;text-align:center;">Result</th>
+                                <th style="width:10%;text-align:center;">Flag</th>
+                                <th style="width:12%;text-align:center;">Unit</th>
+                                <th style="width:18%;text-align:center;">Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for param_result in result.parameter_results.all %}
+                            <tr>
+                                <td class="param-name">{{ param_result.parameter.name }}</td>
+                                <td class="result-val">{{ param_result.result_value }}</td>
+                                <td class="flag-cell">
+                                    {% if param_result.flag == 'critical_low' or param_result.flag == 'critical_high' %}
+                                    <span class="flag-badge flag-critical">{{ param_result.flag|slice:":1"|upper }}</span>
+                                    {% elif param_result.flag == 'low' %}
+                                    <span class="flag-badge flag-low">L</span>
+                                    {% elif param_result.flag == 'high' %}
+                                    <span class="flag-badge flag-high">H</span>
+                                    {% elif param_result.flag == 'abnormal' %}
+                                    <span class="flag-badge flag-high">A</span>
+                                    {% else %}
+                                    <span class="flag-badge flag-normal">N</span>
+                                    {% endif %}
+                                </td>
+                                <td class="unit-cell">{{ param_result.parameter.unit|default:"-" }}</td>
+                                <td class="range-cell">
+                                    {% if param_result.parameter.reference_range_text %}
+                                        {{ param_result.parameter.reference_range_text }}
+                                    {% elif param_result.parameter.reference_range_min and param_result.parameter.reference_range_max %}
+                                        {{ param_result.parameter.reference_range_min }} - {{ param_result.parameter.reference_range_max }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <!-- Simple Test Result -->
+                    <table class="results-tbl">
+                        <thead>
+                            <tr>
+                                <th style="width:35%;">Test</th>
+                                <th style="width:20%;text-align:center;">Result</th>
+                                <th style="width:15%;text-align:center;">Unit</th>
+                                <th style="width:20%;text-align:center;">Reference Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="param-name">{{ result.request.test.name }}</td>
+                                <td class="result-val">{{ result.result_value }}</td>
+                                <td class="unit-cell">{{ result.result_unit|default:"-" }}</td>
+                                <td class="range-cell">{{ result.request.test.normal_range|default:"-" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    {% endif %}
+
+                    {% if result.interpretation %}
+                    <div class="interpretation-box">
+                        <h4><i class="bi bi-lightbulb me-1"></i>Interpretation</h4>
+                        <p>{{ result.interpretation }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="result-sidebar">
+                <!-- Quick Actions -->
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header" style="background:#27ae60;">
+                        <h3><i class="bi bi-lightning me-2"></i>Quick Actions</h3>
+                    </div>
+                    <div class="sidebar-card-body">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success btn-sm" onclick="printReport()">
+                                <i class="bi bi-printer me-1"></i> Print Report
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="printReportClean()">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Print Clean Copy
+                            </button>
+                            {% if not result.verified %}
+                            <a href="#" class="btn btn-outline-warning btn-sm">
+                                <i class="bi bi-pencil me-1"></i> Edit Result
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flag Legend -->
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header" style="background:#8e44ad;">
+                        <h3><i class="bi bi-flag me-2"></i>Flag Legend</h3>
+                    </div>
+                    <div class="sidebar-card-body">
+                        <div class="sidebar-item">
+                            <span class="flag-badge flag-normal">N</span>
+                            <span class="value">Normal</span>
+                        </div>
+                        <div class="sidebar-item">
+                            <span class="flag-badge flag-high">H</span>
+                            <span class="value">High</span>
+                        </div>
+                        <div class="sidebar-item">
+                            <span class="flag-badge flag-low">L</span>
+                            <span class="value">Low</span>
+                        </div>
+                        <div class="sidebar-item">
+                            <span class="flag-badge flag-critical">C</span>
+                            <span class="value">Critical</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header" style="background:#1a5276;">
+                        <h3><i class="bi bi-clock-history me-2"></i>Timeline</h3>
+                    </div>
+                    <div class="sidebar-card-body">
+                        <div class="sidebar-item">
+                            <span class="label">Requested</span>
+                            <span class="value">{{ result.request.date_requested|date:"d M, H:i" }}</span>
+                        </div>
+                        {% if result.request.sample_collected_at %}
+                        <div class="sidebar-item">
+                            <span class="label">Sample</span>
+                            <span class="value">{{ result.request.sample_collected_at|date:"d M, H:i" }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="sidebar-item">
+                            <span class="label">Reported</span>
+                            <span class="value">{{ result.date_reported|date:"d M, H:i" }}</span>
+                        </div>
+                        {% if result.verified_at %}
+                        <div class="sidebar-item">
+                            <span class="label">Verified</span>
+                            <span class="value">{{ result.verified_at|date:"d M, H:i" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Print Button -->
+<div class="print-float no-print">
+    <button type="button" class="btn btn-print" onclick="printReport()" title="Print Report">
+        <i class="bi bi-printer"></i>
+    </button>
+</div>
+
+<!-- Hidden Print Area -->
+<div id="printArea" style="display:none;">
+    {% include 'laboratory/result_detail_partial.html' %}
+</div>
+
+<script>
+function printReport() {
+    var printWindow = window.open('', '_blank');
+    var printContents = document.getElementById('printArea').innerHTML;
+    printWindow.document.write('<html><head><title>Lab Report - LAB-{{ result.id|stringformat:"05d" }}</title>');
+    printWindow.document.write('<style>body{margin:0;padding:10mm;font-family:Arial,sans-serif;}</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(printContents);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 250);
+}
+
+function printReportClean() {
+    printReport();
+}
+</script>
 {% endblock %}
