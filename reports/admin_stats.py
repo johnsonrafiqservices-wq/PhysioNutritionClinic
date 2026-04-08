@@ -168,17 +168,20 @@ def stats_dashboard(request):
 
     # ── Pharmacy ──
     total_meds = Medication.objects.count()
-    low_stock = Medication.objects.filter(current_stock__lte=F('reorder_level')).count()
+    low_stock_qs = Medication.objects.filter(is_active=True).annotate(
+        stock=Sum('batches__quantity_remaining', filter=Q(batches__is_active=True, batches__expiry_date__gt=date.today()))
+    ).filter(Q(stock__lte=F('reorder_level')) | Q(stock__isnull=True))
+    low_stock = low_stock_qs.count()
     expired_batches = Batch.objects.filter(expiry_date__lt=date.today(), status='active').count()
     expiring_soon = Batch.objects.filter(
         expiry_date__range=[date.today(), date.today() + timedelta(days=90)], status='active'
     ).count()
-    prescriptions_count = Prescription.objects.filter(date_prescribed__range=[start, end]).count()
+    prescriptions_count = Prescription.objects.filter(prescribed_date__date__range=[start, end]).count()
 
     # ── Laboratory ──
-    lab_requests = LabTestRequest.objects.filter(requested_date__date__range=[start, end]).count()
-    lab_completed = LabTestRequest.objects.filter(requested_date__date__range=[start, end], status='completed').count()
-    lab_pending = LabTestRequest.objects.filter(requested_date__date__range=[start, end], status__in=['requested', 'in_progress']).count()
+    lab_requests = LabTestRequest.objects.filter(date_requested__date__range=[start, end]).count()
+    lab_completed = LabTestRequest.objects.filter(date_requested__date__range=[start, end], status='completed').count()
+    lab_pending = LabTestRequest.objects.filter(date_requested__date__range=[start, end], status__in=['requested', 'in_progress']).count()
     lab_completion_rate = _pct(lab_completed, lab_requests)
 
     # ── Staff ──
@@ -187,17 +190,17 @@ def stats_dashboard(request):
 
     # ── Budget ──
     total_expenses = Expense.objects.filter(
-        date__range=[start, end], status='approved'
+        expense_date__range=[start, end], status='approved'
     ).aggregate(s=Sum('amount'))['s'] or Decimal('0')
     prev_expenses = Expense.objects.filter(
-        date__range=[prev_start, prev_end], status='approved'
+        expense_date__range=[prev_start, prev_end], status='approved'
     ).aggregate(s=Sum('amount'))['s'] or Decimal('0')
     expenses_change = _change_pct(float(total_expenses), float(prev_expenses))
     net_income = float(total_revenue) - float(total_expenses)
 
     # Expense categories
     exp_cats = list(
-        Expense.objects.filter(date__range=[start, end], status='approved')
+        Expense.objects.filter(expense_date__range=[start, end], status='approved')
         .values('category__name')
         .annotate(total=Sum('amount'))
         .order_by('-total')[:8]
@@ -207,8 +210,8 @@ def stats_dashboard(request):
 
     # Revenue vs Expenses monthly
     exp_trend = list(
-        Expense.objects.filter(status='approved', date__gte=twelve_months_ago)
-        .annotate(month=TruncMonth('date'))
+        Expense.objects.filter(status='approved', expense_date__gte=twelve_months_ago)
+        .annotate(month=TruncMonth('expense_date'))
         .values('month')
         .annotate(total=Sum('amount'))
         .order_by('month')
@@ -332,9 +335,9 @@ def stats_patients(request):
     # Triage priority distribution
     triage_data_qs = list(
         Triage.objects.filter(triage_date__date__range=[start, end])
-        .values('priority').annotate(c=Count('id')).order_by('priority')
+        .values('priority_level').annotate(c=Count('id')).order_by('priority_level')
     )
-    triage_labels = [t['priority'] for t in triage_data_qs]
+    triage_labels = [t['priority_level'] for t in triage_data_qs]
     triage_data = [t['c'] for t in triage_data_qs]
 
     # Recent patients
@@ -561,8 +564,11 @@ def stats_pharmacy(request):
 
     total_meds = Medication.objects.count()
     active_meds = Medication.objects.filter(is_active=True).count()
-    low_stock = Medication.objects.filter(current_stock__lte=F('reorder_level')).count()
-    out_of_stock = Medication.objects.filter(current_stock=0).count()
+    meds_with_stock = Medication.objects.filter(is_active=True).annotate(
+        stock=Sum('batches__quantity_remaining', filter=Q(batches__is_active=True, batches__expiry_date__gt=date.today()))
+    )
+    low_stock = meds_with_stock.filter(Q(stock__lte=F('reorder_level')) | Q(stock__isnull=True)).count()
+    out_of_stock = meds_with_stock.filter(Q(stock=0) | Q(stock__isnull=True)).count()
 
     # Batch info
     total_batches = Batch.objects.filter(status='active').count()
@@ -570,28 +576,28 @@ def stats_pharmacy(request):
     expiring_30 = Batch.objects.filter(expiry_date__range=[date.today(), date.today() + timedelta(days=30)], status='active').count()
     expiring_90 = Batch.objects.filter(expiry_date__range=[date.today(), date.today() + timedelta(days=90)], status='active').count()
 
-    # Stock value
-    stock_cost = sum(
-        float(m.cost_price or 0) * m.current_stock
-        for m in Medication.objects.filter(is_active=True)
-    )
-    stock_sell = sum(
-        float(m.selling_price or 0) * m.current_stock
-        for m in Medication.objects.filter(is_active=True)
-    )
+    # Stock value (computed from active batches)
+    from django.db.models import ExpressionWrapper, DecimalField
+    stock_value_qs = Batch.objects.filter(is_active=True, expiry_date__gt=date.today())
+    stock_cost = float(stock_value_qs.aggregate(
+        total=Sum(ExpressionWrapper(F('quantity_remaining') * F('cost_price'), output_field=DecimalField()))
+    )['total'] or 0)
+    stock_sell = float(stock_value_qs.aggregate(
+        total=Sum(ExpressionWrapper(F('quantity_remaining') * F('selling_price'), output_field=DecimalField()))
+    )['total'] or 0)
 
     # Prescriptions
-    prescriptions = Prescription.objects.filter(date_prescribed__range=[start, end]).count()
-    dispensed = Prescription.objects.filter(date_prescribed__range=[start, end], status='dispensed').count()
-    pending_rx = Prescription.objects.filter(date_prescribed__range=[start, end], status='pending').count()
+    prescriptions = Prescription.objects.filter(prescribed_date__date__range=[start, end]).count()
+    dispensed = Prescription.objects.filter(prescribed_date__date__range=[start, end], status='dispensed').count()
+    pending_rx = Prescription.objects.filter(prescribed_date__date__range=[start, end], status='pending').count()
 
     # Purchase orders
     po_count = PurchaseOrder.objects.filter(order_date__range=[start, end]).count()
     po_total = PurchaseOrder.objects.filter(order_date__range=[start, end]).aggregate(s=Sum('total_amount'))['s'] or 0
 
     # Stock movements
-    stock_in = StockMovement.objects.filter(date__date__range=[start, end], movement_type='in').aggregate(s=Sum('quantity'))['s'] or 0
-    stock_out = StockMovement.objects.filter(date__date__range=[start, end], movement_type='out').aggregate(s=Sum('quantity'))['s'] or 0
+    stock_in = StockMovement.objects.filter(created_at__date__range=[start, end], movement_type='in').aggregate(s=Sum('quantity'))['s'] or 0
+    stock_out = StockMovement.objects.filter(created_at__date__range=[start, end], movement_type='out').aggregate(s=Sum('quantity'))['s'] or 0
 
     # By category
     by_cat = list(
@@ -604,8 +610,8 @@ def stats_pharmacy(request):
     # Stock movement trend (monthly)
     twelve = date.today() - timedelta(days=365)
     move_trend = list(
-        StockMovement.objects.filter(date__date__gte=twelve)
-        .annotate(month=TruncMonth('date')).values('month', 'movement_type')
+        StockMovement.objects.filter(created_at__date__gte=twelve)
+        .annotate(month=TruncMonth('created_at')).values('month', 'movement_type')
         .annotate(total=Sum('quantity')).order_by('month')
     )
     move_months = sorted(set(d['month'].strftime('%b %Y') for d in move_trend))
@@ -616,8 +622,8 @@ def stats_pharmacy(request):
 
     # Low stock items list
     low_stock_items = list(
-        Medication.objects.filter(current_stock__lte=F('reorder_level'), is_active=True)
-        .values('name', 'current_stock', 'reorder_level')[:20]
+        meds_with_stock.filter(Q(stock__lte=F('reorder_level')) | Q(stock__isnull=True))
+        .values('name', 'stock', 'reorder_level')[:20]
     )
 
     # Expiring items
@@ -656,17 +662,17 @@ def stats_laboratory(request):
     start, end = _parse_dates(request)
     prev_start, prev_end = _prev_period(start, end)
 
-    qs = LabTestRequest.objects.filter(requested_date__date__range=[start, end])
+    qs = LabTestRequest.objects.filter(date_requested__date__range=[start, end])
     total = qs.count()
     completed = qs.filter(status='completed').count()
     pending = qs.filter(status__in=['requested', 'in_progress']).count()
     cancelled = qs.filter(status='cancelled').count()
-    prev_total = LabTestRequest.objects.filter(requested_date__date__range=[prev_start, prev_end]).count()
+    prev_total = LabTestRequest.objects.filter(date_requested__date__range=[prev_start, prev_end]).count()
     change = _change_pct(total, prev_total)
     comp_rate = _pct(completed, total)
 
     # Results
-    results_qs = LabTestResult.objects.filter(result_date__date__range=[start, end])
+    results_qs = LabTestResult.objects.filter(date_reported__date__range=[start, end])
     total_results = results_qs.count()
     abnormal_results = results_qs.filter(is_abnormal=True).count()
     abnormal_rate = _pct(abnormal_results, total_results)
@@ -678,8 +684,8 @@ def stats_laboratory(request):
     # Monthly trend
     twelve = date.today() - timedelta(days=365)
     monthly = list(
-        LabTestRequest.objects.filter(requested_date__date__gte=twelve)
-        .annotate(month=TruncMonth('requested_date')).values('month')
+        LabTestRequest.objects.filter(date_requested__date__gte=twelve)
+        .annotate(month=TruncMonth('date_requested')).values('month')
         .annotate(c=Count('id')).order_by('month')
     )
     monthly_labels = [d['month'].strftime('%b %Y') for d in monthly]
@@ -707,14 +713,13 @@ def stats_laboratory(request):
     cat_data = [c['c'] for c in by_cat]
 
     # Turnaround time (average hours from request to completion)
-    completed_requests = qs.filter(status='completed', completed_date__isnull=False)
+    completed_requests = qs.filter(status='completed')
     avg_tat = None
     if completed_requests.exists():
-        from django.db.models import ExpressionWrapper, DurationField
         tats = []
         for req in completed_requests[:100]:
-            if req.completed_date and req.requested_date:
-                delta = req.completed_date - req.requested_date
+            if req.updated_at and req.date_requested:
+                delta = req.updated_at - req.date_requested
                 tats.append(delta.total_seconds() / 3600)
         avg_tat = round(sum(tats) / len(tats), 1) if tats else None
 
@@ -847,21 +852,21 @@ def export_stats_csv(request, module):
 
     elif module == 'pharmacy':
         from pharmacy.models import Medication
-        writer.writerow(['Name', 'Category', 'Form', 'Current Stock', 'Reorder Level', 'Cost Price', 'Selling Price', 'Active'])
+        writer.writerow(['Name', 'Category', 'Form', 'Current Stock', 'Reorder Level', 'Unit Price', 'Active'])
         for m in Medication.objects.all().select_related('category').order_by('name'):
-            writer.writerow([m.name, m.category.name if m.category else '', m.dosage_form, m.current_stock, m.reorder_level, float(m.cost_price or 0), float(m.selling_price or 0), m.is_active])
+            writer.writerow([m.name, m.category.name if m.category else '', m.form, m.current_stock, m.reorder_level, float(m.unit_price or 0), m.is_active])
 
     elif module == 'laboratory':
         from laboratory.models import LabTestRequest
         writer.writerow(['Date', 'Patient', 'Test', 'Priority', 'Status', 'Requested By'])
-        for r in LabTestRequest.objects.filter(requested_date__date__range=[start, end]).select_related('patient', 'test', 'requested_by').order_by('-requested_date'):
-            writer.writerow([r.requested_date.strftime('%Y-%m-%d'), r.patient.get_full_name() if r.patient else '', r.test.name if r.test else '', r.priority, r.get_status_display(), r.requested_by.get_full_name() if r.requested_by else ''])
+        for r in LabTestRequest.objects.filter(date_requested__date__range=[start, end]).select_related('patient', 'test', 'requested_by').order_by('-date_requested'):
+            writer.writerow([r.date_requested.strftime('%Y-%m-%d'), r.patient.get_full_name() if r.patient else '', r.test.name if r.test else '', r.priority, r.get_status_display(), r.requested_by.get_full_name() if r.requested_by else ''])
 
     elif module == 'staff':
         from staff_management.models import Staff
         writer.writerow(['Name', 'Department', 'Position', 'Employment Status', 'Join Date', 'Active'])
         for s in Staff.objects.filter(is_active=True).select_related('department', 'user').order_by('user__last_name'):
-            writer.writerow([s.user.get_full_name(), s.department.name if s.department else '', s.position, s.get_employment_status_display(), s.join_date, s.is_active])
+            writer.writerow([s.user.get_full_name(), s.department.name if s.department else '', s.position, s.get_employment_status_display(), s.joining_date, s.is_active])
 
     elif module == 'overview':
         from patients.models import Patient
@@ -892,10 +897,13 @@ def export_stats_csv(request, module):
         writer.writerow([])
         writer.writerow(['--- Pharmacy ---'])
         writer.writerow(['Total Medications', Medication.objects.count()])
-        writer.writerow(['Low Stock', Medication.objects.filter(current_stock__lte=F('reorder_level')).count()])
+        low_stock_meds = Medication.objects.filter(is_active=True).annotate(
+            stock=Sum('batches__quantity_remaining', filter=Q(batches__is_active=True, batches__expiry_date__gt=date.today()))
+        ).filter(Q(stock__lte=F('reorder_level')) | Q(stock__isnull=True))
+        writer.writerow(['Low Stock', low_stock_meds.count()])
         writer.writerow([])
         writer.writerow(['--- Laboratory ---'])
-        lab = LabTestRequest.objects.filter(requested_date__date__range=[start, end])
+        lab = LabTestRequest.objects.filter(date_requested__date__range=[start, end])
         writer.writerow(['Total Requests', lab.count()])
         writer.writerow(['Completed', lab.filter(status='completed').count()])
         writer.writerow([])
@@ -903,7 +911,7 @@ def export_stats_csv(request, module):
         writer.writerow(['Active Staff', Staff.objects.filter(is_active=True).count()])
         writer.writerow([])
         writer.writerow(['--- Expenses ---'])
-        writer.writerow(['Total Expenses', float(Expense.objects.filter(date__range=[start, end], status='approved').aggregate(s=Sum('amount'))['s'] or 0)])
+        writer.writerow(['Total Expenses', float(Expense.objects.filter(expense_date__range=[start, end], status='approved').aggregate(s=Sum('amount'))['s'] or 0)])
 
     return response
 
@@ -969,21 +977,21 @@ def export_stats_excel(request, module):
 
     elif module == 'pharmacy':
         from pharmacy.models import Medication
-        r = write_header(r, ['Name', 'Category', 'Form', 'Stock', 'Reorder Level', 'Cost', 'Selling Price'])
+        r = write_header(r, ['Name', 'Category', 'Form', 'Stock', 'Reorder Level', 'Unit Price'])
         for m in Medication.objects.all().select_related('category').order_by('name'):
-            r = write_row(r, [m.name, m.category.name if m.category else '', m.dosage_form, m.current_stock, m.reorder_level, float(m.cost_price or 0), float(m.selling_price or 0)])
+            r = write_row(r, [m.name, m.category.name if m.category else '', m.form, m.current_stock, m.reorder_level, float(m.unit_price or 0)])
 
     elif module == 'laboratory':
         from laboratory.models import LabTestRequest
         r = write_header(r, ['Date', 'Patient', 'Test', 'Priority', 'Status', 'Requested By'])
-        for req in LabTestRequest.objects.filter(requested_date__date__range=[start, end]).select_related('patient', 'test', 'requested_by').order_by('-requested_date'):
-            r = write_row(r, [req.requested_date.strftime('%Y-%m-%d'), req.patient.get_full_name() if req.patient else '', req.test.name if req.test else '', req.priority, req.get_status_display(), req.requested_by.get_full_name() if req.requested_by else ''])
+        for req in LabTestRequest.objects.filter(date_requested__date__range=[start, end]).select_related('patient', 'test', 'requested_by').order_by('-date_requested'):
+            r = write_row(r, [req.date_requested.strftime('%Y-%m-%d'), req.patient.get_full_name() if req.patient else '', req.test.name if req.test else '', req.priority, req.get_status_display(), req.requested_by.get_full_name() if req.requested_by else ''])
 
     elif module == 'staff':
         from staff_management.models import Staff
         r = write_header(r, ['Name', 'Department', 'Position', 'Employment Status', 'Join Date'])
         for s in Staff.objects.filter(is_active=True).select_related('department', 'user').order_by('user__last_name'):
-            r = write_row(r, [s.user.get_full_name(), s.department.name if s.department else '', s.position, s.get_employment_status_display(), str(s.join_date)])
+            r = write_row(r, [s.user.get_full_name(), s.department.name if s.department else '', s.position, s.get_employment_status_display(), str(s.joining_date)])
 
     # Auto-width columns
     from openpyxl.utils import get_column_letter

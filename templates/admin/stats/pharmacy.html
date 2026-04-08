@@ -101,10 +101,10 @@
         {% for item in low_stock_items %}
         <tr>
             <td><strong>{{ item.name }}</strong></td>
-            <td>{{ item.current_stock }}</td>
+            <td>{{ item.stock|default:0 }}</td>
             <td>{{ item.reorder_level }}</td>
             <td>
-                {% if item.current_stock == 0 %}
+                {% if item.stock == 0 or item.stock == None %}
                 <span class="badge badge-danger">Out of Stock</span>
                 {% else %}
                 <span class="badge badge-warning">Low Stock</span>
