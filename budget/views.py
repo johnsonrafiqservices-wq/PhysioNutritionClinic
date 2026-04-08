@@ -169,6 +169,11 @@ def budget_detail(request, pk):
     # Get budget items with stats
     budget_items = budget.items.all()
     
+    # Get expenses linked to this budget's items
+    expenses = Expense.objects.filter(
+        budget_item__budget=budget
+    ).select_related('category', 'budget_item', 'submitted_by').order_by('-expense_date')
+    
     # Get categories for modal form
     categories = ExpenseCategory.objects.filter(is_active=True)
     
@@ -179,6 +184,7 @@ def budget_detail(request, pk):
         'remaining_amount': remaining_amount,
         'utilization_pct': utilization_pct,
         'budget_items': budget_items,
+        'expenses': expenses,
         'categories': categories,
     }
     

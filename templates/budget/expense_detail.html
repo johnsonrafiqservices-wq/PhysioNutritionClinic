@@ -1,216 +1,607 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Expense: {{ expense.description }} - {{ clinic_settings.clinic_name }}{% endblock %}
+{% block title %}Expense: {{ expense.description }}{% endblock %}
 
 {% block page_title %}
-    <div>
-        <nav aria-label="breadcrumb" class="mb-2">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{% url 'budget:dashboard' %}">Budget</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'budget:expense_list' %}">Expenses</a></li>
-                <li class="breadcrumb-item active">{{ expense.description|truncatewords:3 }}</li>
-            </ol>
-        </nav>
-        <div class="d-flex align-items-center">
-            <i class="bi bi-receipt me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
-            <span style="background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">
-                Expense Details
-            </span>
-        </div>
+    <div class="d-flex align-items-center">
+        <i class="bi bi-receipt me-3" style="font-size: 1.5rem; color: #1B5E96;"></i>
+        <span style="background: linear-gradient(135deg, #1B5E96 0%, #2E8B57 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: medium;">Expense Detail - {{ expense.description|truncatewords:4 }}</span>
     </div>
-{% endblock %}
-
-{% block page_actions %}
-<div class="btn-group" role="group">
-    {% if expense.status == 'pending' and user.is_superuser %}
-        <a href="{% url 'budget:expense_approve' expense.pk %}" class="btn btn-success">
-            <i class="bi bi-check-circle"></i> Approve/Reject
-        </a>
-    {% endif %}
-    <a href="{% url 'budget:expense_edit' expense.pk %}" class="btn btn-outline-primary">
-        <i class="bi bi-pencil"></i> Edit
-    </a>
-    <a href="{% url 'budget:expense_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back
-    </a>
-</div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
     :root {
-        --alafia-primary: #0ea5e9;
-        --alafia-success: #10b981;
+        --alafia-primary: #1B5E96;
+        --alafia-primary-light: #e6f1fa;
+        --alafia-success: #2E8B57;
+        --alafia-success-light: #e8f5f0;
         --alafia-warning: #f59e0b;
-        --alafia-danger: #ef4444;
+        --alafia-warning-light: #fef3c7;
+        --alafia-danger: #dc2626;
+        --alafia-danger-light: #fef2f2;
+        --alafia-dark: #1e293b;
+        --alafia-gradient-primary: linear-gradient(135deg, #1B5E96 0%, #2E8B57 100%);
+        --alafia-gradient-success: linear-gradient(135deg, #e8f5f0 0%, #d1fae5 100%);
+        --alafia-gradient-warning: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        --alafia-gradient-danger: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
     }
 
-    .card-modern {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-        margin-bottom: 1rem;
+    .expense-container {
+        max-width: 96%;
+        margin: 0 auto;
+        padding: 16px;
+        background: #ffffff;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        border-radius: 16px;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #f1f5f9;
     }
 
-    .section-title {
-        font-size: 1rem;
+    .expense-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--alafia-gradient-primary);
+        z-index: 1;
+    }
+
+    /* Header */
+    .expense-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding: 14px 18px;
+        background: #fafbfc;
+        border-radius: 12px;
+        border: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+    }
+
+    .expense-header:hover {
+        background: #f8fafc;
+    }
+
+    .expense-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--alafia-primary-light);
+        color: var(--alafia-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        margin-right: 12px;
+        border: 2px solid #d4e6f5;
+        flex-shrink: 0;
+    }
+
+    .expense-name {
+        font-size: 18px;
+        font-weight: 700;
+        background: var(--alafia-gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 4px;
+        line-height: 1.2;
+    }
+
+    .expense-details {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.4;
+        font-weight: 500;
+    }
+
+    .expense-info-left {
+        display: flex;
+        align-items: center;
+        flex: 1;
+    }
+
+    .expense-info-text { flex: 1; }
+
+    .expense-title-right {
+        text-align: right;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 12px;
+        border-radius: 25px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-pending { background: var(--alafia-gradient-warning); color: #92400e; border: 1px solid var(--alafia-warning); }
+    .status-approved { background: var(--alafia-gradient-success); color: var(--alafia-success); border: 1px solid var(--alafia-success); }
+    .status-rejected { background: var(--alafia-gradient-danger); color: var(--alafia-danger); border: 1px solid var(--alafia-danger); }
+    .status-paid { background: var(--alafia-primary-light); color: var(--alafia-primary); border: 1px solid var(--alafia-primary); }
+
+    .expense-meta {
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 500;
+        margin-top: 6px;
+    }
+
+    /* Nav Tabs */
+    .horizontal-nav-tabs { margin-top: 12px; margin-bottom: 14px; }
+
+    .horizontal-nav-tabs .nav-link {
+        padding: 8px 16px;
+        font-size: 13px;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #64748b;
+        font-weight: 500;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .horizontal-nav-tabs .nav-link:hover {
+        color: var(--alafia-primary);
+        border-bottom-color: var(--alafia-primary-light);
+    }
+
+    .horizontal-nav-tabs .nav-link.active {
+        border-bottom-color: #0d6efd;
+        color: #0d6efd;
         font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #e2e8f0;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .kpi-card {
+        padding: 14px;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 3px;
+        height: 100%;
+    }
+
+    .kpi-card:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border-color: #e2e8f0;
+    }
+
+    .kpi-card.primary::before { background: var(--alafia-primary); }
+    .kpi-card.danger::before { background: var(--alafia-danger); }
+    .kpi-card.success::before { background: var(--alafia-success); }
+    .kpi-card.warning::before { background: var(--alafia-warning); }
+
+    .kpi-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        margin-bottom: 8px;
+    }
+
+    .kpi-icon.primary { background: var(--alafia-primary-light); color: var(--alafia-primary); }
+    .kpi-icon.danger { background: var(--alafia-danger-light); color: var(--alafia-danger); }
+    .kpi-icon.success { background: var(--alafia-success-light); color: var(--alafia-success); }
+    .kpi-icon.warning { background: var(--alafia-warning-light); color: var(--alafia-warning); }
+
+    .kpi-label {
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+
+    .kpi-value {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--alafia-dark);
+        line-height: 1.2;
+    }
+
+    .kpi-sub {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 2px;
+    }
+
+    /* Info Cards */
+    .info-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .info-card {
+        padding: 16px;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s ease;
+    }
+
+    .info-card:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border-color: #e2e8f0;
+    }
+
+    .info-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f1f5f9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0;
+        align-items: center;
+        padding: 7px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+
+    .info-row:last-child { border-bottom: none; }
+
+    .info-label {
+        font-weight: 600;
+        color: #475569;
+        font-size: 12px;
+        flex: 0 0 40%;
+    }
+
+    .info-value {
+        color: var(--alafia-dark);
+        font-size: 12px;
+        font-weight: 500;
+        text-align: right;
+        flex: 1;
+    }
+
+    /* Section Styling */
+    .expense-section {
+        margin-bottom: 18px;
+        animation: fadeInUp 0.5s ease forwards;
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    .expense-section:nth-child(1) { animation-delay: 0.1s; }
+    .expense-section:nth-child(2) { animation-delay: 0.15s; }
+
+    @keyframes fadeInUp {
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .expense-header {
+            flex-direction: column;
+            gap: 12px;
+            text-align: center;
+        }
+        .expense-info-left { flex-direction: column; }
+        .expense-avatar { margin-right: 0; margin-bottom: 8px; }
+        .expense-title-right { text-align: center; }
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        .info-section { grid-template-columns: 1fr; }
+        .expense-container { padding: 12px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-
-    <div class="row">
-        <div class="col-lg-8 mb-4">
-            <div class="card-modern">
-                <h5 class="section-title"><i class="bi bi-info-circle me-2"></i>Expense Information</h5>
-                <div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Description</strong>
-                            <p class="mb-0">{{ expense.description }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Category</strong>
-                            <span class="fw-semibold text-{{ expense.category.color }} bg-opacity-10 text-{{ expense.category.color }}">
-                                <i class="bi {{ expense.category.icon }}"></i> {{ expense.category.name }}
-                            </span>
-                        </div>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="expense-container">
+            <!-- Header -->
+            <div class="expense-header">
+                <div class="expense-info-left">
+                    <div class="expense-avatar">
+                        <i class="bi bi-receipt"></i>
                     </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Amount</strong>
-                            <h4 class="mb-0 text-danger">{{ expense.currency }} {{ expense.amount|floatformat:0|intcomma }}</h4>
+                    <div class="expense-info-text">
+                        <div class="expense-name">{{ expense.description }}</div>
+                        <div class="expense-details">
+                            <strong>Category:</strong> {{ expense.category.name }} &bull;
+                            <strong>Date:</strong> {{ expense.expense_date|date:"M d, Y" }} &bull;
+                            <strong>Method:</strong> {{ expense.get_payment_method_display }}
                         </div>
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Expense Date</strong>
-                            <p class="mb-0">{{ expense.expense_date|date:"l, F d, Y" }}</p>
-                        </div>
+                        {% if expense.vendor_name %}
+                        <div class="expense-details mt-1"><strong>Vendor:</strong> {{ expense.vendor_name }}</div>
+                        {% endif %}
                     </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Payment Method</strong>
-                            <p class="mb-0">{{ expense.get_payment_method_display }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Reference Number</strong>
-                            <p class="mb-0">{{ expense.reference_number|default:"-" }}</p>
-                        </div>
+                </div>
+                <div class="expense-title-right">
+                    <div class="status-badge status-{{ expense.status }}">
+                        <i class="bi {% if expense.status == 'pending' %}bi-clock-history{% elif expense.status == 'approved' %}bi-check-circle-fill{% elif expense.status == 'rejected' %}bi-x-circle-fill{% else %}bi-cash{% endif %} me-1"></i>
+                        {{ expense.get_status_display }}
                     </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Vendor Name</strong>
-                            <p class="mb-0">{{ expense.vendor_name|default:"-" }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <strong class="text-muted d-block small">Budget Item</strong>
-                            <p class="mb-0">
-                                {% if expense.budget_item %}
-                                    <a href="{% url 'budget:budget_detail' expense.budget_item.budget.pk %}">
-                                        {{ expense.budget_item.budget.name }} - {{ expense.budget_item.category.name }}
-                                    </a>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </p>
-                        </div>
+                    <div class="expense-meta">Submitted {{ expense.created_at|date:"M d, Y" }} by {{ expense.submitted_by.get_full_name }}</div>
+                    <div class="mt-2">
+                        {% if expense.status == 'pending' %}
+                        <a href="{% url 'budget:expense_edit' expense.pk %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-pencil-square me-1"></i>Edit
+                        </a>
+                        {% endif %}
+                        {% if expense.status == 'pending' and user.is_superuser %}
+                        <a href="{% url 'budget:expense_approve' expense.pk %}" class="btn btn-success btn-sm">
+                            <i class="bi bi-check-circle me-1"></i>Approve/Reject
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'budget:expense_list' %}" class="btn btn-sm btn-outline-dark">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
                     </div>
-
-                    {% if expense.notes %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong class="text-muted d-block small">Notes</strong>
-                            <p class="mb-0">{{ expense.notes }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if expense.receipt_file %}
-                    <div class="row">
-                        <div class="col-12">
-                            <strong class="text-muted d-block small mb-2">Receipt/Invoice</strong>
-                            <a href="{{ expense.receipt_file.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-file-earmark-pdf me-1"></i> View Receipt
-                            </a>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
-        </div>
 
-        <div class="col-lg-4 mb-4">
-            <div class="card-modern">
-                <h5 class="section-title"><i class="bi bi-check-circle me-2"></i>Status</h5>
-                <div>
-                    <div class="mb-3 text-center">
-                        {% if expense.status == 'pending' %}
-                            <span class="fw-semibold text-warning p-3 fs-6">
-                                <i class="bi bi-clock-history me-1"></i> Pending Approval
-                            </span>
-                        {% elif expense.status == 'approved' %}
-                            <span class="fw-semibold text-success p-3 fs-6">
-                                <i class="bi bi-check-circle me-1"></i> Approved
-                            </span>
-                        {% elif expense.status == 'rejected' %}
-                            <span class="fw-semibold text-danger p-3 fs-6">
-                                <i class="bi bi-x-circle me-1"></i> Rejected
-                            </span>
-                        {% elif expense.status == 'paid' %}
-                            <span class="fw-semibold text-primary p-3 fs-6">
-                                <i class="bi bi-cash me-1"></i> Paid
-                            </span>
+            <!-- Navigation Tabs -->
+            <div class="horizontal-nav-tabs">
+                <div class="nav nav-tabs" role="tablist" style="border-bottom: 2px solid #e2e8f0;">
+                    <a href="#" class="nav-link active" data-section="overview">
+                        <i class="bi bi-speedometer2 me-2"></i>Overview
+                    </a>
+                    <a href="#" class="nav-link" data-section="approval">
+                        <i class="bi bi-shield-check me-2"></i>Approval Info
+                    </a>
+                </div>
+            </div>
+
+            <!-- Dynamic Content -->
+            <div id="dynamic-content">
+
+                <!-- OVERVIEW -->
+                <div class="expense-section" id="overview-section">
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card danger">
+                            <div class="kpi-icon danger"><i class="bi bi-cash-stack"></i></div>
+                            <div class="kpi-label">Amount</div>
+                            <div class="kpi-value" style="color: var(--alafia-danger);">{{ expense.currency }} {{ expense.amount|floatformat:0|intcomma }}</div>
+                            <div class="kpi-sub">{{ expense.get_payment_method_display }}</div>
+                        </div>
+                        <div class="kpi-card primary">
+                            <div class="kpi-icon primary"><i class="bi bi-tag"></i></div>
+                            <div class="kpi-label">Category</div>
+                            <div class="kpi-value" style="font-size:14px;">{{ expense.category.name }}</div>
+                            <div class="kpi-sub">Expense category</div>
+                        </div>
+                        <div class="kpi-card {% if expense.status == 'approved' %}success{% elif expense.status == 'rejected' %}danger{% elif expense.status == 'paid' %}primary{% else %}warning{% endif %}">
+                            <div class="kpi-icon {% if expense.status == 'approved' %}success{% elif expense.status == 'rejected' %}danger{% elif expense.status == 'paid' %}primary{% else %}warning{% endif %}">
+                                <i class="bi {% if expense.status == 'pending' %}bi-clock-history{% elif expense.status == 'approved' %}bi-check-circle{% elif expense.status == 'rejected' %}bi-x-circle{% else %}bi-cash{% endif %}"></i>
+                            </div>
+                            <div class="kpi-label">Status</div>
+                            <div class="kpi-value" style="font-size:14px;">{{ expense.get_status_display }}</div>
+                            <div class="kpi-sub">Current state</div>
+                        </div>
+                        {% if expense.budget_item %}
+                        <div class="kpi-card success">
+                            <div class="kpi-icon success"><i class="bi bi-clipboard-data"></i></div>
+                            <div class="kpi-label">Budget</div>
+                            <div class="kpi-value" style="font-size:14px;">{{ expense.budget_item.budget.name }}</div>
+                            <div class="kpi-sub">{{ expense.budget_item.category.name }}</div>
+                        </div>
                         {% endif %}
                     </div>
 
-                    {% if expense.approved_by %}
-                    <div class="mb-2">
-                        <strong class="text-muted d-block small">Approved/Rejected By</strong>
-                        <p class="mb-0">{{ expense.approved_by.get_full_name }}</p>
-                    </div>
-                    {% endif %}
+                    <!-- Info Cards -->
+                    <div class="info-section">
+                        <div class="info-card">
+                            <div class="info-title"><i class="bi bi-info-circle me-2"></i>Expense Details</div>
+                            <div class="info-row">
+                                <span class="info-label">Description</span>
+                                <span class="info-value">{{ expense.description }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Category</span>
+                                <span class="info-value">
+                                    <i class="bi {{ expense.category.icon|default:'bi-tag' }} me-1" style="color:var(--alafia-primary);"></i>{{ expense.category.name }}
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Amount</span>
+                                <span class="info-value fw-bold" style="color:var(--alafia-danger);">{{ expense.currency }} {{ expense.amount|floatformat:0|intcomma }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Expense Date</span>
+                                <span class="info-value">{{ expense.expense_date|date:"F d, Y" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Payment Method</span>
+                                <span class="info-value">{{ expense.get_payment_method_display }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Reference #</span>
+                                <span class="info-value">{{ expense.reference_number|default:"-" }}</span>
+                            </div>
+                        </div>
 
-                    {% if expense.approved_at %}
-                    <div class="mb-2">
-                        <strong class="text-muted d-block small">Approval Date</strong>
-                        <p class="mb-0">{{ expense.approved_at|date:"M d, Y g:i A" }}</p>
+                        <div class="info-card">
+                            <div class="info-title"><i class="bi bi-building me-2"></i>Vendor & Budget</div>
+                            <div class="info-row">
+                                <span class="info-label">Vendor Name</span>
+                                <span class="info-value">{{ expense.vendor_name|default:"-" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Budget</span>
+                                <span class="info-value">
+                                    {% if expense.budget_item %}
+                                        <a href="{% url 'budget:budget_detail' expense.budget_item.budget.pk %}" style="color:var(--alafia-primary);text-decoration:none;">
+                                            {{ expense.budget_item.budget.name }}
+                                        </a>
+                                    {% else %}-{% endif %}
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Budget Category</span>
+                                <span class="info-value">{% if expense.budget_item %}{{ expense.budget_item.category.name }}{% else %}-{% endif %}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Submitted By</span>
+                                <span class="info-value">{{ expense.submitted_by.get_full_name }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Submitted</span>
+                                <span class="info-value">{{ expense.created_at|date:"M d, Y g:i A" }}</span>
+                            </div>
+                            {% if expense.notes %}
+                            <div class="info-row">
+                                <span class="info-label">Notes</span>
+                                <span class="info-value">{{ expense.notes }}</span>
+                            </div>
+                            {% endif %}
+                            {% if expense.receipt_file %}
+                            <div class="info-row">
+                                <span class="info-label">Receipt</span>
+                                <span class="info-value">
+                                    <a href="{{ expense.receipt_file.url }}" target="_blank" class="btn btn-outline-primary btn-sm" style="font-size:11px;padding:3px 10px;">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i>View
+                                    </a>
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
-                    {% endif %}
-
-                    {% if expense.approval_notes %}
-                    <div>
-                        <strong class="text-muted d-block small">Approval Notes</strong>
-                        <p class="mb-0">{{ expense.approval_notes }}</p>
-                    </div>
-                    {% endif %}
                 </div>
-            </div>
 
-            <div class="card-modern">
-                <h5 class="section-title"><i class="bi bi-person me-2"></i>Submitted By</h5>
-                <div>
-                    <div class="mb-2">
-                        <strong class="text-muted d-block small">Name</strong>
-                        <p class="mb-0">{{ expense.submitted_by.get_full_name }}</p>
-                    </div>
-                    <div>
-                        <strong class="text-muted d-block small">Submitted At</strong>
-                        <p class="mb-0">{{ expense.created_at|date:"M d, Y g:i A" }}</p>
+                <!-- APPROVAL INFO -->
+                <div class="expense-section" id="approval-section" style="display: none;">
+                    <div class="info-section">
+                        <div class="info-card">
+                            <div class="info-title"><i class="bi bi-shield-check me-2"></i>Approval Status</div>
+                            <div class="info-row">
+                                <span class="info-label">Current Status</span>
+                                <span class="info-value">
+                                    {% if expense.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif expense.status == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                    {% elif expense.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                    {% elif expense.status == 'paid' %}
+                                        <span class="badge bg-primary">Paid</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if expense.approved_by %}
+                            <div class="info-row">
+                                <span class="info-label">Reviewed By</span>
+                                <span class="info-value">{{ expense.approved_by.get_full_name }}</span>
+                            </div>
+                            {% endif %}
+                            {% if expense.approved_date %}
+                            <div class="info-row">
+                                <span class="info-label">Review Date</span>
+                                <span class="info-value">{{ expense.approved_date|date:"M d, Y g:i A" }}</span>
+                            </div>
+                            {% endif %}
+                            {% if expense.rejection_reason %}
+                            <div class="info-row">
+                                <span class="info-label">Rejection Reason</span>
+                                <span class="info-value" style="color:var(--alafia-danger);">{{ expense.rejection_reason }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-title"><i class="bi bi-clock-history me-2"></i>Timeline</div>
+                            <div class="info-row">
+                                <span class="info-label">Created</span>
+                                <span class="info-value">{{ expense.created_at|date:"M d, Y g:i A" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Last Updated</span>
+                                <span class="info-value">{{ expense.updated_at|date:"M d, Y g:i A" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Expense Date</span>
+                                <span class="info-value">{{ expense.expense_date|date:"F d, Y" }}</span>
+                            </div>
+                            {% if expense.approved_date %}
+                            <div class="info-row">
+                                <span class="info-label">Approval Date</span>
+                                <span class="info-value">{{ expense.approved_date|date:"M d, Y g:i A" }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+
+            </div><!-- /dynamic-content -->
+        </div><!-- /expense-container -->
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const navLinks = document.querySelectorAll('.horizontal-nav-tabs .nav-link');
+    const sections = {
+        'overview': document.getElementById('overview-section'),
+        'approval': document.getElementById('approval-section'),
+    };
+
+    navLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = this.getAttribute('data-section');
+
+            navLinks.forEach(function(l) {
+                l.classList.remove('active');
+                l.style.borderBottomColor = 'transparent';
+                l.style.color = '#64748b';
+            });
+            this.classList.add('active');
+            this.style.borderBottomColor = '#0d6efd';
+            this.style.color = '#0d6efd';
+
+            Object.keys(sections).forEach(function(key) {
+                if (sections[key]) {
+                    sections[key].style.display = (key === target) ? 'block' : 'none';
+                }
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

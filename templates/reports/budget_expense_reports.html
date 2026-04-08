@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Budget & Expense Reports{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-wallet2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Budget & Expense Reports</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center">
+    <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+    <a href="{% url 'budget:dashboard' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-wallet2 me-1"></i>Budget</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Period Filter -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small fw-bold me-1"><i class="bi bi-funnel me-1"></i>Period:</span>
+            <select name="period" class="form-select form-select-sm" style="width:auto;" onchange="toggleCustom(this)">
+                <option value="this_month" {% if period == 'this_month' %}selected{% endif %}>This Month</option>
+                <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last Month</option>
+                <option value="last_7_days" {% if period == 'last_7_days' %}selected{% endif %}>Last 7 Days</option>
+                <option value="last_30_days" {% if period == 'last_30_days' %}selected{% endif %}>Last 30 Days</option>
+                <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This Year</option>
+                <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+            <div id="customDates" class="d-flex gap-2 align-items-center" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %} !important;">
+                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ start_date|date:'Y-m-d' }}" style="width:auto;">
+                <span class="text-muted small">to</span>
+                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ end_date|date:'Y-m-d' }}" style="width:auto;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter me-1"></i>Apply</button>
+            <span class="ms-auto text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ start_date|date:"M d, Y" }} — {{ end_date|date:"M d, Y" }}</span>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid var(--alafia-primary) !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:var(--alafia-primary);">{{ total_budgets }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Active Budgets</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #198754 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#198754;">{{ total_categories }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Categories</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #6f42c1 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#6f42c1;">{{ total_expenses }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Expenses (Period)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #dc3545 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#dc3545;">{{ total_expense_amount|floatformat:0|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Total Spent (UGX)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #e67e22 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#e67e22;">{{ pending_expenses }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Pending</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #0d6efd !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#0d6efd;">{{ approved_expenses }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Approved/Paid</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up text-primary me-1"></i>Expense Trend (Last 7 Days)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="expenseTrendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart text-success me-1"></i>Expenses by Category</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Method + Budget Utilization -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-credit-card text-info me-1"></i>By Payment Method</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="methodChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-clipboard-data text-primary me-1"></i>Active Budgets Utilization</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if budget_summaries %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Budget</th>
+                                <th class="border-0">Period</th>
+                                <th class="border-0 text-end">Total</th>
+                                <th class="border-0 text-end">Spent</th>
+                                <th class="border-0 text-end">Remaining</th>
+                                <th class="border-0 text-center" style="width:140px;">Utilization</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in budget_summaries %}
+                            <tr>
+                                <td class="ps-3 fw-medium">{{ b.name }}</td>
+                                <td class="text-muted">{{ b.period }}</td>
+                                <td class="text-end">{{ b.total|floatformat:0|intcomma }}</td>
+                                <td class="text-end text-danger fw-medium">{{ b.spent|floatformat:0|intcomma }}</td>
+                                <td class="text-end text-success fw-medium">{{ b.remaining|floatformat:0|intcomma }}</td>
+                                <td class="text-center">
+                                    <div class="d-flex align-items-center gap-1 justify-content-center">
+                                        <div class="progress" style="width:70px;height:6px;">
+                                            <div class="progress-bar {% if b.utilization >= 90 %}bg-danger{% elif b.utilization >= 75 %}bg-warning{% else %}bg-success{% endif %}" style="width:{{ b.utilization }}%;"></div>
+                                        </div>
+                                        <small class="fw-bold">{{ b.utilization }}%</small>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No active budgets</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tables Row -->
+<div class="row g-3 mb-3">
+    <!-- Recent Expenses -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-receipt text-primary me-1"></i>Recent Expenses</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_expenses %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Date</th>
+                                <th class="border-0">Description</th>
+                                <th class="border-0">Category</th>
+                                <th class="border-0 text-end">Amount</th>
+                                <th class="border-0 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exp in recent_expenses %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ exp.expense_date|date:"m/d" }}</td>
+                                <td class="fw-medium">
+                                    <a href="{% url 'budget:expense_detail' exp.pk %}" class="text-decoration-none text-dark">{{ exp.description|truncatewords:4 }}</a>
+                                </td>
+                                <td>{{ exp.category.name }}</td>
+                                <td class="text-end fw-medium text-danger">{{ exp.amount|floatformat:0|intcomma }}</td>
+                                <td class="text-center">
+                                    {% if exp.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif exp.status == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                    {% elif exp.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                    {% elif exp.status == 'paid' %}
+                                        <span class="badge bg-primary">Paid</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No expenses found</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Vendors -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-building text-warning me-1"></i>Top Vendors</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if top_vendors %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">#</th>
+                                <th class="border-0">Vendor</th>
+                                <th class="border-0 text-center">Count</th>
+                                <th class="border-0 text-end pe-3">Total (UGX)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in top_vendors %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+                                <td class="fw-medium">{{ v.vendor_name }}</td>
+                                <td class="text-center"><span class="badge bg-primary">{{ v.count }}</span></td>
+                                <td class="text-end pe-3">{{ v.total|floatformat:0|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No vendor data for this period</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const trendCtx = document.getElementById('expenseTrendChart').getContext('2d');
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: {{ exp_trend_labels|safe }},
+        datasets: [{
+            label: 'Expenses (UGX)',
+            data: {{ exp_trend_data|safe }},
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220,53,69,0.1)',
+            borderWidth: 2, fill: true, tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } },
+        plugins: { legend: { display: false } }
+    }
+});
+
+const catCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(catCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ exp_cat_labels|safe }},
+        datasets: [{ data: {{ exp_cat_amounts|safe }}, backgroundColor: ['#1B5E96','#198754','#e67e22','#6f42c1','#dc3545','#0d6efd','#20c997','#fd7e14','#6610f2','#d63384'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+});
+
+const methCtx = document.getElementById('methodChart').getContext('2d');
+new Chart(methCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ method_labels|safe }},
+        datasets: [{ data: {{ method_amounts|safe }}, backgroundColor: ['#0d6efd','#198754','#e67e22','#6f42c1','#dc3545'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+});
+
+function toggleCustom(sel) {
+    document.getElementById('customDates').style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+</script>
+{% endblock %}
