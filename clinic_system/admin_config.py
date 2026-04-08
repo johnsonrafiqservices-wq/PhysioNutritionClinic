@@ -13,9 +13,9 @@ class ClinicAdminSite(AdminSite):
     Custom admin site for the clinic system
     """
     site_header = _('PhysioNutrition Clinic Administration')
-    site_title = _('Clinic Admin')
+    site_title = _('PhysioNutrition Admin')
     index_title = _('Welcome to PhysioNutrition Clinic Administration')
-    site_url = '/patients/'  # Link to main application
+    site_url = '/dashboard/'
     
     def get_app_list(self, request):
         """
@@ -143,9 +143,9 @@ def customize_admin_interface():
     """
     # Customize admin site
     admin.site.site_header = _('PhysioNutrition Clinic Administration')
-    admin.site.site_title = _('Clinic Admin')
+    admin.site.site_title = _('PhysioNutrition Admin')
     admin.site.index_title = _('Welcome to PhysioNutrition Clinic Administration')
-    admin.site.site_url = '/patients/'
+    admin.site.site_url = '/dashboard/'
     
     # Add custom CSS and JS
     admin.site.enable_nav_sidebar = False  # Disable Django 3.1+ sidebar for Jet compatibility

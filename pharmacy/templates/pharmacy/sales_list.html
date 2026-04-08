@@ -3,251 +3,258 @@
 {% load humanize %}
 
 {% block page_title %}
-    <div class="d-flex align-items-center">
-        <i class="bi bi-cart-check me-3" style="font-size: 1.5rem; color: var(--alafia-success);"></i>
-        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Sales Transactions</span>
-    </div>
+<div class="d-flex align-items-center">
+    <i class="bi bi-cart-check me-2" style="font-size: 1.2rem; color: #0d9488;"></i>
+    <span style="font-weight: 700; font-size: 15px;">Sales Transactions</span>
+</div>
 {% endblock %}
 
 {% block page_actions %}
-<a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left"></i> Back to Dashboard
-</a>
-<a href="{% url 'pharmacy:sales_report' %}" class="btn btn-success btn-sm">
-    <i class="bi bi-file-earmark-bar-graph"></i> Sales Report
-</a>
-<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#saleRecordModal">
-    <i class="bi bi-plus-circle"></i> Record Sale
-</button>
+<div class="d-flex flex-wrap gap-2 align-items-center">
+    <a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-outline-secondary btn-sm" style="font-size: 11px;">
+        <i class="bi bi-speedometer2 me-1"></i> Dashboard
+    </a>
+    <a href="{% url 'pharmacy:sales_report' %}" class="btn btn-sm" style="font-size: 11px; background: #0d9488; color: white;">
+        <i class="bi bi-bar-chart me-1"></i> Report
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" style="font-size: 11px;" data-bs-toggle="modal" data-bs-target="#saleRecordModal">
+        <i class="bi bi-plus-circle me-1"></i> Record Sale
+    </button>
+</div>
 {% endblock %}
 
 {% block content %}
-<!-- Filters Card -->
-<div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid var(--alafia-primary) !important;">
-    <div class="card-body">
-        <h6 class="text-muted mb-3">
-            <i class="bi bi-funnel me-2"></i>Filter Sales
-        </h6>
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label for="start_date" class="form-label small fw-semibold">Start Date</label>
-                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
-            </div>
-            <div class="col-md-4">
-                <label for="end_date" class="form-label small fw-semibold">End Date</label>
-                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-filter me-2"></i>Apply Filter
-                </button>
-            </div>
-            <div class="col-md-12">
-                <a href="{% url 'pharmacy:sales_list' %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-x-circle"></i> Clear Filters
-                </a>
-            </div>
-        </form>
+<style>
+.sl-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+.sl-stat {
+    background: white; border-radius: 8px; padding: 12px 14px;
+    border: 1px solid #e2e8f0; position: relative; overflow: hidden;
+}
+.sl-stat::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+}
+.sl-stat.today::before { background: #0d9488; }
+.sl-stat.week::before { background: #6366f1; }
+.sl-stat.month::before { background: #f59e0b; }
+.sl-stat.total::before { background: #1e293b; }
+.sl-stat-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.sl-stat-value { font-size: 20px; font-weight: 800; color: #1e293b; line-height: 1; }
+.sl-stat-row { display: flex; gap: 12px; margin-top: 6px; }
+.sl-stat-sub { font-size: 10px; color: #64748b; }
+.sl-stat-sub b { color: #334155; }
+.sl-filter { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
+.sl-filter .form-control, .sl-filter .form-select, .sl-filter .btn { font-size: 11px; padding: 5px 10px; }
+.sl-filter label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 2px; }
+.sl-card { border: none; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden; }
+.sl-header { padding: 10px 14px; background: white; border-bottom: 2px solid #0d9488; display: flex; justify-content: space-between; align-items: center; }
+.sl-header h6 { font-size: 12px; font-weight: 700; margin: 0; color: #1e293b; }
+.sl-badge { background: #0d9488; color: white; font-size: 10px; padding: 3px 10px; border-radius: 12px; }
+.sl-table { font-size: 11px; margin: 0; }
+.sl-table thead th { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; padding: 8px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+.sl-table tbody td { padding: 7px 10px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+.sl-table tbody tr { transition: background .15s; cursor: pointer; }
+.sl-table tbody tr:hover { background: #f0fdf4; }
+.sl-med { font-weight: 600; color: #1e293b; }
+.sl-sub { font-size: 10px; color: #94a3b8; }
+.sl-amount { font-weight: 700; color: #059669; }
+.sl-qty-badge { background: #eff6ff; color: #2563eb; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.sl-ref { font-size: 10px; color: #64748b; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-empty { text-align: center; padding: 40px 20px; }
+.sl-empty i { font-size: 2.5rem; color: #cbd5e1; }
+@media (max-width: 768px) { .sl-stats { grid-template-columns: repeat(2, 1fr); } }
+</style>
+
+<!-- Stats Cards -->
+<div class="sl-stats">
+    <div class="sl-stat today">
+        <div class="sl-stat-label">Today</div>
+        <div class="sl-stat-value" style="color: #0d9488;">{{ stats_today.revenue|floatformat:0|intcomma }}</div>
+        <div class="sl-stat-row">
+            <span class="sl-stat-sub"><b>{{ stats_today.count }}</b> sales</span>
+            <span class="sl-stat-sub"><b>{{ stats_today.qty }}</b> units</span>
+        </div>
+    </div>
+    <div class="sl-stat week">
+        <div class="sl-stat-label">This Week</div>
+        <div class="sl-stat-value" style="color: #6366f1;">{{ stats_week.revenue|floatformat:0|intcomma }}</div>
+        <div class="sl-stat-row">
+            <span class="sl-stat-sub"><b>{{ stats_week.count }}</b> sales</span>
+            <span class="sl-stat-sub"><b>{{ stats_week.qty }}</b> units</span>
+        </div>
+    </div>
+    <div class="sl-stat month">
+        <div class="sl-stat-label">This Month</div>
+        <div class="sl-stat-value" style="color: #d97706;">{{ stats_month.revenue|floatformat:0|intcomma }}</div>
+        <div class="sl-stat-row">
+            <span class="sl-stat-sub"><b>{{ stats_month.count }}</b> sales</span>
+            <span class="sl-stat-sub"><b>{{ stats_month.qty }}</b> units</span>
+        </div>
+    </div>
+    <div class="sl-stat total">
+        <div class="sl-stat-label">All Time</div>
+        <div class="sl-stat-value">{{ stats_all.revenue|floatformat:0|intcomma }}</div>
+        <div class="sl-stat-row">
+            <span class="sl-stat-sub"><b>{{ stats_all.count }}</b> sales</span>
+            <span class="sl-stat-sub"><b>{{ stats_all.qty }}</b> units</span>
+        </div>
     </div>
 </div>
 
-<!-- Sales Table -->
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white py-3" style="border-bottom: 2px solid var(--alafia-primary);">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold">
-                <i class="bi bi-receipt text-success me-2"></i>Sales Transactions
-            </h5>
-            <div>
-                <span class="badge" style="background: var(--alafia-gradient); font-size: 0.9rem; padding: 0.5rem 1rem;">
-                    {{ sales.count }} transaction{{ sales.count|pluralize }}
-                </span>
-            </div>
+<!-- Filter -->
+<div class="sl-filter">
+    <form method="get" class="d-flex align-items-end gap-2 flex-wrap">
+        <div>
+            <label>From</label>
+            <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
         </div>
-    </div>
-    <div class="card-body p-0">
-        {% if sales %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <tr>
-                        <th class="px-4 py-3">
-                            <i class="bi bi-calendar3 me-1"></i>Date & Time
-                        </th>
-                        <th class="py-3">
-                            <i class="bi bi-capsule me-1"></i>Medication
-                        </th>
-                        <th class="text-center py-3">
-                            <i class="bi bi-box-seam me-1"></i>Quantity
-                        </th>
-                        <th class="text-end py-3">
-                            <i class="bi bi-cash me-1"></i>Total Amount
-                        </th>
-                        <th class="py-3">
-                            <i class="bi bi-person me-1"></i>Customer
-                        </th>
-                        <th class="py-3">
-                            <i class="bi bi-person-badge me-1"></i>Sold By
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sale in sales %}
-                    <tr style="border-left: 3px solid transparent; transition: all 0.2s;">
-                        <td class="px-4">
-                            <div class="d-flex align-items-center">
-                                <div class="text-center me-3" style="min-width: 50px;">
-                                    <div class="fw-bold" style="color: var(--alafia-primary);">{{ sale.created_at|date:"d" }}</div>
-                                    <small class="text-muted">{{ sale.created_at|date:"M" }}</small>
-                                </div>
-                                <div>
-                                    <div class="small text-muted">{{ sale.created_at|date:"Y" }}</div>
-                                    <small class="text-muted">
-                                        <i class="bi bi-clock"></i> {{ sale.created_at|date:"h:i A" }}
-                                    </small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="fw-semibold" style="color: var(--alafia-primary);">
-                                {{ sale.batch.medication.name }}
-                            </div>
-                            <small class="text-muted">{{ sale.batch.medication.generic_name }}</small>
-                            <div class="mt-1">
-                                <span class="badge bg-secondary" style="font-size: 0.7rem;">
-                                    Batch: {{ sale.batch.batch_number }}
-                                </span>
-                            </div>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
-                                {{ sale.quantity }} unit{{ sale.quantity|pluralize }}
-                            </span>
-                        </td>
-                        <td class="text-end">
-                            {% widthratio sale.quantity 1 sale.batch.selling_price as total_amount %}
-                            <div class="fw-bold text-success" style="font-size: 1.1rem;">
-                                UGX {{ total_amount|floatformat:0|intcomma }}
-                            </div>
-                            <small class="text-muted">
-                                @ UGX {{ sale.batch.selling_price|floatformat:0|intcomma }}/unit
-                            </small>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
-                                     style="width: 35px; height: 35px;">
-                                    <i class="bi bi-person-fill" style="color: var(--alafia-primary);"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-semibold small">{{ sale.reference|default:"Walk-in" }}</div>
-                                    <small class="text-muted">Customer</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center me-2" 
-                                     style="width: 35px; height: 35px; background: var(--alafia-gradient);">
-                                    <i class="bi bi-person-badge-fill text-white"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-semibold small">{{ sale.created_by.get_full_name }}</div>
-                                    <small class="text-muted">Staff</small>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div>
+            <label>To</label>
+            <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
         </div>
-        {% else %}
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <i class="bi bi-inbox" style="font-size: 4rem; color: var(--alafia-primary); opacity: 0.3;"></i>
-            </div>
-            <h5 class="text-muted mb-3">No Sales Found</h5>
-            <p class="text-muted mb-4">No sales transactions found for the selected period.</p>
-            <a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-primary">
-                <i class="bi bi-cart-plus me-2"></i>Record a Sale
+        <div style="min-width: 160px;">
+            <label>Medication</label>
+            <select class="form-select" name="medication">
+                <option value="">All Medications</option>
+                {% for med_name in medication_names %}
+                <option value="{{ med_name }}" {% if medication_name == med_name %}selected{% endif %}>{{ med_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary btn-sm" style="font-size: 11px;">
+                <i class="bi bi-funnel me-1"></i>Filter
+            </button>
+        </div>
+        {% if start_date or end_date or medication_name %}
+        <div>
+            <a href="{% url 'pharmacy:sales_list' %}" class="btn btn-outline-secondary btn-sm" style="font-size: 11px;">
+                <i class="bi bi-x"></i> Clear
             </a>
         </div>
         {% endif %}
+    </form>
+</div>
+
+<!-- Sales Table -->
+<div class="sl-card">
+    <div class="sl-header">
+        <h6><i class="bi bi-receipt me-2"></i>Sales</h6>
+        <span class="sl-badge">{{ sales.count }} record{{ sales.count|pluralize }}</span>
     </div>
+    {% if sales %}
+    <div class="table-responsive">
+        <table class="table sl-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Medication</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Amount</th>
+                    <th>Customer</th>
+                    <th>Sold By</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in sales %}
+                <tr onclick="window.location='{% url 'pharmacy:sale_detail' sale.pk %}'">
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td>
+                        <div>{{ sale.created_at|date:"d M Y" }}</div>
+                        <div class="sl-sub">{{ sale.created_at|date:"h:i A" }}</div>
+                    </td>
+                    <td>
+                        <div class="sl-med">{{ sale.batch.medication.name }}</div>
+                        <div class="sl-sub">{{ sale.batch.batch_number }} · {{ sale.batch.medication.strength }}</div>
+                    </td>
+                    <td class="text-center">
+                        <span class="sl-qty-badge">{{ sale.quantity }}</span>
+                    </td>
+                    <td class="text-end">
+                        {% widthratio sale.quantity 1 sale.batch.selling_price as total_amount %}
+                        <div class="sl-amount">{{ total_amount|floatformat:0|intcomma }}</div>
+                        <div class="sl-sub">@ {{ sale.batch.selling_price|floatformat:0|intcomma }}/unit</div>
+                    </td>
+                    <td>
+                        <div class="sl-ref" title="{{ sale.reference|default:'Walk-in' }}">{{ sale.reference|default:"Walk-in" }}</div>
+                    </td>
+                    <td>
+                        <div style="font-size: 11px;">{{ sale.created_by.get_full_name|truncatewords:2 }}</div>
+                    </td>
+                    <td class="text-center" onclick="event.stopPropagation();">
+                        <a href="{% url 'pharmacy:sale_detail' sale.pk %}" class="btn btn-outline-primary py-0 px-1" style="font-size: .72rem;" title="View">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="sl-empty">
+        <i class="bi bi-inbox d-block mb-2"></i>
+        <div class="text-muted" style="font-size: 12px;">No sales found for the selected period</div>
+        <button type="button" class="btn btn-primary btn-sm mt-2" style="font-size: 11px;" data-bs-toggle="modal" data-bs-target="#saleRecordModal">
+            <i class="bi bi-plus-circle me-1"></i>Record a Sale
+        </button>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Record Sale Modal -->
 <div class="modal fade" id="saleRecordModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header" style="background: var(--alafia-gradient); color: white;">
-                <h5 class="modal-title">
-                    <i class="bi bi-cart-plus"></i> Record Sale / Dispense Medication
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header" style="background: #0d9488; color: white; padding: 10px 16px;">
+                <h6 class="modal-title mb-0" style="font-size: 13px;">
+                    <i class="bi bi-cart-plus me-2"></i>Record Sale
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 10px;"></button>
             </div>
             <form id="saleRecordForm" method="post" action="{% url 'pharmacy:record_sale_ajax' %}">
                 {% csrf_token %}
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            <label for="id_medication_batch_combo" class="form-label">
-                                <i class="bi bi-capsule"></i> Select Medication <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select" id="id_medication_batch_combo" name="medication_batch_combo" required>
+                <div class="modal-body" style="font-size: 12px;">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label" style="font-size: 11px; font-weight: 600;">Medication & Batch <span class="text-danger">*</span></label>
+                            <select class="form-select" id="id_medication_batch_combo" name="medication_batch_combo" required style="font-size: 12px;">
                                 <option value="">-- Select Medication & Batch --</option>
                             </select>
-                            <small class="text-muted">Select medication with available batch</small>
-                            <div id="batchInfo" style="display:none;" class="mt-2">
-                                <span class="badge bg-info me-2">Stock: <span id="batchStock">-</span></span>
-                                <span class="badge bg-warning text-dark">Expiry: <span id="batchExpiry">-</span></span>
+                            <div id="batchInfo" style="display:none;" class="mt-1">
+                                <span class="badge bg-info" style="font-size: 10px;">Stock: <span id="batchStock">-</span></span>
+                                <span class="badge bg-warning text-dark" style="font-size: 10px;">Exp: <span id="batchExpiry">-</span></span>
                             </div>
-                            <div class="invalid-feedback"></div>
                         </div>
-                        <!-- Hidden fields to store the selected values -->
                         <input type="hidden" id="id_medication" name="medication">
                         <input type="hidden" id="id_batch" name="batch">
                         <div class="col-md-4">
-                            <label for="id_quantity" class="form-label">
-                                <i class="bi bi-123"></i> Quantity <span class="text-danger">*</span>
-                            </label>
-                            <input type="number" class="form-control" id="id_quantity" name="quantity" min="1" value="1" required>
-                            <div class="invalid-feedback"></div>
+                            <label class="form-label" style="font-size: 11px; font-weight: 600;">Quantity <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="id_quantity" name="quantity" min="1" value="1" required style="font-size: 12px;">
                         </div>
                         <div class="col-md-4">
-                            <label for="id_unit_price" class="form-label">
-                                <i class="bi bi-currency-exchange"></i> Unit Price (UGX)
-                            </label>
-                            <input type="number" class="form-control" id="id_unit_price" name="unit_price" step="0.01" readonly>
+                            <label class="form-label" style="font-size: 11px; font-weight: 600;">Unit Price (UGX)</label>
+                            <input type="number" class="form-control" id="id_unit_price" name="unit_price" step="0.01" readonly style="font-size: 12px;">
                         </div>
                         <div class="col-md-4">
-                            <label for="id_total_amount" class="form-label">
-                                <i class="bi bi-cash-stack"></i> Total Amount (UGX)
-                            </label>
-                            <input type="number" class="form-control fw-bold text-success" id="id_total_amount" readonly>
+                            <label class="form-label" style="font-size: 11px; font-weight: 600;">Total (UGX)</label>
+                            <input type="number" class="form-control fw-bold text-success" id="id_total_amount" readonly style="font-size: 12px;">
                         </div>
-                        <div class="col-md-12">
-                            <label for="id_customer_info" class="form-label">
-                                <i class="bi bi-person"></i> Customer Information
-                            </label>
-                            <input type="text" class="form-control" id="id_customer_info" name="customer_info" placeholder="Customer name or ID (optional)">
-                            <small class="text-muted">Leave blank for walk-in sales</small>
+                        <div class="col-md-6">
+                            <label class="form-label" style="font-size: 11px; font-weight: 600;">Customer</label>
+                            <input type="text" class="form-control" id="id_customer_info" name="customer_info" placeholder="Walk-in" style="font-size: 12px;">
                         </div>
-                        <div class="col-md-12">
-                            <label for="id_notes" class="form-label">
-                                <i class="bi bi-pencil-square"></i> Notes
-                            </label>
-                            <textarea class="form-control" id="id_notes" name="notes" rows="2" placeholder="Additional notes..."></textarea>
+                        <div class="col-md-6">
+                            <label class="form-label" style="font-size: 11px; font-weight: 600;">Notes</label>
+                            <input type="text" class="form-control" id="id_notes" name="notes" placeholder="Optional" style="font-size: 12px;">
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-success" id="submitSaleBtn">
-                        <i class="bi bi-check-circle"></i> Record Sale
+                <div class="modal-footer" style="padding: 10px 16px;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="font-size: 11px;">Cancel</button>
+                    <button type="submit" class="btn btn-success btn-sm" id="submitSaleBtn" style="font-size: 11px;">
+                        <i class="bi bi-check-circle me-1"></i>Record Sale
                     </button>
                 </div>
             </form>
@@ -260,7 +267,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const medicationBatchCombo = document.getElementById('id_medication_batch_combo');
     const medicationInput = document.getElementById('id_medication');
     const batchInput = document.getElementById('id_batch');
-    
     const quantityInput = document.getElementById('id_quantity');
     const unitPriceInput = document.getElementById('id_unit_price');
     const totalAmountInput = document.getElementById('id_total_amount');
@@ -268,101 +274,59 @@ document.addEventListener('DOMContentLoaded', function() {
     const batchStock = document.getElementById('batchStock');
     const batchExpiry = document.getElementById('batchExpiry');
     const saleForm = document.getElementById('saleRecordForm');
-    
-    // Load medications with batches on modal show
-    document.getElementById('saleRecordModal').addEventListener('shown.bs.modal', function() {
-        loadMedicationsWithBatches();
-    });
-    
-    // Load medications with their batches
+
+    document.getElementById('saleRecordModal').addEventListener('shown.bs.modal', loadMedicationsWithBatches);
+
     function loadMedicationsWithBatches() {
-        medicationBatchCombo.innerHTML = '<option value="">Loading medications...</option>';
+        medicationBatchCombo.innerHTML = '<option value="">Loading...</option>';
         medicationBatchCombo.disabled = true;
-        
         fetch('{% url "pharmacy:get_medications_ajax" %}')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(r => r.json())
             .then(data => {
                 medicationBatchCombo.innerHTML = '<option value="">-- Select Medication & Batch --</option>';
-                
                 if (data.success && data.medications && data.medications.length > 0) {
-                    const promises = data.medications.map(med => 
+                    const promises = data.medications.map(med =>
                         fetch(`{% url "pharmacy:get_batches_ajax" %}?medication_id=${med.id}`)
                             .then(res => res.json())
-                            .then(batchData => ({ medication: med, batches: batchData.batches || [] }))
+                            .then(bd => ({ medication: med, batches: bd.batches || [] }))
                     );
-                    
                     Promise.all(promises).then(results => {
-                        let totalOptions = 0;
+                        let n = 0;
                         results.forEach(({ medication, batches }) => {
-                            if (batches.length > 0) {
-                                batches.forEach(batch => {
-                                    const option = document.createElement('option');
-                                    option.value = `${medication.id}|${batch.id}`;
-                                    option.textContent = `${medication.name} - Batch: ${batch.batch_number} (Stock: ${batch.current_stock}, Exp: ${batch.expiry_date})`;
-                                    option.dataset.medicationId = medication.id;
-                                    option.dataset.batchId = batch.id;
-                                    option.dataset.stock = batch.current_stock;
-                                    option.dataset.expiry = batch.expiry_date;
-                                    option.dataset.price = batch.selling_price;
-                                    medicationBatchCombo.appendChild(option);
-                                    totalOptions++;
-                                });
-                            }
+                            batches.forEach(batch => {
+                                const opt = document.createElement('option');
+                                opt.value = `${medication.id}|${batch.id}`;
+                                opt.textContent = `${medication.name} - ${batch.batch_number} (Stock: ${batch.current_stock})`;
+                                opt.dataset.medicationId = medication.id;
+                                opt.dataset.batchId = batch.id;
+                                opt.dataset.stock = batch.current_stock;
+                                opt.dataset.expiry = batch.expiry_date;
+                                opt.dataset.price = batch.selling_price;
+                                medicationBatchCombo.appendChild(opt);
+                                n++;
+                            });
                         });
-                        
-                        if (totalOptions === 0) {
-                            medicationBatchCombo.innerHTML = '<option value="">No medications with stock available</option>';
-                            medicationBatchCombo.disabled = true;
-                            alert('⚠️ No medications with available stock found. Please add stock first.');
-                        } else {
-                            medicationBatchCombo.disabled = false;
-                        }
+                        medicationBatchCombo.disabled = n === 0;
+                        if (n === 0) medicationBatchCombo.innerHTML = '<option value="">No stock available</option>';
                     });
-                } else {
-                    medicationBatchCombo.innerHTML = '<option value="">No medications available</option>';
                 }
             })
-            .catch(error => {
-                console.error('Error loading medications:', error);
-                medicationBatchCombo.innerHTML = '<option value="">Error loading medications</option>';
-                alert('Failed to load medications: ' + error.message);
-            });
+            .catch(() => { medicationBatchCombo.innerHTML = '<option value="">Error loading</option>'; });
     }
-    
-    // Handle combined medication & batch selection
+
     medicationBatchCombo.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        
-        if (this.value && selectedOption) {
-            // Parse the value (format: medicationId|batchId)
-            const [medId, batchId] = this.value.split('|');
-            
-            // Update hidden fields
+        const opt = this.options[this.selectedIndex];
+        if (this.value && opt) {
+            const [medId, bId] = this.value.split('|');
             medicationInput.value = medId;
-            batchInput.value = batchId;
-            
-            // Get batch details from data attributes
-            const stock = selectedOption.dataset.stock;
-            const expiry = selectedOption.dataset.expiry;
-            const price = selectedOption.dataset.price;
-            
-            // Display batch information
-            batchStock.textContent = `${stock} units`;
-            batchExpiry.textContent = expiry;
+            batchInput.value = bId;
+            batchStock.textContent = `${opt.dataset.stock} units`;
+            batchExpiry.textContent = opt.dataset.expiry;
             batchInfo.style.display = 'block';
-            
-            // Update price and max quantity
-            unitPriceInput.value = parseFloat(price).toFixed(2);
-            quantityInput.max = stock;
-            
-            calculateTotal();
+            unitPriceInput.value = parseFloat(opt.dataset.price).toFixed(2);
+            quantityInput.max = opt.dataset.stock;
+            calcTotal();
         } else {
-            // Reset when nothing selected
             medicationInput.value = '';
             batchInput.value = '';
             batchInfo.style.display = 'none';
@@ -370,100 +334,43 @@ document.addEventListener('DOMContentLoaded', function() {
             totalAmountInput.value = '';
         }
     });
-    
-    // Calculate total on quantity change
-    quantityInput.addEventListener('input', calculateTotal);
-    
-    function calculateTotal() {
-        const quantity = parseFloat(quantityInput.value) || 0;
-        const unitPrice = parseFloat(unitPriceInput.value) || 0;
-        const total = quantity * unitPrice;
-        totalAmountInput.value = total.toFixed(2);
+
+    quantityInput.addEventListener('input', calcTotal);
+    function calcTotal() {
+        totalAmountInput.value = ((parseFloat(quantityInput.value) || 0) * (parseFloat(unitPriceInput.value) || 0)).toFixed(2);
     }
-    
-    // Form submission
+
     saleForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        const submitBtn = document.getElementById('submitSaleBtn');
-        const originalText = submitBtn.innerHTML;
-        
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="bi bi-hourglass-split spinner-border spinner-border-sm"></i> Recording...';
-        
-        const formData = new FormData(this);
-        
-        fetch(this.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('saleRecordModal'));
-                modal.hide();
-                saleForm.reset();
-                
-                // If patient sale, offer to add to invoice
-                if (data.data && data.data.patient_id && data.data.stock_movement_id) {
-                    const message = data.message || 'Sale recorded successfully!';
-                    const addToInvoice = confirm(message + '\n\nWould you like to add this sale to the patient\'s invoice?');
-                    
-                    if (addToInvoice) {
-                        // Add to invoice
-                        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-                        const invoiceFormData = new FormData();
-                        invoiceFormData.append('csrfmiddlewaretoken', csrfToken);
-                        invoiceFormData.append('stock_movement_id', data.data.stock_movement_id);
-                        invoiceFormData.append('patient_id', data.data.patient_id);
-                        
-                        fetch('{% url "pharmacy:add_sale_to_invoice_ajax" %}', {
-                            method: 'POST',
-                            body: invoiceFormData,
-                            headers: {
-                                'X-CSRFToken': csrfToken,
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(res => res.json())
-                        .then(invoiceData => {
-                            if (invoiceData.success) {
-                                alert('✓ Sale added to invoice ' + invoiceData.data.invoice_number + ' successfully!');
-                            } else {
-                                alert('Could not add to invoice: ' + invoiceData.message);
-                            }
-                            window.location.reload();
-                        })
-                        .catch(err => {
-                            console.error('Invoice error:', err);
-                            alert('Error adding to invoice. Sale was recorded successfully.');
-                            window.location.reload();
-                        });
-                    } else {
-                        window.location.reload();
-                    }
-                } else {
-                    alert(data.message || 'Sale recorded successfully!');
-                    window.location.reload();
-                }
-            } else {
-                alert(data.message || 'Error recording sale. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-        })
-        .finally(() => {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        });
+        const btn = document.getElementById('submitSaleBtn');
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+        fetch(this.action, { method: 'POST', body: new FormData(this), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('saleRecordModal')).hide();
+                    saleForm.reset();
+                    if (data.data && data.data.patient_id && data.data.stock_movement_id) {
+                        if (confirm((data.message || 'Sale recorded!') + '\n\nAdd to patient invoice?')) {
+                            const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            const fd = new FormData();
+                            fd.append('csrfmiddlewaretoken', csrf);
+                            fd.append('stock_movement_id', data.data.stock_movement_id);
+                            fd.append('patient_id', data.data.patient_id);
+                            fetch('{% url "pharmacy:add_sale_to_invoice_ajax" %}', { method: 'POST', body: fd, headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' } })
+                                .then(r => r.json())
+                                .then(id => { if (id.success) alert('Added to invoice ' + id.data.invoice_number); window.location.reload(); })
+                                .catch(() => { window.location.reload(); });
+                        } else { window.location.reload(); }
+                    } else { alert(data.message || 'Sale recorded!'); window.location.reload(); }
+                } else { alert(data.message || 'Error'); }
+            })
+            .catch(() => alert('Error'))
+            .finally(() => { btn.disabled = false; btn.innerHTML = orig; });
     });
-    
-    // Reset form when modal closes
+
     document.getElementById('saleRecordModal').addEventListener('hidden.bs.modal', function() {
         saleForm.reset();
         medicationBatchCombo.value = '';
@@ -474,35 +381,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
-<style>
-/* Alafia Sales List Styles */
-.table tbody tr {
-    transition: all 0.2s ease;
-}
-
-.table tbody tr:hover {
-    background: linear-gradient(90deg, rgba(27, 94, 150, 0.05) 0%, transparent 100%);
-    border-left-color: var(--alafia-primary) !important;
-    transform: translateX(2px);
-}
-
-.card-header {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-}
-
-.badge {
-    font-weight: 500;
-    letter-spacing: 0.3px;
-}
-
-/* Smooth hover effects for avatars */
-.rounded-circle {
-    transition: transform 0.2s;
-}
-
-.table tbody tr:hover .rounded-circle {
-    transform: scale(1.1);
-}
-</style>
 {% endblock %}

@@ -20,6 +20,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 
 # Application definition
 
@@ -185,7 +187,7 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 20))
 
 # Django Jet Reboot Configuration
-JET_DEFAULT_THEME = 'default'
+JET_DEFAULT_THEME = 'light-blue'
 JET_THEMES = [
     {
         'theme': 'default',
@@ -214,10 +216,9 @@ JET_THEMES = [
     },
     {
         'theme': 'light-gray',
-        'color': '#ecf2f6',
+        'color': '#222',
         'title': 'Light Gray'
     },
-   
 ]
 
 # ─── Cloudinary (PDF cloud hosting for QR codes) ───────────────────────────
@@ -244,5 +245,33 @@ JET_CHANGE_FORM_SIBLING_LINKS = False
 # JET_INDEX_DASHBOARD = 'clinic_system.dashboard.CustomIndexDashboard'
 # JET_APP_INDEX_DASHBOARD = 'clinic_system.dashboard.CustomAppIndexDashboard'
 
-# Disable custom menu to avoid KeyError
-# JET_SIDE_MENU_ITEMS will use Django Jet's default auto-generated menu
+JET_SIDE_MENU_ITEMS = [
+    {'label': 'Dashboard', 'items': [
+        {'label': 'Home', 'url': '/admin/', 'url_blank': False},
+        {'label': 'Main Dashboard', 'url': '/dashboard/', 'url_blank': False},
+    ]},
+    {'label': 'Clinical', 'items': [
+        {'label': 'Patients', 'url': '/admin/patients/', 'url_blank': False},
+        {'label': 'Appointments', 'url': '/admin/appointments/', 'url_blank': False},
+        {'label': 'Medical Records', 'url': '/admin/medical_records/', 'url_blank': False},
+    ]},
+    {'label': 'Diagnostics', 'items': [
+        {'label': 'Laboratory', 'url': '/admin/laboratory/', 'url_blank': False},
+    ]},
+    {'label': 'Finance', 'items': [
+        {'label': 'Billing', 'url': '/admin/billing/', 'url_blank': False},
+        {'label': 'Budget & Expenses', 'url': '/admin/budget/', 'url_blank': False},
+    ]},
+    {'label': 'Pharmacy', 'items': [
+        {'label': 'Pharmacy', 'url': '/admin/pharmacy/', 'url_blank': False},
+    ]},
+    {'label': 'Operations', 'items': [
+        {'label': 'Staff Management', 'url': '/admin/staff_management/', 'url_blank': False},
+        {'label': 'Reports', 'url': '/admin/reports/', 'url_blank': False},
+    ]},
+    {'label': 'System', 'items': [
+        {'label': 'Clinic Settings', 'url': '/admin/clinic_settings/', 'url_blank': False},
+        {'label': 'Users & Auth', 'url': '/admin/accounts/', 'url_blank': False},
+        {'label': 'Tenants', 'url': '/admin/tenants/', 'url_blank': False},
+    ]},
+]

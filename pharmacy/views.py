@@ -1,3 +1,4 @@
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -6,14 +7,14 @@ from accounts.permissions import (
     app_access_required, permission_required, pharmacy_staff_required
 )
 from django.db import models, transaction
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q, Count
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.urls import reverse
 from datetime import timedelta
-from .models import Medication, Batch, Prescription, StockMovement, Supplier, Category
+from .models import Medication, MedicationUnit, Batch, Prescription, PrescriptionItem, StockMovement, Supplier, Category
 from .forms import (
     MedicationForm, BatchForm, PrescriptionForm, StockMovementForm, 
     SupplierForm, StockAdjustmentForm, QualityCheckForm
@@ -174,7 +175,20 @@ def supplier_create(request):
 def supplier_detail(request, pk):
     """Display supplier details."""
     supplier = get_object_or_404(Supplier, pk=pk)
-    return render(request, 'pharmacy/supplier_detail.html', {'supplier': supplier})
+    
+    # Calculate stats for the template
+    active_batches_count = supplier.batch_set.filter(is_active=True).count()
+    medications_count = supplier.batch_set.values('medication').distinct().count()
+    batches = supplier.batch_set.all().order_by('-received_date')[:15]
+    
+    context = {
+        'supplier': supplier,
+        'active_batches_count': active_batches_count,
+        'medications_count': medications_count,
+        'batches': batches,
+        'total_batches': supplier.batch_set.count(),
+    }
+    return render(request, 'pharmacy/supplier_detail.html', context)
 
 @login_required
 def supplier_edit(request, pk):
@@ -524,11 +538,40 @@ def medication_detail(request, pk):
     total_stock = medication.current_stock  # Uses the @property method
     batches_count = batches.count()
     
+    # Calculate stock value based on active batches
+    stock_value = sum(batch.quantity_remaining * batch.selling_price for batch in batches)
+    
+    # Get prescription items for this medication
+    prescription_items = PrescriptionItem.objects.filter(
+        medication=medication
+    ).select_related('prescription', 'prescription__patient').order_by('-prescription__prescribed_date')[:20]
+    prescription_count = medication.prescriptionitem_set.count() if hasattr(medication, 'prescriptionitem_set') else 0
+    
+    # Get stock movements for this medication's batches
+    stock_movements = StockMovement.objects.filter(
+        batch__medication=medication
+    ).select_related('batch', 'created_by').order_by('-created_at')[:20]
+    
+    # Get sales data - check if DispensedItem exists
+    dispensed_items = []
+    try:
+        from pharmacy.models import DispensedItem
+        dispensed_items = DispensedItem.objects.filter(
+            batch__medication=medication
+        ).select_related('batch', 'dispensed_by').order_by('-dispensed_at')[:20]
+    except ImportError:
+        pass
+    
     context = {
         'medication': medication,
         'batches': batches,
         'total_stock': total_stock,
         'batches_count': batches_count,
+        'stock_value': stock_value,
+        'prescription_count': prescription_count,
+        'prescription_items': prescription_items,
+        'stock_movements': stock_movements,
+        'dispensed_items': dispensed_items,
         'title': medication.name
     }
     return render(request, 'pharmacy/medication_detail.html', context)
@@ -599,12 +642,64 @@ def batch_create(request):
 @login_required
 def batch_detail(request, pk):
     """View batch details"""
-    batch = get_object_or_404(Batch, pk=pk)
+    batch = get_object_or_404(
+        Batch.objects.select_related('medication__category', 'supplier', 'received_by'),
+        pk=pk
+    )
     
-    return render(request, 'pharmacy/batch_detail.html', {
+    # Stock movements for this batch
+    stock_movements = StockMovement.objects.filter(
+        batch=batch
+    ).select_related('created_by').order_by('-created_at')
+    
+    # Sales (stock out with SALE reference)
+    sales = stock_movements.filter(movement_type='out', reference__icontains='SALE')
+    sales_count = sales.count()
+    total_sold = sales.aggregate(total=Sum('quantity'))['total'] or 0
+    total_revenue = total_sold * batch.selling_price
+    total_cost = total_sold * batch.cost_price
+    total_profit = total_revenue - total_cost
+    
+    # Stock in movements
+    stock_ins = stock_movements.filter(movement_type='in')
+    total_received = stock_ins.aggregate(total=Sum('quantity'))['total'] or 0
+    
+    # Adjustments
+    adjustments = stock_movements.filter(movement_type='adjustment')
+    
+    # Stock value (remaining)
+    stock_value = batch.quantity_remaining * batch.selling_price
+    cost_value = batch.quantity_remaining * batch.cost_price
+    
+    # Profit margin
+    if batch.selling_price > 0:
+        margin = ((batch.selling_price - batch.cost_price) / batch.selling_price) * 100
+    else:
+        margin = 0
+    
+    # Other batches of same medication
+    sibling_batches = Batch.objects.filter(
+        medication=batch.medication
+    ).exclude(pk=pk).select_related('supplier').order_by('-created_at')[:5]
+    
+    context = {
         'batch': batch,
+        'stock_movements': stock_movements[:50],
+        'sales': sales[:20],
+        'sales_count': sales_count,
+        'total_sold': total_sold,
+        'total_revenue': total_revenue,
+        'total_cost': total_cost,
+        'total_profit': total_profit,
+        'total_received': total_received,
+        'stock_value': stock_value,
+        'cost_value': cost_value,
+        'margin': margin,
+        'sibling_batches': sibling_batches,
+        'movements_count': stock_movements.count(),
         'title': f'Batch Details - {batch.batch_number}'
-    })
+    }
+    return render(request, 'pharmacy/batch_detail.html', context)
 
 @login_required
 def batch_edit(request, pk):
@@ -650,6 +745,16 @@ def batch_toggle_status(request):
 def prescription_list(request):
     prescriptions = Prescription.objects.all().order_by('-prescribed_date')
     
+    # Statistics
+    total_prescriptions = prescriptions.count()
+    pending_count = prescriptions.filter(status='pending').count()
+    dispensed_count = prescriptions.filter(status='dispensed').count()
+    cancelled_count = prescriptions.filter(status='cancelled').count()
+    
+    # Today's prescriptions
+    today = timezone.now().date()
+    today_count = prescriptions.filter(prescribed_date__date=today).count()
+    
     status_filter = request.GET.get('status')
     if status_filter:
         prescriptions = prescriptions.filter(status=status_filter)
@@ -667,7 +772,12 @@ def prescription_list(request):
         'medications': medications,
         'suppliers': suppliers,
         'categories': categories,
-        'patients': patients
+        'patients': patients,
+        'total_prescriptions': total_prescriptions,
+        'pending_count': pending_count,
+        'dispensed_count': dispensed_count,
+        'cancelled_count': cancelled_count,
+        'today_count': today_count,
     })
 
 @login_required
@@ -789,6 +899,24 @@ def medication_create_ajax(request):
     form = MedicationForm(request.POST)
     if form.is_valid():
         medication = form.save()
+        
+        # Process selling units if provided
+        units_json = request.POST.get('units_json', '[]')
+        try:
+            units_data = json.loads(units_json)
+            for unit_data in units_data:
+                unit_name = unit_data.get('unit_name', '').strip()
+                if unit_name:
+                    MedicationUnit.objects.create(
+                        medication=medication,
+                        unit_name=unit_name,
+                        quantity_per_base=int(unit_data.get('quantity_per_base', 1)),
+                        selling_price=unit_data.get('selling_price', 0),
+                        is_default=unit_data.get('is_default', False)
+                    )
+        except (json.JSONDecodeError, ValueError):
+            pass  # Units are optional, don't fail the whole creation
+        
         return JsonResponse({
             'success': True,
             'message': f'Medication "{medication.name}" created successfully!',
@@ -804,6 +932,34 @@ def medication_create_ajax(request):
             'errors': errors,
             'message': 'Please correct the errors below.'
         }, status=400)
+
+
+@login_required
+def medication_details_ajax(request, pk):
+    """Get medication details for edit modal."""
+    try:
+        medication = get_object_or_404(Medication, pk=pk)
+        
+        data = {
+            'id': medication.id,
+            'name': medication.name,
+            'generic_name': medication.generic_name,
+            'category_id': medication.category_id,
+            'form': medication.form,
+            'strength': medication.strength,
+            'manufacturer': medication.manufacturer,
+            'unit_price': str(medication.unit_price),
+            'unit_of_measure': medication.unit_of_measure,
+            'reorder_level': medication.reorder_level,
+            'storage_instructions': medication.storage_instructions or '',
+            'notes': medication.notes or '',
+            'requires_prescription': medication.requires_prescription,
+            'is_active': medication.is_active,
+        }
+        
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
@@ -1103,6 +1259,80 @@ def get_prescription_total_ajax(request, prescription_id):
 
 
 @login_required
+def prescription_details_ajax(request, pk):
+    """Get prescription details for dispense modal."""
+    try:
+        prescription = get_object_or_404(Prescription, pk=pk)
+        
+        # Get prescription items (new multi-medication system)
+        items = []
+        prescription_items = prescription.items.all()
+        
+        if prescription_items.exists():
+            for item in prescription_items:
+                # Check stock availability
+                available_stock = Batch.objects.filter(
+                    medication=item.medication,
+                    is_active=True,
+                    expiry_date__gt=timezone.now()
+                ).aggregate(total=Sum('quantity_remaining'))['total'] or 0
+                
+                items.append({
+                    'medication_id': item.medication.pk,
+                    'medication_name': item.medication.name,
+                    'medication_strength': item.medication.strength or '',
+                    'dosage': item.dosage or '',
+                    'frequency': item.frequency or '',
+                    'duration': item.duration or '',
+                    'quantity': item.quantity or 0,
+                    'available_stock': available_stock,
+                    'has_stock': available_stock >= (item.quantity or 0)
+                })
+        elif prescription.medication:
+            # Legacy single medication
+            available_stock = Batch.objects.filter(
+                medication=prescription.medication,
+                is_active=True,
+                expiry_date__gt=timezone.now()
+            ).aggregate(total=Sum('quantity_remaining'))['total'] or 0
+            
+            items.append({
+                'medication_id': prescription.medication.pk,
+                'medication_name': prescription.medication.name,
+                'medication_strength': prescription.medication.strength or '',
+                'dosage': prescription.dosage or '',
+                'frequency': prescription.frequency or '',
+                'duration': prescription.duration or '',
+                'quantity': prescription.quantity or 0,
+                'available_stock': available_stock,
+                'has_stock': available_stock >= (prescription.quantity or 0)
+            })
+        
+        # Build response data with safe attribute access
+        data = {
+            'id': prescription.id,
+            'patient_name': prescription.patient.get_full_name() if prescription.patient else 'N/A',
+            'patient_pk': prescription.patient.pk if prescription.patient else None,
+            'patient_id': getattr(prescription.patient, 'patient_id', 'N/A') if prescription.patient else 'N/A',
+            'patient_gender': (prescription.patient.gender.title() if prescription.patient and getattr(prescription.patient, 'gender', None) else 'N/A'),
+            'patient_dob': (prescription.patient.date_of_birth.strftime('%d %b %Y') if prescription.patient and getattr(prescription.patient, 'date_of_birth', None) else 'N/A'),
+            'patient_phone': getattr(prescription.patient, 'phone_number', 'N/A') if prescription.patient else 'N/A',
+            'patient_allergies': getattr(prescription.patient, 'allergies', None) if prescription.patient else None,
+            'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'N/A',
+            'prescribed_date': prescription.prescribed_date.strftime('%d %b %Y') if prescription.prescribed_date else 'N/A',
+            'instructions': getattr(prescription, 'instructions', '') or '',
+            'status': prescription.status,
+            'items': items,
+            'items_count': len(items),
+            'all_in_stock': all(item['has_stock'] for item in items) if items else True
+        }
+        
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
 def dispense_prescription_ajax(request, pk):
     """AJAX-only prescription dispensing view."""
     if request.method != 'POST':
@@ -1383,26 +1613,96 @@ def sales_dashboard(request):
 @login_required
 def sales_list(request):
     """Sales List - Using Pharmacy Stock Movements"""
-    sales = StockMovement.objects.filter(
+    from datetime import timedelta
+    
+    all_sales = StockMovement.objects.filter(
         movement_type='out',
         reference__icontains='SALE'
     ).select_related('batch__medication', 'created_by').order_by('-created_at')
     
-    # Filter by date range if provided
+    # --- Statistics (always computed on full dataset) ---
+    today = timezone.now().date()
+    week_start = today - timedelta(days=today.weekday())  # Monday
+    month_start = today.replace(day=1)
+    
+    def calc_stats(qs):
+        agg = qs.aggregate(
+            count=Count('id'),
+            total_qty=Sum('quantity'),
+            total_revenue=Sum(F('quantity') * F('batch__selling_price'), output_field=DecimalField()),
+        )
+        return {
+            'count': agg['count'] or 0,
+            'qty': agg['total_qty'] or 0,
+            'revenue': agg['total_revenue'] or 0,
+        }
+    
+    stats_today = calc_stats(all_sales.filter(created_at__date=today))
+    stats_week = calc_stats(all_sales.filter(created_at__date__gte=week_start))
+    stats_month = calc_stats(all_sales.filter(created_at__date__gte=month_start))
+    stats_all = calc_stats(all_sales)
+    
+    # --- Filters ---
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    medication_name = request.GET.get('medication', '').strip()
     
+    sales = all_sales
     if start_date:
         sales = sales.filter(created_at__date__gte=start_date)
     if end_date:
         sales = sales.filter(created_at__date__lte=end_date)
+    if medication_name:
+        sales = sales.filter(batch__medication__name__icontains=medication_name)
+    
+    # Distinct medication names for the filter dropdown
+    medication_names = StockMovement.objects.filter(
+        movement_type='out', reference__icontains='SALE'
+    ).values_list('batch__medication__name', flat=True).distinct().order_by('batch__medication__name')
     
     context = {
         'sales': sales,
         'start_date': start_date,
         'end_date': end_date,
+        'medication_name': medication_name,
+        'medication_names': medication_names,
+        'stats_today': stats_today,
+        'stats_week': stats_week,
+        'stats_month': stats_month,
+        'stats_all': stats_all,
     }
     return render(request, 'pharmacy/sales_list.html', context)
+
+
+@login_required
+def sale_detail(request, pk):
+    """View a single sale transaction."""
+    sale = get_object_or_404(
+        StockMovement.objects.select_related('batch__medication', 'batch__supplier', 'created_by'),
+        pk=pk,
+        movement_type='out'
+    )
+    
+    # Calculate total
+    total_amount = sale.quantity * sale.batch.selling_price
+    cost_total = sale.quantity * sale.batch.cost_price
+    profit = total_amount - cost_total
+    
+    # Get other recent sales for the same medication
+    related_sales = StockMovement.objects.filter(
+        movement_type='out',
+        batch__medication=sale.batch.medication,
+        reference__icontains='SALE'
+    ).exclude(pk=pk).select_related('batch', 'created_by').order_by('-created_at')[:5]
+    
+    context = {
+        'sale': sale,
+        'total_amount': total_amount,
+        'cost_total': cost_total,
+        'profit': profit,
+        'related_sales': related_sales,
+    }
+    return render(request, 'pharmacy/sale_detail.html', context)
 
 
 @login_required
@@ -2092,3 +2392,144 @@ def prescription_download_pdf(request, prescription_id):
     except Exception as e:
         messages.error(request, f'Error processing PDF download: {str(e)}')
         return redirect('pharmacy:prescription_list')
+
+
+# ============================================================================
+# MEDICATION UNITS AJAX VIEWS
+# ============================================================================
+
+@login_required
+def medication_units_list_ajax(request, medication_id):
+    """Get all units for a medication."""
+    medication = get_object_or_404(Medication, pk=medication_id)
+    units = medication.units.filter(is_active=True)
+    
+    data = {
+        'medication_id': medication.id,
+        'medication_name': medication.name,
+        'base_unit': medication.unit_of_measure,
+        'base_price': str(medication.unit_price),
+        'units': [
+            {
+                'id': unit.id,
+                'unit_name': unit.unit_name,
+                'quantity_per_base': unit.quantity_per_base,
+                'selling_price': str(unit.selling_price),
+                'is_default': unit.is_default,
+                'is_active': unit.is_active,
+            }
+            for unit in units
+        ]
+    }
+    return JsonResponse(data)
+
+
+@login_required
+def medication_unit_create_ajax(request, medication_id):
+    """Create a new medication unit."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    medication = get_object_or_404(Medication, pk=medication_id)
+    
+    try:
+        unit_name = request.POST.get('unit_name', '').strip()
+        quantity_per_base = int(request.POST.get('quantity_per_base', 1))
+        selling_price = request.POST.get('selling_price', '0')
+        is_default = request.POST.get('is_default') == 'on'
+        
+        if not unit_name:
+            return JsonResponse({'success': False, 'message': 'Unit name is required'}, status=400)
+        
+        # Check for duplicate
+        if MedicationUnit.objects.filter(medication=medication, unit_name__iexact=unit_name).exists():
+            return JsonResponse({'success': False, 'message': f'Unit "{unit_name}" already exists for this medication'}, status=400)
+        
+        unit = MedicationUnit.objects.create(
+            medication=medication,
+            unit_name=unit_name,
+            quantity_per_base=quantity_per_base,
+            selling_price=selling_price,
+            is_default=is_default
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Unit "{unit_name}" created successfully',
+            'unit': {
+                'id': unit.id,
+                'unit_name': unit.unit_name,
+                'quantity_per_base': unit.quantity_per_base,
+                'selling_price': str(unit.selling_price),
+                'is_default': unit.is_default,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@login_required
+def medication_unit_update_ajax(request, pk):
+    """Update a medication unit."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    unit = get_object_or_404(MedicationUnit, pk=pk)
+    
+    try:
+        unit_name = request.POST.get('unit_name', '').strip()
+        quantity_per_base = int(request.POST.get('quantity_per_base', 1))
+        selling_price = request.POST.get('selling_price', '0')
+        is_default = request.POST.get('is_default') == 'on'
+        
+        if not unit_name:
+            return JsonResponse({'success': False, 'message': 'Unit name is required'}, status=400)
+        
+        # Check for duplicate (excluding current)
+        if MedicationUnit.objects.filter(
+            medication=unit.medication, 
+            unit_name__iexact=unit_name
+        ).exclude(pk=pk).exists():
+            return JsonResponse({'success': False, 'message': f'Unit "{unit_name}" already exists'}, status=400)
+        
+        unit.unit_name = unit_name
+        unit.quantity_per_base = quantity_per_base
+        unit.selling_price = selling_price
+        unit.is_default = is_default
+        unit.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Unit "{unit_name}" updated successfully',
+            'unit': {
+                'id': unit.id,
+                'unit_name': unit.unit_name,
+                'quantity_per_base': unit.quantity_per_base,
+                'selling_price': str(unit.selling_price),
+                'is_default': unit.is_default,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@login_required
+def medication_unit_delete_ajax(request, pk):
+    """Delete (deactivate) a medication unit."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    unit = get_object_or_404(MedicationUnit, pk=pk)
+    unit_name = unit.unit_name
+    
+    try:
+        # Soft delete - just deactivate
+        unit.is_active = False
+        unit.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Unit "{unit_name}" deleted successfully'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

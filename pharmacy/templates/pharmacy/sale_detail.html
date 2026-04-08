@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Sale #{{ sale.pk }}{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --sd-primary: #0d9488;
+    --sd-success: #059669;
+    --sd-dark: #1e293b;
+    --sd-muted: #64748b;
+    --sd-border: #e2e8f0;
+    --sd-bg: #f8fafc;
+}
+
+.sd-container { max-width: 100%; padding: 16px; background: white; border-radius: 12px; }
+
+/* Header */
+.sd-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; margin: -16px -16px 16px -16px;
+    background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+    border-radius: 12px 12px 0 0; color: white;
+}
+.sd-header-left { display: flex; align-items: center; gap: 14px; }
+.sd-avatar {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: white;
+}
+.sd-title { font-size: 16px; font-weight: 700; }
+.sd-subtitle { font-size: 11px; opacity: .85; }
+
+/* Cards */
+.sd-card {
+    border: 1px solid var(--sd-border); border-radius: 8px;
+    background: white; overflow: hidden; margin-bottom: 14px;
+}
+.sd-card-header {
+    padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--sd-dark);
+    background: var(--sd-bg); border-bottom: 1px solid var(--sd-border);
+}
+.sd-card-body { padding: 14px; }
+
+/* Info grid */
+.sd-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sd-info-item { }
+.sd-info-label { font-size: 10px; font-weight: 600; color: var(--sd-muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 2px; }
+.sd-info-value { font-size: 12px; font-weight: 600; color: var(--sd-dark); }
+
+/* Amount highlights */
+.sd-amount-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sd-amount-box {
+    padding: 12px; border-radius: 8px; text-align: center;
+}
+.sd-amount-box .label { font-size: 10px; font-weight: 600; color: var(--sd-muted); text-transform: uppercase; }
+.sd-amount-box .value { font-size: 18px; font-weight: 800; margin-top: 2px; }
+
+/* Related table */
+.sd-rel-table { font-size: 11px; margin: 0; }
+.sd-rel-table thead th { font-size: 10px; font-weight: 600; color: var(--sd-muted); text-transform: uppercase; padding: 7px 10px; background: var(--sd-bg); }
+.sd-rel-table tbody td { padding: 7px 10px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+.sd-rel-table tbody tr:hover { background: #f0fdf4; }
+
+/* Notes */
+.sd-notes { font-size: 12px; color: var(--sd-dark); background: var(--sd-bg); padding: 10px 14px; border-radius: 6px; line-height: 1.6; }
+
+@media (max-width: 768px) {
+    .sd-info { grid-template-columns: 1fr; }
+    .sd-amount-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <i class="bi bi-receipt me-2" style="font-size: 1.2rem; color: #0d9488;"></i>
+    <div>
+        <span style="font-weight: 700; font-size: 15px;">Sale #{{ sale.pk }}</span>
+        <span style="color: #64748b; font-size: 12px; display: block;">{{ sale.created_at|date:"d M Y, h:i A" }}</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex flex-wrap gap-2 align-items-center">
+    <a href="{% url 'pharmacy:sales_list' %}" class="btn btn-outline-secondary btn-sm" style="font-size: 11px;">
+        <i class="bi bi-arrow-left me-1"></i> Back to Sales
+    </a>
+    <a href="{% url 'pharmacy:medication_detail' sale.batch.medication.pk %}" class="btn btn-sm" style="font-size: 11px; background: #0d9488; color: white;">
+        <i class="bi bi-capsule me-1"></i> View Medication
+    </a>
+    <a href="{% url 'pharmacy:batch_detail' sale.batch.pk %}" class="btn btn-sm" style="font-size: 11px; background: #6366f1; color: white;">
+        <i class="bi bi-box-seam me-1"></i> View Batch
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="sd-container">
+    <!-- Header -->
+    <div class="sd-header">
+        <div class="sd-header-left">
+            <div class="sd-avatar">
+                <i class="bi bi-receipt-cutoff" style="font-size: 20px;"></i>
+            </div>
+            <div>
+                <div class="sd-title">{{ sale.batch.medication.name }}</div>
+                <div class="sd-subtitle">
+                    {{ sale.batch.medication.generic_name }} · {{ sale.batch.medication.strength }} · {{ sale.batch.medication.get_form_display }}
+                </div>
+            </div>
+        </div>
+        <div class="text-end">
+            <div style="font-size: 22px; font-weight: 800;">UGX {{ total_amount|floatformat:0|intcomma }}</div>
+            <div style="font-size: 10px; opacity: .8;">{{ sale.quantity }} unit{{ sale.quantity|pluralize }} @ {{ sale.batch.selling_price|floatformat:0|intcomma }}/unit</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-7">
+            <!-- Financial Summary -->
+            <div class="sd-amount-grid mb-3">
+                <div class="sd-amount-box" style="background: #ecfdf5;">
+                    <div class="label">Revenue</div>
+                    <div class="value" style="color: #059669;">{{ total_amount|floatformat:0|intcomma }}</div>
+                </div>
+                <div class="sd-amount-box" style="background: #fef3c7;">
+                    <div class="label">Cost</div>
+                    <div class="value" style="color: #d97706;">{{ cost_total|floatformat:0|intcomma }}</div>
+                </div>
+                <div class="sd-amount-box" style="background: {% if profit >= 0 %}#f0fdf4{% else %}#fef2f2{% endif %};">
+                    <div class="label">Profit</div>
+                    <div class="value" style="color: {% if profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ profit|floatformat:0|intcomma }}</div>
+                </div>
+            </div>
+
+            <!-- Transaction Details -->
+            <div class="sd-card">
+                <div class="sd-card-header"><i class="bi bi-info-circle me-2"></i>Transaction Details</div>
+                <div class="sd-card-body">
+                    <div class="sd-info">
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Sale ID</div>
+                            <div class="sd-info-value">#{{ sale.pk }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Date & Time</div>
+                            <div class="sd-info-value">{{ sale.created_at|date:"d M Y, h:i A" }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Quantity Sold</div>
+                            <div class="sd-info-value">{{ sale.quantity }} unit{{ sale.quantity|pluralize }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Unit Price</div>
+                            <div class="sd-info-value">UGX {{ sale.batch.selling_price|floatformat:0|intcomma }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Cost Price</div>
+                            <div class="sd-info-value">UGX {{ sale.batch.cost_price|floatformat:0|intcomma }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Movement Type</div>
+                            <div class="sd-info-value">{{ sale.get_movement_type_display }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Customer / Reference</div>
+                            <div class="sd-info-value">{{ sale.reference|default:"Walk-in Customer" }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Sold By</div>
+                            <div class="sd-info-value">{{ sale.created_by.get_full_name }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if sale.notes %}
+            <div class="sd-card">
+                <div class="sd-card-header"><i class="bi bi-sticky me-2"></i>Notes</div>
+                <div class="sd-card-body">
+                    <div class="sd-notes">{{ sale.notes|linebreaksbr }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-5">
+            <!-- Medication Info -->
+            <div class="sd-card">
+                <div class="sd-card-header"><i class="bi bi-capsule me-2"></i>Medication</div>
+                <div class="sd-card-body">
+                    <div class="sd-info">
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Name</div>
+                            <div class="sd-info-value">
+                                <a href="{% url 'pharmacy:medication_detail' sale.batch.medication.pk %}" class="text-decoration-none" style="color: #0d9488;">
+                                    {{ sale.batch.medication.name }}
+                                </a>
+                            </div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Generic Name</div>
+                            <div class="sd-info-value">{{ sale.batch.medication.generic_name }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Strength</div>
+                            <div class="sd-info-value">{{ sale.batch.medication.strength }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Form</div>
+                            <div class="sd-info-value">{{ sale.batch.medication.get_form_display }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Category</div>
+                            <div class="sd-info-value">{{ sale.batch.medication.category }}</div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Manufacturer</div>
+                            <div class="sd-info-value">{{ sale.batch.medication.manufacturer }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Info -->
+            <div class="sd-card">
+                <div class="sd-card-header"><i class="bi bi-box-seam me-2"></i>Batch</div>
+                <div class="sd-card-body">
+                    <div class="sd-info">
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Batch Number</div>
+                            <div class="sd-info-value">
+                                <a href="{% url 'pharmacy:batch_detail' sale.batch.pk %}" class="text-decoration-none" style="color: #6366f1;">
+                                    {{ sale.batch.batch_number }}
+                                </a>
+                            </div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Expiry Date</div>
+                            <div class="sd-info-value">
+                                {{ sale.batch.expiry_date|date:"d M Y" }}
+                                {% if sale.batch.is_expired %}
+                                    <span class="badge bg-danger" style="font-size: 9px;">Expired</span>
+                                {% elif sale.batch.is_expiring_soon %}
+                                    <span class="badge bg-warning text-dark" style="font-size: 9px;">Expiring Soon</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Stock Remaining</div>
+                            <div class="sd-info-value">{{ sale.batch.quantity_remaining }} units</div>
+                        </div>
+                        {% if sale.batch.supplier %}
+                        <div class="sd-info-item">
+                            <div class="sd-info-label">Supplier</div>
+                            <div class="sd-info-value">
+                                <a href="{% url 'pharmacy:supplier_detail' sale.batch.supplier.pk %}" class="text-decoration-none" style="color: #0d9488;">
+                                    {{ sale.batch.supplier.name }}
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Sales -->
+            {% if related_sales %}
+            <div class="sd-card">
+                <div class="sd-card-header"><i class="bi bi-clock-history me-2"></i>Recent Sales (Same Medication)</div>
+                <div class="sd-card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table sd-rel-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rs in related_sales %}
+                                <tr style="cursor: pointer;" onclick="window.location='{% url 'pharmacy:sale_detail' rs.pk %}'">
+                                    <td>{{ rs.created_at|date:"d M" }}</td>
+                                    <td class="text-center">{{ rs.quantity }}</td>
+                                    <td class="text-end fw-bold" style="color: #059669;">
+                                        {% widthratio rs.quantity 1 rs.batch.selling_price as rs_total %}
+                                        {{ rs_total|floatformat:0|intcomma }}
+                                    </td>
+                                    <td>{{ rs.created_by.get_full_name|truncatewords:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

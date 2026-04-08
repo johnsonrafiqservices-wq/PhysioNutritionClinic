@@ -8,6 +8,36 @@ from django.shortcuts import redirect
 from accounts.views import dashboard
 from .views import serve_firestore_pdf
 
+# Admin branding
+admin.site.site_header = 'PhysioNutrition Clinic Administration'
+admin.site.site_title = 'PhysioNutrition Admin'
+admin.site.index_title = 'Dashboard'
+admin.site.site_url = '/dashboard/'
+admin.site.enable_nav_sidebar = False
+
+# Inject dashboard stats into admin index
+_original_index = admin.site.__class__.index
+
+def _patched_index(self, request, extra_context=None):
+    from patients.models import Patient
+    from appointments.models import Appointment
+    from billing.models import Invoice
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+    User = get_user_model()
+    today = timezone.now().date()
+    extra_context = extra_context or {}
+    extra_context.update({
+        'total_patients': Patient.objects.count(),
+        'total_appointments': Appointment.objects.count(),
+        'todays_appointments': Appointment.objects.filter(appointment_date=today).count(),
+        'total_invoices': Invoice.objects.count(),
+        'total_staff': User.objects.filter(is_staff=True).count(),
+    })
+    return _original_index(self, request, extra_context)
+
+admin.site.__class__.index = _patched_index
+
 urlpatterns = [
     path('jet/', include('jet.urls', 'jet')),  # Django Jet URLS
     path('jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),  # Django Jet dashboard URLS

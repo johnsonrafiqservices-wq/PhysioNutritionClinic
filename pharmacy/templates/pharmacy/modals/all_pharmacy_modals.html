@@ -4,42 +4,65 @@
 <!-- MEDICATION MODALS -->
 <!-- ============================================================================ -->
 
-<!-- Create Medication Modal -->
-<div class="modal fade" id="medicationCreateModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<!-- Create Medication Modal (Enhanced with Selling Units) -->
+<style>
+.med-create-modal .modal-dialog { max-width: 750px; max-height: 90vh; }
+.med-create-modal .modal-content { max-height: 90vh; display: flex; flex-direction: column; }
+.med-create-modal .modal-header { padding: 12px 16px; flex-shrink: 0; }
+.med-create-modal .modal-title { font-size: 14px; }
+.med-create-modal .modal-body { padding: 16px; font-size: 12px; overflow-y: auto; flex: 1 1 auto; }
+.med-create-modal .modal-footer { padding: 12px 16px; flex-shrink: 0; }
+.med-create-modal .form-label { font-size: 11px; margin-bottom: 3px; font-weight: 600; color: #475569; }
+.med-create-modal .form-select, .med-create-modal .form-control { font-size: 12px; padding: 6px 10px; }
+.med-create-modal .form-control::placeholder { font-size: 11px; }
+.med-create-modal .row { --bs-gutter-x: 12px; }
+.med-create-modal .mb-2 { margin-bottom: 8px !important; }
+.med-create-modal .form-check-label { font-size: 11px; }
+.med-create-modal .section-title { font-size: 12px; font-weight: 600; color: #1e293b; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+.create-units-table { font-size: 11px; }
+.create-units-table th { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; padding: 6px 8px; }
+.create-units-table td { padding: 6px 8px; vertical-align: middle; }
+.create-units-table input { font-size: 11px; padding: 4px 8px; }
+</style>
+
+<div class="modal fade med-create-modal" id="medicationCreateModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
+            <div class="modal-header" style="background: #0d9488; color: white;">
+                <h6 class="modal-title mb-0">
                     <i class="bi bi-capsule me-2"></i>Add New Medication
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 10px;"></button>
             </div>
             <div class="modal-body">
                 <form id="medicationCreateForm" method="post">
                     {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="section-title"><i class="bi bi-info-circle me-1"></i>Basic Information</div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Medication Name *</label>
-                            <input type="text" class="form-control" name="name" required>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Medication Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" id="create_name" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Generic Name *</label>
-                            <input type="text" class="form-control" name="generic_name" required>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Generic Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="generic_name" id="create_generic_name" required>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Category *</label>
-                            <select class="form-select" name="category" required>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" name="category" id="create_category" required>
                                 <option value="">Select Category</option>
                                 {% for category in categories %}
                                 <option value="{{ category.id }}">{{ category.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Form *</label>
-                            <select class="form-select" name="form" required>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Form <span class="text-danger">*</span></label>
+                            <select class="form-select" name="form" id="create_form" required>
                                 <option value="">Select Form</option>
                                 <option value="tablet">Tablet</option>
                                 <option value="capsule">Capsule</option>
@@ -55,93 +78,245 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Strength *</label>
-                            <input type="text" class="form-control" name="strength" placeholder="e.g., 500mg" required>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Strength <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="strength" id="create_strength" placeholder="e.g., 500mg" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Manufacturer *</label>
-                            <input type="text" class="form-control" name="manufacturer" required>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Manufacturer <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="manufacturer" id="create_manufacturer" required>
                         </div>
                     </div>
+                    
+                    <!-- Pricing & Units -->
+                    <div class="section-title mt-3"><i class="bi bi-currency-dollar me-1"></i>Pricing & Base Unit</div>
                     <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Unit Price (UGX) *</label>
-                            <input type="number" class="form-control" name="unit_price" step="0.01" required>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Base Unit <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="unit_of_measure" id="create_unit_of_measure" placeholder="e.g., Box" required>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Unit of Measure *</label>
-                            <input type="text" class="form-control" name="unit_of_measure" placeholder="e.g., Box, Strip" required>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Base Price (UGX) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="unit_price" id="create_unit_price" step="0.01" required>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Reorder Level *</label>
-                            <input type="number" class="form-control" name="reorder_level" value="10" required>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Reorder Level <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="reorder_level" id="create_reorder_level" value="10" required>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Storage Instructions</label>
-                        <textarea class="form-control" name="storage_instructions" rows="2"></textarea>
+                    
+                    <!-- Selling Units Section -->
+                    <div class="section-title mt-3">
+                        <i class="bi bi-rulers me-1"></i>Additional Selling Units 
+                        <span class="text-muted fw-normal" style="font-size: 10px;">(Optional - smaller units like Tablet, Strip)</span>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    <div class="p-2 rounded mb-2" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+                        <table class="table table-sm create-units-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35%;">Unit Name</th>
+                                    <th style="width: 20%;">Qty per Base</th>
+                                    <th style="width: 30%;">Price (UGX)</th>
+                                    <th style="width: 15%;" class="text-center">Default</th>
+                                </tr>
+                            </thead>
+                            <tbody id="createUnitsTableBody">
+                                <tr class="create-unit-row">
+                                    <td><input type="text" class="form-control" name="unit_names[]" placeholder="e.g., Strip"></td>
+                                    <td><input type="number" class="form-control" name="unit_quantities[]" value="1" min="1"></td>
+                                    <td><input type="number" class="form-control" name="unit_prices[]" step="0.01" placeholder="0"></td>
+                                    <td class="text-center"><input type="radio" name="default_unit" value="0" class="form-check-input"></td>
+                                </tr>
+                                <tr class="create-unit-row">
+                                    <td><input type="text" class="form-control" name="unit_names[]" placeholder="e.g., Tablet"></td>
+                                    <td><input type="number" class="form-control" name="unit_quantities[]" value="1" min="1"></td>
+                                    <td><input type="number" class="form-control" name="unit_prices[]" step="0.01" placeholder="0"></td>
+                                    <td class="text-center"><input type="radio" name="default_unit" value="1" class="form-check-input"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="text-muted mt-1" style="font-size: 10px;">
+                            <i class="bi bi-info-circle me-1"></i>Leave unit name empty to skip. You can add more units later from the medication detail page.
+                        </div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="requires_prescription" id="requiresPrescription" checked>
-                        <label class="form-check-label" for="requiresPrescription">
-                            Requires Prescription
-                        </label>
+                    
+                    <!-- Additional Info -->
+                    <div class="section-title mt-3"><i class="bi bi-card-text me-1"></i>Additional Information</div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Storage Instructions</label>
+                            <input type="text" class="form-control" name="storage_instructions" id="create_storage" placeholder="Optional">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Notes</label>
+                            <input type="text" class="form-control" name="notes" id="create_notes" placeholder="Optional">
+                        </div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="medicationActive" checked>
-                        <label class="form-check-label" for="medicationActive">
-                            Active
-                        </label>
+                    <div class="row mt-1">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="requires_prescription" id="create_requires_prescription" checked>
+                                <label class="form-check-label" for="create_requires_prescription">Requires Prescription</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="create_is_active" checked>
+                                <label class="form-check-label" for="create_is_active">Active</label>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitMedicationForm('medicationCreateForm', '{% url 'pharmacy:medication_create_ajax' %}')">
-                    <i class="bi bi-check-circle me-2"></i>Save Medication
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="font-size: 11px;">Cancel</button>
+                <button type="button" class="btn btn-sm" id="saveMedicationBtn" style="font-size: 11px; background: #0d9488; color: white;" onclick="submitMedicationWithUnits()">
+                    <i class="bi bi-check-circle me-1"></i>Save Medication
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Edit Medication Modal -->
-<div class="modal fade" id="medicationEditModal" tabindex="-1">
+<!-- Edit Medication Modal (Compact) -->
+<style>
+.med-edit-modal .modal-dialog { max-height: 85vh; }
+.med-edit-modal .modal-content { max-height: 85vh; display: flex; flex-direction: column; }
+.med-edit-modal .modal-header { padding: 10px 16px; flex-shrink: 0; }
+.med-edit-modal .modal-title { font-size: 13px; }
+.med-edit-modal .modal-body { padding: 12px 16px; font-size: 12px; overflow-y: auto; flex: 1 1 auto; }
+.med-edit-modal .modal-footer { padding: 10px 16px; flex-shrink: 0; }
+.med-edit-modal .form-label { font-size: 11px; margin-bottom: 3px; font-weight: 600; color: #475569; }
+.med-edit-modal .form-select, .med-edit-modal .form-control { font-size: 12px; padding: 6px 10px; }
+.med-edit-modal .form-control::placeholder { font-size: 11px; }
+.med-edit-modal .row { --bs-gutter-x: 10px; }
+.med-edit-modal .mb-2 { margin-bottom: 6px !important; }
+.med-edit-modal .form-check-label { font-size: 11px; }
+</style>
+
+<div class="modal fade med-edit-modal" id="medicationEditModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title">
+            <div class="modal-header" style="background: #f59e0b; color: white;">
+                <h6 class="modal-title mb-0">
                     <i class="bi bi-pencil-square me-2"></i>Edit Medication
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 10px;"></button>
             </div>
             <div class="modal-body">
-                <form id="medicationEditForm" method="post">
+                <div id="editMedLoading" class="text-center py-4">
+                    <div class="spinner-border text-warning" role="status"></div>
+                    <p class="text-muted mt-2 small">Loading medication details...</p>
+                </div>
+                <form id="medicationEditForm" method="post" style="display: none;">
                     {% csrf_token %}
                     <input type="hidden" name="medication_id" id="edit_medication_id">
-                    <!-- Same fields as create form -->
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Medication Name *</label>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Medication Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" id="edit_name" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Generic Name *</label>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Generic Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="generic_name" id="edit_generic_name" required>
                         </div>
                     </div>
-                    <!-- Add all other fields similar to create -->
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" name="category" id="edit_category" required>
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Form <span class="text-danger">*</span></label>
+                            <select class="form-select" name="form" id="edit_form" required>
+                                <option value="">Select Form</option>
+                                <option value="tablet">Tablet</option>
+                                <option value="capsule">Capsule</option>
+                                <option value="liquid">Liquid</option>
+                                <option value="injection">Injection</option>
+                                <option value="ointment">Ointment</option>
+                                <option value="inhaler">Inhaler</option>
+                                <option value="cream">Cream</option>
+                                <option value="drops">Drops</option>
+                                <option value="powder">Powder</option>
+                                <option value="spray">Spray</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Strength <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="strength" id="edit_strength" placeholder="e.g., 500mg" required>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Manufacturer <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="manufacturer" id="edit_manufacturer" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Unit Price (UGX) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="unit_price" id="edit_unit_price" step="0.01" required>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Unit of Measure <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="unit_of_measure" id="edit_unit_of_measure" placeholder="e.g., Box" required>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Reorder Level <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="reorder_level" id="edit_reorder_level" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Storage Instructions</label>
+                            <input type="text" class="form-control" name="storage_instructions" id="edit_storage_instructions" placeholder="Optional">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Notes</label>
+                            <input type="text" class="form-control" name="notes" id="edit_notes" placeholder="Optional">
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="requires_prescription" id="edit_requires_prescription">
+                                <label class="form-check-label" for="edit_requires_prescription">Requires Prescription</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="edit_is_active">
+                                <label class="form-check-label" for="edit_is_active">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Selling Units Preview -->
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span style="font-size: 11px; font-weight: 600; color: #475569;">
+                                <i class="bi bi-rulers me-1"></i>Selling Units
+                            </span>
+                            <button type="button" class="btn btn-link btn-sm p-0" id="editOpenUnitsBtn" style="font-size: 10px; color: #6366f1;">
+                                <i class="bi bi-pencil me-1"></i>Manage Units
+                            </button>
+                        </div>
+                        <div id="editUnitsPreview" class="p-2 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0; font-size: 11px;">
+                            <div class="text-muted text-center py-1">Loading units...</div>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" onclick="updateMedication()">
-                    <i class="bi bi-check-circle me-2"></i>Update Medication
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="font-size: 11px;">Cancel</button>
+                <button type="button" class="btn btn-warning btn-sm" id="updateMedicationBtn" style="font-size: 11px;">
+                    <i class="bi bi-check-circle me-1"></i>Update Medication
                 </button>
             </div>
         </div>
@@ -250,120 +425,126 @@
 </div>
 
 <!-- ============================================================================ -->
-<!-- PRESCRIPTION MODAL - MULTI-MEDICATION -->
+<!-- PRESCRIPTION MODAL - MULTI-MEDICATION (COMPACT) -->
 <!-- ============================================================================ -->
 
-<div class="modal fade" id="prescriptionCreateModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+<style>
+.rx-modal .modal-dialog { max-height: 80vh; display: flex; flex-direction: column; }
+.rx-modal .modal-content { max-height: 80vh; display: flex; flex-direction: column; }
+.rx-modal .modal-header { padding: 10px 16px; flex-shrink: 0; }
+.rx-modal .modal-title { font-size: 13px; }
+.rx-modal .modal-body { padding: 12px 16px; font-size: 12px; overflow-y: auto; flex: 1 1 auto; }
+.rx-modal .form-label { font-size: 11px; margin-bottom: 3px; font-weight: 600; color: #475569; }
+.rx-modal .form-select, .rx-modal .form-control { font-size: 12px; padding: 6px 10px; }
+.rx-modal .form-control::placeholder { font-size: 11px; }
+.rx-modal .med-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; margin-bottom: 10px; background: #f8fafc; }
+.rx-modal .med-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+.rx-modal .med-card-title { font-size: 11px; font-weight: 600; color: #0d9488; }
+.rx-modal .modal-footer { padding: 10px 16px; flex-shrink: 0; border-top: 1px solid #e2e8f0; }
+.rx-modal .modal-footer .btn { font-size: 11px; padding: 6px 14px; }
+.rx-modal .row { --bs-gutter-x: 10px; }
+.rx-modal .mb-2 { margin-bottom: 6px !important; }
+.rx-modal .mb-3 { margin-bottom: 8px !important; }
+</style>
+
+<div class="modal fade rx-modal" id="prescriptionCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">
+            <div class="modal-header" style="background: #0d9488; color: white;">
+                <h6 class="modal-title mb-0">
                     <i class="bi bi-prescription2 me-2"></i>Create Prescription
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 10px;"></button>
             </div>
             <div class="modal-body">
-                <!-- Guidelines -->
-                <div class="alert alert-light border mb-3">
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Select patient and add one or more medications. Click "+ Add Medication" to prescribe multiple medications on one form.
-                    </small>
-                </div>
-
                 <form id="prescriptionCreateForm" method="post">
                     {% csrf_token %}
                     
                     <!-- Patient Selection -->
-                    <div class="mb-4">
-                        <label class="form-label"><strong>Patient</strong> <span class="text-danger">*</span></label>
-                        {% if patient %}
-                        <input type="hidden" name="patient" value="{{ patient.id }}">
-                        <div class="form-control-plaintext">{{ patient.get_full_name }} ({{ patient.patient_id }})</div>
-                        {% else %}
-                        <select class="form-select" name="patient" required>
-                            <option value="">Select Patient</option>
-                            {% for patient in patients %}
-                            <option value="{{ patient.id }}">{{ patient.get_full_name }} ({{ patient.patient_id }})</option>
-                            {% endfor %}
-                        </select>
-                        {% endif %}
+                    <div class="row mb-2">
+                        <div class="col-12">
+                            <label class="form-label">Patient <span class="text-danger">*</span></label>
+                            {% if patient %}
+                            <input type="hidden" name="patient" value="{{ patient.id }}">
+                            <div class="form-control-plaintext" style="font-size: 12px;">{{ patient.get_full_name }} ({{ patient.patient_id }})</div>
+                            {% else %}
+                            <select class="form-select" name="patient" required>
+                                <option value="">Select Patient</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.get_full_name }} ({{ patient.patient_id }})</option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <!-- Medications Header -->
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0">
-                            <i class="bi bi-capsule-pill text-info"></i> Medications 
-                            <span class="badge bg-info" id="medicationCountPharmacy">1</span>
-                        </h6>
-                        <button type="button" class="btn btn-sm btn-success" onclick="addMedicationRowPharmacy()">
-                            <i class="bi bi-plus-circle"></i> Add Medication
+                    <div class="d-flex justify-content-between align-items-center mb-2" style="padding: 6px 0; border-bottom: 1px solid #e2e8f0;">
+                        <span style="font-size: 11px; font-weight: 600; color: #334155;">
+                            <i class="bi bi-capsule-pill" style="color: #0d9488;"></i> Medications 
+                            <span class="badge" style="background: #0d9488; font-size: 10px;" id="medicationCountPharmacy">1</span>
+                        </span>
+                        <button type="button" class="btn btn-sm" style="font-size: 10px; padding: 3px 8px; background: #10b981; color: white;" onclick="addMedicationRowPharmacy()">
+                            <i class="bi bi-plus"></i> Add
                         </button>
                     </div>
 
                     <!-- Medications Container -->
                     <div id="medicationsContainerPharmacy">
                         <!-- First medication row -->
-                        <div class="medication-row-pharmacy card mb-3 border-info">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="mb-0"><i class="bi bi-capsule text-info"></i> Medication #1</h6>
-                                    <button type="button" class="btn btn-sm btn-danger remove-medication-pharmacy" onclick="removeMedicationRowPharmacy(this)" style="display: none;">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                        <div class="medication-row-pharmacy med-card">
+                            <div class="med-card-header">
+                                <span class="med-card-title"><i class="bi bi-capsule"></i> Medication #1</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-medication-pharmacy" onclick="removeMedicationRowPharmacy(this)" style="display: none; font-size: 10px; padding: 2px 6px;">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12 mb-2">
+                                    <label class="form-label">Medication <span class="text-danger">*</span></label>
+                                    <select class="form-select medication-select-pharmacy" required>
+                                        <option value="">Select medication...</option>
+                                        {% for medication in medications %}
+                                        <option value="{{ medication.id }}">{{ medication.name }} {{ medication.strength }} ({{ medication.get_form_display }})</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-12 mb-3">
-                                        <label class="form-label"><i class="bi bi-capsule-pill text-primary"></i> Medication <span class="text-danger">*</span></label>
-                                        <select class="form-select medication-select-pharmacy" required style="font-weight: 500; border: 2px solid #0d6efd;">
-                                            <option value="" style="color: #999; font-style: italic;">⚠️ Click here to select medication...</option>
-                                            {% for medication in medications %}
-                                            <option value="{{ medication.id }}">
-                                                {{ medication.name }} {{ medication.strength }} ({{ medication.get_form_display }})
-                                            </option>
-                                            {% endfor %}
-                                        </select>
-                                        <div class="form-text text-primary"><i class="bi bi-arrow-up-circle"></i> <strong>Click the dropdown above to choose a medication</strong></div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Dosage <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control dosage-input-pharmacy" placeholder="e.g., 500mg" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Frequency <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control frequency-input-pharmacy" placeholder="e.g., Twice daily" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Duration <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control duration-input-pharmacy" placeholder="e.g., 7 days" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Quantity <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control quantity-input-pharmacy" min="1" placeholder="e.g., 14" required>
-                                    </div>
-                                    <div class="col-12 mb-2">
-                                        <label class="form-label">Notes (Optional)</label>
-                                        <textarea class="form-control notes-input-pharmacy" rows="2" placeholder="Specific notes for this medication"></textarea>
-                                    </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="form-label">Dosage <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control dosage-input-pharmacy" placeholder="500mg" required>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="form-label">Frequency <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control frequency-input-pharmacy" placeholder="Twice daily" required>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="form-label">Duration <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control duration-input-pharmacy" placeholder="7 days" required>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="form-label">Qty <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control quantity-input-pharmacy" min="1" placeholder="14" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Notes</label>
+                                    <input type="text" class="form-control notes-input-pharmacy" placeholder="Optional notes...">
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- General Instructions -->
-                    <div class="mb-3">
-                        <label class="form-label"><strong>General Instructions</strong> (Optional)</label>
-                        <textarea class="form-control" name="instructions" rows="3" placeholder="General instructions that apply to all medications..."></textarea>
+                    <div class="mb-2">
+                        <label class="form-label">General Instructions</label>
+                        <textarea class="form-control" name="instructions" rows="2" placeholder="General instructions..."></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-info" onclick="submitMultiMedicationPrescription()">
-                    <i class="bi bi-check-circle me-2"></i>Create Prescription
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" style="background: #0d9488; color: white;" onclick="submitMultiMedicationPrescription()">
+                    <i class="bi bi-check-circle me-1"></i>Create Prescription
                 </button>
             </div>
         </div>
@@ -481,33 +662,216 @@
 </div>
 
 <!-- ============================================================================ -->
-<!-- DISPENSE PRESCRIPTION MODAL -->
+<!-- DISPENSE PRESCRIPTION MODAL (COMPACT) -->
 <!-- ============================================================================ -->
 
-<div class="modal fade" id="dispensePrescriptionModal" tabindex="-1">
-    <div class="modal-dialog">
+<style>
+.dispense-modal .modal-dialog { max-height: 85vh; }
+.dispense-modal .modal-content { max-height: 85vh; display: flex; flex-direction: column; }
+.dispense-modal .modal-header { padding: 10px 16px; flex-shrink: 0; }
+.dispense-modal .modal-body { padding: 12px 16px; overflow-y: auto; flex: 1 1 auto; font-size: 12px; }
+.dispense-modal .modal-footer { padding: 10px 16px; flex-shrink: 0; }
+.dispense-modal .info-row { display: flex; margin-bottom: 6px; }
+.dispense-modal .info-label { width: 100px; color: #64748b; font-size: 11px; }
+.dispense-modal .info-value { flex: 1; font-weight: 500; color: #1e293b; }
+.dispense-modal .section-title { font-size: 11px; font-weight: 600; color: #0d9488; text-transform: uppercase; margin: 12px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+.dispense-modal .med-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; }
+.dispense-modal .med-name { font-weight: 600; color: #0d9488; font-size: 12px; }
+.dispense-modal .med-details { font-size: 11px; color: #64748b; margin-top: 2px; }
+.dispense-modal .stock-ok { color: #10b981; }
+.dispense-modal .stock-low { color: #ef4444; }
+.dispense-modal .patient-card { background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 100%); border: 1px solid #99f6e4; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+.dispense-modal .patient-avatar { width: 40px; height: 40px; background: #0d9488; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; }
+.dispense-modal .alert { font-size: 11px; padding: 8px 12px; margin-top: 10px; }
+</style>
+
+<div class="modal fade dispense-modal" id="dispensePrescriptionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
+            <div class="modal-header" style="background: #10b981; color: white;">
+                <h6 class="modal-title mb-0" style="font-size: 13px;">
                     <i class="bi bi-prescription2 me-2"></i>Dispense Prescription
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 10px;"></button>
             </div>
             <div class="modal-body">
-                <div id="dispense_prescription_info">
-                    <!-- Prescription details will be loaded here -->
+                <div id="dispenseModalLoading" class="text-center py-4">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <p class="text-muted mt-2 small">Loading prescription details...</p>
                 </div>
-                
-                <div class="alert alert-warning mt-3">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> This action will deduct stock from the oldest batch (FIFO) and cannot be undone.
+                <div id="dispenseModalContent" style="display: none;">
+                    <!-- Patient Info -->
+                    <div class="patient-card">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="patient-avatar"><i class="bi bi-person-fill"></i></div>
+                            <div class="flex-grow-1">
+                                <div style="font-weight: 600; color: #1e293b;" id="dispensePatientName">-</div>
+                                <div style="font-size: 11px; color: #64748b;" id="dispensePatientId">-</div>
+                            </div>
+                            <div class="text-end" style="font-size: 11px;">
+                                <div><span class="text-muted">Gender:</span> <span id="dispensePatientGender">-</span></div>
+                                <div><span class="text-muted">DOB:</span> <span id="dispensePatientDob">-</span></div>
+                            </div>
+                        </div>
+                        <div id="dispensePatientAllergies" class="alert alert-danger py-1 px-2 mb-0 mt-2" style="display: none; font-size: 10px;">
+                            <strong><i class="bi bi-exclamation-triangle me-1"></i>Allergies:</strong> <span id="dispenseAllergiesText"></span>
+                        </div>
+                    </div>
+
+                    <!-- Prescription Info -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-row"><span class="info-label">Prescribed By</span><span class="info-value" id="dispensePrescribedBy">-</span></div>
+                            <div class="info-row"><span class="info-label">Date</span><span class="info-value" id="dispensePrescribedDate">-</span></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="dispenseStatus">-</span></div>
+                            <div class="info-row"><span class="info-label">Items</span><span class="info-value" id="dispenseItemsCount">-</span></div>
+                        </div>
+                    </div>
+
+                    <div id="dispenseInstructions" style="display: none;">
+                        <div class="info-row"><span class="info-label">Instructions</span><span class="info-value" id="dispenseInstructionsText">-</span></div>
+                    </div>
+
+                    <!-- Medications -->
+                    <div class="section-title"><i class="bi bi-capsule-pill me-1"></i>Medications to Dispense</div>
+                    <div id="dispenseMedicationsList"></div>
+
+                    <!-- Stock Warning -->
+                    <div id="dispenseStockWarning" class="alert alert-danger" style="display: none;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>Insufficient Stock!</strong> Some medications don't have enough stock to dispense.
+                    </div>
+
+                    <!-- Confirmation -->
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>Warning:</strong> This will deduct stock (FIFO) and cannot be undone.
+                    </div>
+
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="confirmDispenseCheck">
+                        <label class="form-check-label" for="confirmDispenseCheck" style="font-size: 11px;">
+                            I confirm all medications have been verified and are ready to dispense
+                        </label>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmDispenseBtn">
-                    <i class="bi bi-check-circle me-2"></i>Confirm Dispense
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="font-size: 11px;">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm" id="confirmDispenseBtn" disabled style="font-size: 11px;">
+                    <i class="bi bi-check-circle me-1"></i>Confirm Dispense
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================================ -->
+<!-- MEDICATION UNIT MODAL -->
+<!-- ============================================================================ -->
+
+<style>
+.unit-modal .modal-dialog { max-width: 500px; }
+.unit-modal .modal-header { padding: 10px 16px; }
+.unit-modal .modal-title { font-size: 13px; }
+.unit-modal .modal-body { padding: 12px 16px; font-size: 12px; }
+.unit-modal .modal-footer { padding: 10px 16px; }
+.unit-modal .form-label { font-size: 11px; margin-bottom: 3px; font-weight: 600; color: #475569; }
+.unit-modal .form-select, .unit-modal .form-control { font-size: 12px; padding: 6px 10px; }
+.unit-modal .mb-2 { margin-bottom: 8px !important; }
+.unit-modal .form-check-label { font-size: 11px; }
+.unit-table { font-size: 11px; }
+.unit-table th { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+.unit-table td { vertical-align: middle; }
+.unit-badge-default { background: #0d9488; color: white; font-size: 9px; padding: 2px 6px; border-radius: 10px; }
+</style>
+
+<div class="modal fade unit-modal" id="medicationUnitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #6366f1; color: white;">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-rulers me-2"></i>Manage Selling Units
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 10px;"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Medication Info -->
+                <div class="d-flex align-items-center mb-3 p-2 rounded" style="background: #f1f5f9;">
+                    <i class="bi bi-capsule me-2" style="font-size: 18px; color: #6366f1;"></i>
+                    <div>
+                        <div id="unitMedName" style="font-weight: 600; font-size: 13px;"></div>
+                        <div class="text-muted" style="font-size: 10px;">
+                            Base Unit: <span id="unitMedBase"></span> @ UGX <span id="unitMedPrice"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Units List -->
+                <div id="unitsListContainer" class="mb-3">
+                    <div id="unitsLoading" class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ms-2 text-muted small">Loading units...</span>
+                    </div>
+                    <table class="table table-sm unit-table mb-0" id="unitsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Unit Name</th>
+                                <th class="text-center">Qty/Base</th>
+                                <th class="text-end">Price (UGX)</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unitsTableBody"></tbody>
+                    </table>
+                    <div id="noUnitsMsg" class="text-center text-muted py-3" style="display: none; font-size: 11px;">
+                        <i class="bi bi-info-circle me-1"></i>No additional units defined. Add one below.
+                    </div>
+                </div>
+
+                <!-- Add/Edit Unit Form -->
+                <div class="border-top pt-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span style="font-weight: 600; font-size: 11px; color: #475569;">
+                            <span id="unitFormTitle">Add New Unit</span>
+                        </span>
+                        <button type="button" class="btn btn-link btn-sm p-0" id="cancelEditUnitBtn" style="font-size: 10px; display: none;" onclick="resetUnitForm()">
+                            Cancel Edit
+                        </button>
+                    </div>
+                    <form id="medicationUnitForm">
+                        <input type="hidden" id="unit_id" name="unit_id">
+                        <input type="hidden" id="unit_medication_id" name="medication_id">
+                        <div class="row">
+                            <div class="col-5 mb-2">
+                                <label class="form-label">Unit Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="unit_name" name="unit_name" placeholder="e.g., Tablet, Strip" required>
+                            </div>
+                            <div class="col-3 mb-2">
+                                <label class="form-label">Qty/Base <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="quantity_per_base" name="quantity_per_base" value="1" min="1" required>
+                            </div>
+                            <div class="col-4 mb-2">
+                                <label class="form-label">Price (UGX) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="selling_price" name="selling_price" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_default" name="is_default">
+                                <label class="form-check-label" for="is_default">Set as default selling unit</label>
+                            </div>
+                            <button type="submit" class="btn btn-sm px-3" id="saveUnitBtn" style="font-size: 11px; background: #6366f1; color: white;">
+                                <i class="bi bi-plus-circle me-1"></i>Add Unit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="font-size: 11px;">Close</button>
             </div>
         </div>
     </div>
@@ -518,18 +882,363 @@
 <!-- ============================================================================ -->
 
 <script>
-// Load medication data for editing
-function loadMedicationForEdit(medicationId) {
-    // Fetch medication data and populate form
-    fetch(`/pharmacy/medications/${medicationId}/`)
+// ============================================================================
+// MEDICATION UNITS FUNCTIONS
+// ============================================================================
+
+let currentUnitMedicationId = null;
+
+function openMedicationUnitModal(medicationId) {
+    currentUnitMedicationId = medicationId;
+    document.getElementById('unit_medication_id').value = medicationId;
+    
+    // Show loading
+    document.getElementById('unitsLoading').style.display = 'block';
+    document.getElementById('unitsTable').style.display = 'none';
+    document.getElementById('noUnitsMsg').style.display = 'none';
+    
+    // Reset form
+    resetUnitForm();
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('medicationUnitModal'));
+    modal.show();
+    
+    // Fetch units
+    loadMedicationUnits(medicationId);
+}
+
+function loadMedicationUnits(medicationId) {
+    fetch(`/pharmacy/ajax/medication/${medicationId}/units/`)
         .then(response => response.json())
         .then(data => {
-            document.getElementById('edit_medication_id').value = data.id;
-            document.getElementById('edit_name').value = data.name;
-            document.getElementById('edit_generic_name').value = data.generic_name;
-            // Populate other fields...
+            // Update header info
+            document.getElementById('unitMedName').textContent = data.medication_name;
+            document.getElementById('unitMedBase').textContent = data.base_unit;
+            document.getElementById('unitMedPrice').textContent = parseFloat(data.base_price).toLocaleString();
+            
+            // Hide loading
+            document.getElementById('unitsLoading').style.display = 'none';
+            
+            // Build table
+            if (data.units && data.units.length > 0) {
+                let html = '';
+                data.units.forEach(unit => {
+                    html += `
+                        <tr data-unit-id="${unit.id}">
+                            <td>
+                                ${unit.unit_name}
+                                ${unit.is_default ? '<span class="unit-badge-default ms-1">Default</span>' : ''}
+                            </td>
+                            <td class="text-center">${unit.quantity_per_base}</td>
+                            <td class="text-end">${parseFloat(unit.selling_price).toLocaleString()}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-link btn-sm p-0 me-2" onclick="editUnit(${unit.id}, '${unit.unit_name}', ${unit.quantity_per_base}, ${unit.selling_price}, ${unit.is_default})" title="Edit">
+                                    <i class="bi bi-pencil" style="font-size: 11px; color: #f59e0b;"></i>
+                                </button>
+                                <button type="button" class="btn btn-link btn-sm p-0" onclick="deleteUnit(${unit.id}, '${unit.unit_name}')" title="Delete">
+                                    <i class="bi bi-trash" style="font-size: 11px; color: #ef4444;"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('unitsTableBody').innerHTML = html;
+                document.getElementById('unitsTable').style.display = 'table';
+            } else {
+                document.getElementById('noUnitsMsg').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading units:', error);
+            document.getElementById('unitsLoading').style.display = 'none';
+            document.getElementById('noUnitsMsg').innerHTML = '<i class="bi bi-exclamation-circle me-1 text-danger"></i>Error loading units';
+            document.getElementById('noUnitsMsg').style.display = 'block';
         });
 }
+
+function editUnit(unitId, unitName, qtyPerBase, price, isDefault) {
+    document.getElementById('unit_id').value = unitId;
+    document.getElementById('unit_name').value = unitName;
+    document.getElementById('quantity_per_base').value = qtyPerBase;
+    document.getElementById('selling_price').value = price;
+    document.getElementById('is_default').checked = isDefault;
+    
+    document.getElementById('unitFormTitle').textContent = 'Edit Unit';
+    document.getElementById('saveUnitBtn').innerHTML = '<i class="bi bi-check-circle me-1"></i>Update Unit';
+    document.getElementById('cancelEditUnitBtn').style.display = 'inline';
+}
+
+function resetUnitForm() {
+    document.getElementById('medicationUnitForm').reset();
+    document.getElementById('unit_id').value = '';
+    document.getElementById('unitFormTitle').textContent = 'Add New Unit';
+    document.getElementById('saveUnitBtn').innerHTML = '<i class="bi bi-plus-circle me-1"></i>Add Unit';
+    document.getElementById('cancelEditUnitBtn').style.display = 'none';
+}
+
+function deleteUnit(unitId, unitName) {
+    if (!confirm(`Delete unit "${unitName}"?`)) return;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch(`/pharmacy/ajax/medication-unit/${unitId}/delete/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadMedicationUnits(currentUnitMedicationId);
+        } else {
+            alert(data.message || 'Error deleting unit');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting unit');
+    });
+}
+
+// Form submission handler
+document.addEventListener('DOMContentLoaded', function() {
+    const unitForm = document.getElementById('medicationUnitForm');
+    if (unitForm) {
+        unitForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const unitId = document.getElementById('unit_id').value;
+            const medicationId = document.getElementById('unit_medication_id').value;
+            const formData = new FormData(this);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            const url = unitId 
+                ? `/pharmacy/ajax/medication-unit/${unitId}/update/`
+                : `/pharmacy/ajax/medication/${medicationId}/units/create/`;
+            
+            const btn = document.getElementById('saveUnitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resetUnitForm();
+                    loadMedicationUnits(currentUnitMedicationId);
+                } else {
+                    alert(data.message || 'Error saving unit');
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Add Unit';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error saving unit');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Add Unit';
+            });
+        });
+    }
+});
+
+// ============================================================================
+// MEDICATION CREATE WITH UNITS FUNCTION
+// ============================================================================
+
+function submitMedicationWithUnits() {
+    const form = document.getElementById('medicationCreateForm');
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const btn = document.getElementById('saveMedicationBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+    
+    const formData = new FormData(form);
+    
+    // Collect units data
+    const unitNames = document.querySelectorAll('input[name="unit_names[]"]');
+    const unitQuantities = document.querySelectorAll('input[name="unit_quantities[]"]');
+    const unitPrices = document.querySelectorAll('input[name="unit_prices[]"]');
+    const defaultUnit = document.querySelector('input[name="default_unit"]:checked');
+    
+    const units = [];
+    unitNames.forEach((nameInput, index) => {
+        const name = nameInput.value.trim();
+        if (name) {
+            units.push({
+                unit_name: name,
+                quantity_per_base: unitQuantities[index].value || 1,
+                selling_price: unitPrices[index].value || 0,
+                is_default: defaultUnit && defaultUnit.value == index
+            });
+        }
+    });
+    
+    // Add units as JSON
+    formData.append('units_json', JSON.stringify(units));
+    
+    fetch('/pharmacy/ajax/medication/create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('medicationCreateModal')).hide();
+            alert(data.message || 'Medication created successfully!');
+            window.location.reload();
+        } else {
+            alert(data.message || 'Error creating medication');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Save Medication';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating medication');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Save Medication';
+    });
+}
+
+// ============================================================================
+// MEDICATION EDIT FUNCTIONS
+// ============================================================================
+
+// Open medication edit modal and load data
+function openMedicationEditModal(medicationId) {
+    // Show loading, hide form
+    document.getElementById('editMedLoading').style.display = 'block';
+    document.getElementById('medicationEditForm').style.display = 'none';
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('medicationEditModal'));
+    modal.show();
+    
+    // Wire up Manage Units button
+    document.getElementById('editOpenUnitsBtn').onclick = function() {
+        bootstrap.Modal.getInstance(document.getElementById('medicationEditModal')).hide();
+        setTimeout(() => openMedicationUnitModal(medicationId), 300);
+    };
+    
+    // Fetch medication data
+    fetch(`/pharmacy/ajax/medication/${medicationId}/details/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                bootstrap.Modal.getInstance(document.getElementById('medicationEditModal')).hide();
+                return;
+            }
+            
+            // Populate form fields
+            document.getElementById('edit_medication_id').value = data.id;
+            document.getElementById('edit_name').value = data.name || '';
+            document.getElementById('edit_generic_name').value = data.generic_name || '';
+            document.getElementById('edit_category').value = data.category_id || '';
+            document.getElementById('edit_form').value = data.form || '';
+            document.getElementById('edit_strength').value = data.strength || '';
+            document.getElementById('edit_manufacturer').value = data.manufacturer || '';
+            document.getElementById('edit_unit_price').value = data.unit_price || '';
+            document.getElementById('edit_unit_of_measure').value = data.unit_of_measure || '';
+            document.getElementById('edit_reorder_level').value = data.reorder_level || 10;
+            document.getElementById('edit_storage_instructions').value = data.storage_instructions || '';
+            document.getElementById('edit_notes').value = data.notes || '';
+            document.getElementById('edit_requires_prescription').checked = data.requires_prescription;
+            document.getElementById('edit_is_active').checked = data.is_active;
+            
+            // Hide loading, show form
+            document.getElementById('editMedLoading').style.display = 'none';
+            document.getElementById('medicationEditForm').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error loading medication:', error);
+            alert('Error loading medication details');
+            bootstrap.Modal.getInstance(document.getElementById('medicationEditModal')).hide();
+        });
+    
+    // Load selling units preview
+    fetch(`/pharmacy/ajax/medication/${medicationId}/units/`)
+        .then(response => response.json())
+        .then(data => {
+            const preview = document.getElementById('editUnitsPreview');
+            let html = `<div class="d-flex justify-content-between py-1 border-bottom"><span><strong>${data.base_unit}</strong> <span class="badge" style="background:#0d9488;font-size:8px;">Base</span></span><span class="fw-bold">UGX ${parseFloat(data.base_price).toLocaleString()}</span></div>`;
+            if (data.units && data.units.length > 0) {
+                data.units.forEach(unit => {
+                    html += `<div class="d-flex justify-content-between py-1 border-bottom">
+                        <span><strong>${unit.unit_name}</strong>${unit.is_default ? ' <span class="badge" style="background:#6366f1;font-size:8px;">Default</span>' : ''} <span class="text-muted" style="font-size:10px;">· ${unit.quantity_per_base} per ${data.base_unit}</span></span>
+                        <span class="fw-bold">UGX ${parseFloat(unit.selling_price).toLocaleString()}</span>
+                    </div>`;
+                });
+            } else {
+                html += '<div class="text-muted text-center py-1" style="font-size:10px;">No additional units</div>';
+            }
+            preview.innerHTML = html;
+        })
+        .catch(() => {
+            document.getElementById('editUnitsPreview').innerHTML = '<div class="text-muted text-center py-1">Could not load units</div>';
+        });
+}
+
+// Submit medication update
+document.addEventListener('DOMContentLoaded', function() {
+    const updateBtn = document.getElementById('updateMedicationBtn');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', function() {
+            const form = document.getElementById('medicationEditForm');
+            const medicationId = document.getElementById('edit_medication_id').value;
+            
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Updating...';
+            
+            const formData = new FormData(form);
+            
+            fetch(`/pharmacy/ajax/medication/${medicationId}/update/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('medicationEditModal')).hide();
+                    alert(data.message || 'Medication updated successfully!');
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Error updating medication');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Update Medication';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating medication');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Update Medication';
+            });
+        });
+    }
+});
 
 // Load batch info for stock adjustment
 function openStockAdjustmentModal(batchId, batchNumber, medicationName, currentStock) {
@@ -547,28 +1256,166 @@ function submitStockAdjustment() {
     submitStockAdjustmentForm('stockAdjustmentForm', batchId);
 }
 
-// Update medication
-function updateMedication() {
-    const medicationId = document.getElementById('edit_medication_id').value;
-    const url = `/pharmacy/ajax/medication/${medicationId}/update/`;
-    submitMedicationForm('medicationEditForm', url);
-}
+// Load prescription for dispensing - NEW AJAX VERSION
+let currentDispensePrescriptionId = null;
 
-// Load prescription for dispensing
-function openDispenseModal(prescriptionId, patientName, medicationName, quantity) {
-    const infoDiv = document.getElementById('dispense_prescription_info');
-    infoDiv.innerHTML = `
-        <p><strong>Patient:</strong> ${patientName}</p>
-        <p><strong>Medication:</strong> ${medicationName}</p>
-        <p><strong>Quantity:</strong> ${quantity}</p>
-    `;
+function openDispenseModal(prescriptionId) {
+    currentDispensePrescriptionId = prescriptionId;
     
-    document.getElementById('confirmDispenseBtn').onclick = function() {
-        dispensePrescription(prescriptionId);
-    };
+    // Show loading, hide content
+    document.getElementById('dispenseModalLoading').style.display = 'block';
+    document.getElementById('dispenseModalContent').style.display = 'none';
+    document.getElementById('confirmDispenseCheck').checked = false;
+    document.getElementById('confirmDispenseBtn').disabled = true;
     
+    // Show modal
     const modal = new bootstrap.Modal(document.getElementById('dispensePrescriptionModal'));
     modal.show();
+    
+    // Fetch prescription details
+    fetch(`/pharmacy/ajax/prescription/${prescriptionId}/details/`)
+        .then(response => response.json())
+        .then(data => {
+            // Populate patient info with link (uses patient_id string, not pk)
+            const patientNameEl = document.getElementById('dispensePatientName');
+            if (data.patient_id && data.patient_id !== 'N/A') {
+                patientNameEl.innerHTML = `<a href="/patients/${data.patient_id}/" style="color: #0d9488; text-decoration: none; font-weight: 600;">${data.patient_name} <i class="bi bi-box-arrow-up-right" style="font-size: 10px;"></i></a>`;
+            } else {
+                patientNameEl.textContent = data.patient_name;
+            }
+            document.getElementById('dispensePatientId').textContent = data.patient_id;
+            document.getElementById('dispensePatientGender').textContent = data.patient_gender;
+            document.getElementById('dispensePatientDob').textContent = data.patient_dob;
+            
+            // Show allergies if present
+            if (data.patient_allergies) {
+                document.getElementById('dispensePatientAllergies').style.display = 'block';
+                document.getElementById('dispenseAllergiesText').textContent = data.patient_allergies;
+            } else {
+                document.getElementById('dispensePatientAllergies').style.display = 'none';
+            }
+            
+            // Prescription info
+            document.getElementById('dispensePrescribedBy').textContent = data.prescribed_by;
+            document.getElementById('dispensePrescribedDate').textContent = data.prescribed_date;
+            document.getElementById('dispenseStatus').innerHTML = `<span class="badge bg-warning text-dark">${data.status}</span>`;
+            document.getElementById('dispenseItemsCount').textContent = `${data.items_count} medication(s)`;
+            
+            // Instructions
+            if (data.instructions) {
+                document.getElementById('dispenseInstructions').style.display = 'block';
+                document.getElementById('dispenseInstructionsText').textContent = data.instructions;
+            } else {
+                document.getElementById('dispenseInstructions').style.display = 'none';
+            }
+            
+            // Build medications list with links
+            let medsHtml = '';
+            data.items.forEach(item => {
+                const stockClass = item.has_stock ? 'stock-ok' : 'stock-low';
+                const stockIcon = item.has_stock ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
+                const medLink = item.medication_id ? 
+                    `<a href="/pharmacy/medications/${item.medication_id}/" style="color: #0d9488; text-decoration: none;">${item.medication_name} ${item.medication_strength} <i class="bi bi-box-arrow-up-right" style="font-size: 9px;"></i></a>` :
+                    `${item.medication_name} ${item.medication_strength}`;
+                medsHtml += `
+                    <div class="med-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="med-name">${medLink}</div>
+                                <div class="med-details">${item.dosage} · ${item.frequency} · ${item.duration}</div>
+                            </div>
+                            <div class="text-end">
+                                <div style="font-weight: 600;">Qty: ${item.quantity}</div>
+                                <div class="${stockClass}" style="font-size: 10px;">
+                                    <i class="bi ${stockIcon}"></i> Stock: ${item.available_stock}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('dispenseMedicationsList').innerHTML = medsHtml;
+            
+            // Show stock warning if needed
+            document.getElementById('dispenseStockWarning').style.display = data.all_in_stock ? 'none' : 'block';
+            
+            // Hide loading, show content
+            document.getElementById('dispenseModalLoading').style.display = 'none';
+            document.getElementById('dispenseModalContent').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error loading prescription:', error);
+            alert('Error loading prescription details');
+            bootstrap.Modal.getInstance(document.getElementById('dispensePrescriptionModal')).hide();
+        });
+}
+
+// Handle checkbox change for dispense confirmation
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('confirmDispenseCheck');
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            document.getElementById('confirmDispenseBtn').disabled = !this.checked;
+        });
+    }
+    
+    const dispenseBtn = document.getElementById('confirmDispenseBtn');
+    if (dispenseBtn) {
+        dispenseBtn.addEventListener('click', function() {
+            if (currentDispensePrescriptionId) {
+                confirmDispensePrescription(currentDispensePrescriptionId);
+            }
+        });
+    }
+});
+
+// Confirm and dispense prescription
+function confirmDispensePrescription(prescriptionId) {
+    const btn = document.getElementById('confirmDispenseBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Dispensing...';
+    
+    fetch(`/pharmacy/ajax/prescription/${prescriptionId}/dispense/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('dispensePrescriptionModal')).hide();
+            alert(data.message || 'Prescription dispensed successfully!');
+            window.location.reload();
+        } else {
+            alert(data.message || 'Error dispensing prescription');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Confirm Dispense';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error dispensing prescription');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Confirm Dispense';
+    });
+}
+
+// Helper function to get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // ============================================================================
@@ -591,45 +1438,42 @@ function addMedicationRowPharmacy() {
         optionsHtml += `<option value="${option.value}">${option.textContent}</option>`;
     });
     
-    // CREATE ENTIRELY NEW ROW FROM HTML STRING - NO CLONING
+    // CREATE ENTIRELY NEW ROW FROM HTML STRING - COMPACT VERSION
     const newRowHtml = `
-        <div class="medication-row-pharmacy card mb-3 border-info">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0"><i class="bi bi-capsule text-info"></i> Medication #${medicationRowCountPharmacy}</h6>
-                    <button type="button" class="btn btn-sm btn-danger remove-medication-pharmacy" onclick="removeMedicationRowPharmacy(this)" style="display: inline-block;">
-                        <i class="bi bi-trash"></i>
-                    </button>
+        <div class="medication-row-pharmacy med-card">
+            <div class="med-card-header">
+                <span class="med-card-title"><i class="bi bi-capsule"></i> Medication #${medicationRowCountPharmacy}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-medication-pharmacy" onclick="removeMedicationRowPharmacy(this)" style="display: inline-block; font-size: 10px; padding: 2px 6px;">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            
+            <div class="row">
+                <div class="col-12 mb-2">
+                    <label class="form-label">Medication <span class="text-danger">*</span></label>
+                    <select class="form-select medication-select-pharmacy" required>
+                        ${optionsHtml}
+                    </select>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label"><i class="bi bi-capsule-pill text-primary"></i> Medication <span class="text-danger">*</span></label>
-                        <select class="form-select medication-select-pharmacy" required style="font-weight: 500; border: 2px solid #0d6efd;">
-                            ${optionsHtml}
-                        </select>
-                        <div class="form-text text-primary"><i class="bi bi-arrow-up-circle"></i> <strong>Click the dropdown above to choose a medication</strong></div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Dosage <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control dosage-input-pharmacy" placeholder="e.g., 500mg" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Frequency <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control frequency-input-pharmacy" placeholder="e.g., Twice daily" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Duration <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control duration-input-pharmacy" placeholder="e.g., 7 days" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Quantity <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control quantity-input-pharmacy" min="1" placeholder="e.g., 14" required>
-                    </div>
-                    <div class="col-12 mb-2">
-                        <label class="form-label">Notes (Optional)</label>
-                        <textarea class="form-control notes-input-pharmacy" rows="2" placeholder="Specific notes for this medication"></textarea>
-                    </div>
+                <div class="col-md-3 mb-2">
+                    <label class="form-label">Dosage <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control dosage-input-pharmacy" placeholder="500mg" required>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="form-label">Frequency <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control frequency-input-pharmacy" placeholder="Twice daily" required>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="form-label">Duration <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control duration-input-pharmacy" placeholder="7 days" required>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="form-label">Qty <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control quantity-input-pharmacy" min="1" placeholder="14" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control notes-input-pharmacy" placeholder="Optional notes...">
                 </div>
             </div>
         </div>
@@ -637,24 +1481,6 @@ function addMedicationRowPharmacy() {
     
     // Insert the new row HTML
     container.insertAdjacentHTML('beforeend', newRowHtml);
-    
-    // Get the newly added row and setup event listeners
-    const newRow = container.lastElementChild;
-    const newSelect = newRow.querySelector('.medication-select-pharmacy');
-    
-    // Add event listener for visual feedback
-    newSelect.addEventListener('change', function() {
-        this.classList.remove('is-invalid');
-        if (this.value) {
-            this.style.borderColor = '#28a745';
-            this.style.borderWidth = '2px';
-            this.style.fontWeight = '600';
-        } else {
-            this.style.borderColor = '#0d6efd';
-            this.style.borderWidth = '2px';
-            this.style.fontWeight = '500';
-        }
-    });
     
     updateMedicationCountPharmacy();
     updateRemoveButtonsPharmacy();

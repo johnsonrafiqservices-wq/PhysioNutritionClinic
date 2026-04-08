@@ -78,6 +78,41 @@ class Medication(models.Model):
         return self.current_stock <= self.reorder_level
 
 
+class MedicationUnit(models.Model):
+    """Different units of measurement and their prices for a medication.
+    Example: A medication sold as Box (base unit) can also be sold as:
+    - Strip (10 strips per box)
+    - Tablet (100 tablets per box)
+    """
+    medication = models.ForeignKey(Medication, on_delete=models.CASCADE, related_name='units')
+    unit_name = models.CharField(max_length=50, help_text="e.g., Tablet, Strip, Bottle, Sachet")
+    quantity_per_base = models.PositiveIntegerField(
+        default=1, 
+        help_text="How many of this unit are in the base unit (e.g., 10 strips per box)"
+    )
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price for this unit")
+    is_default = models.BooleanField(default=False, help_text="Is this the default selling unit?")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_default', 'unit_name']
+        unique_together = ['medication', 'unit_name']
+
+    def __str__(self):
+        return f"{self.medication.name} - {self.unit_name} @ {self.selling_price}"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one default unit per medication
+        if self.is_default:
+            MedicationUnit.objects.filter(
+                medication=self.medication, 
+                is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
+
+
 class StockMovement(models.Model):
     MOVEMENT_TYPES = [
         ('in', 'Stock In'),

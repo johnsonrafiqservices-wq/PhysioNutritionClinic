@@ -2,105 +2,172 @@
 {% load static %}
 {% load humanize %}
 
+{% block extra_css %}
+<style>
+.rx-container { padding: 12px; }
+.rx-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 14px; }
+.rx-stat-card { background: white; border-radius: 8px; padding: 12px 14px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+.rx-stat-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: white; }
+.rx-stat-icon.blue { background: #0d9488; }
+.rx-stat-icon.orange { background: #f59e0b; }
+.rx-stat-icon.green { background: #10b981; }
+.rx-stat-icon.red { background: #ef4444; }
+.rx-stat-icon.purple { background: #8b5cf6; }
+.rx-stat-value { font-size: 18px; font-weight: 700; color: #1e293b; line-height: 1; }
+.rx-stat-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+.rx-filter-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
+.rx-filter-row select { font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0; min-width: 140px; }
+.rx-filter-row .btn { font-size: 11px; padding: 6px 12px; }
+.rx-table-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; }
+.rx-table-header { background: #0d9488; color: white; padding: 10px 14px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.rx-table { width: 100%; font-size: 11px; border-collapse: collapse; }
+.rx-table th { background: #f8fafc; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 10px; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+.rx-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+.rx-table tbody tr:hover { background: #f8fafc; }
+.rx-badge { padding: 3px 8px; border-radius: 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; }
+.rx-badge.pending { background: #fef3c7; color: #d97706; }
+.rx-badge.dispensed { background: #d1fae5; color: #059669; }
+.rx-badge.cancelled { background: #fee2e2; color: #dc2626; }
+.rx-med-item { font-size: 11px; color: #0d9488; font-weight: 500; }
+.rx-med-detail { font-size: 10px; color: #64748b; margin-left: 6px; }
+.rx-empty { text-align: center; padding: 30px; color: #64748b; }
+.rx-empty i { font-size: 32px; color: #cbd5e1; }
+@media (max-width: 992px) { .rx-stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .rx-stats { grid-template-columns: repeat(2, 1fr); } }
+</style>
+{% endblock %}
+
 {% block page_title %}
 <div class="d-flex align-items-center">
-    <i class="bi bi-prescription2 me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
-    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Prescriptions</span>
+    <i class="bi bi-prescription2 me-2" style="font-size: 1.2rem; color: #0d9488;"></i>
+    <span style="color: #1e293b; font-weight: 700; font-size: 14px;">Prescriptions</span>
 </div>
 {% endblock %}
 
 {% block page_actions %}
-<a href="{% url 'pharmacy:pharmacy_list' %}" class="btn btn-outline-secondary btn-sm">
+<a href="{% url 'pharmacy:pharmacy_list' %}" class="btn btn-outline-secondary btn-sm" style="font-size: 11px;">
     <i class="bi bi-arrow-left"></i> Dashboard
 </a>
-<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#prescriptionCreateModal">
+<button type="button" class="btn btn-sm" style="font-size: 11px; background: #0d9488; color: white;" data-bs-toggle="modal" data-bs-target="#prescriptionCreateModal">
     <i class="bi bi-plus-circle"></i> New Prescription
 </button>
 {% endblock %}
 
 {% block content %}
-<!-- Filters -->
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-2">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-4">
-                <select name="status" class="form-select form-select-sm">
-                    <option value="">All Status</option>
-                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-                    <option value="dispensed" {% if status_filter == 'dispensed' %}selected{% endif %}>Dispensed</option>
-                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
-                </select>
+<div class="rx-container">
+    <!-- Statistics Row -->
+    <div class="rx-stats">
+        <div class="rx-stat-card">
+            <div class="rx-stat-icon blue"><i class="bi bi-prescription2"></i></div>
+            <div>
+                <div class="rx-stat-value">{{ total_prescriptions }}</div>
+                <div class="rx-stat-label">Total</div>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary btn-sm w-100">
-                    <i class="bi bi-funnel me-1"></i>Apply
-                </button>
+        </div>
+        <div class="rx-stat-card">
+            <div class="rx-stat-icon purple"><i class="bi bi-calendar-check"></i></div>
+            <div>
+                <div class="rx-stat-value">{{ today_count }}</div>
+                <div class="rx-stat-label">Today</div>
             </div>
-        </form>
+        </div>
+        <div class="rx-stat-card">
+            <div class="rx-stat-icon orange"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+                <div class="rx-stat-value">{{ pending_count }}</div>
+                <div class="rx-stat-label">Pending</div>
+            </div>
+        </div>
+        <div class="rx-stat-card">
+            <div class="rx-stat-icon green"><i class="bi bi-check-circle"></i></div>
+            <div>
+                <div class="rx-stat-value">{{ dispensed_count }}</div>
+                <div class="rx-stat-label">Dispensed</div>
+            </div>
+        </div>
+        <div class="rx-stat-card">
+            <div class="rx-stat-icon red"><i class="bi bi-x-circle"></i></div>
+            <div>
+                <div class="rx-stat-value">{{ cancelled_count }}</div>
+                <div class="rx-stat-label">Cancelled</div>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- Prescriptions Table -->
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
-        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-prescription2 text-primary me-1"></i>Prescription List</h6>
-        <span class="badge bg-primary-subtle text-primary" style="font-size:.75rem;">{{ prescriptions.count }} prescriptions</span>
-    </div>
-    <div class="card-body p-0">
+    <!-- Filters -->
+    <form method="get" class="rx-filter-row">
+        <select name="status">
+            <option value="">All Status</option>
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="dispensed" {% if status_filter == 'dispensed' %}selected{% endif %}>Dispensed</option>
+            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+        {% if status_filter %}
+        <a href="{% url 'pharmacy:prescription_list' %}" class="btn btn-outline-secondary">Clear</a>
+        {% endif %}
+    </form>
+
+    <!-- Prescriptions Table -->
+    <div class="rx-table-card">
+        <div class="rx-table-header">
+            <span><i class="bi bi-prescription2 me-2"></i>Prescription List</span>
+            <span style="font-size: 11px; opacity: 0.9;">{{ prescriptions.count }} records</span>
+        </div>
         {% if prescriptions %}
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
-                <thead class="table-light">
+            <table class="rx-table">
+                <thead>
                     <tr>
-                        <th class="border-0 ps-3">Patient</th>
-                        <th class="border-0">Prescribed By</th>
-                        <th class="border-0">Date</th>
-                        <th class="border-0">Medications</th>
-                        <th class="border-0 text-center">Status</th>
-                        <th class="border-0 text-center">Actions</th>
+                        <th>#</th>
+                        <th>Patient</th>
+                        <th>Prescribed By</th>
+                        <th>Date</th>
+                        <th>Medications</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for prescription in prescriptions %}
                     <tr>
-                        <td class="ps-3">
-                            <span class="fw-medium">{{ prescription.patient.get_full_name }}</span>
-                            <br><small class="text-muted">{{ prescription.patient.patient_id }}</small>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td>
+                            <a href="{% url 'patients:patient_detail' prescription.patient.patient_id %}" style="color: #0d9488; text-decoration: none; font-weight: 600;">{{ prescription.patient.get_full_name }}</a>
+                            <span class="text-muted" style="font-size: 10px;"> · {{ prescription.patient.patient_id }}</span>
                         </td>
-                        <td class="text-muted">{{ prescription.prescribed_by.get_full_name }}</td>
-                        <td class="text-muted">{{ prescription.prescribed_date|date:"d M Y" }}</td>
+                        <td>{{ prescription.prescribed_by.get_full_name|default:"-" }}</td>
+                        <td>{{ prescription.prescribed_date|date:"d M Y" }}</td>
                         <td>
                             {% with medications=prescription.items.all %}
                                 {% if medications %}
                                     {% for item in medications|slice:":2" %}
-                                        <div><small class="text-primary fw-medium">{{ item.medication.name }}</small></div>
-                                        <div class="text-muted" style="font-size:.75rem;margin-left:8px;">{{ item.dosage }}, {{ item.frequency }} &middot; {{ item.quantity }} units</div>
+                                        <div class="rx-med-item"><a href="{% url 'pharmacy:medication_detail' item.medication.pk %}" style="color: #0d9488; text-decoration: none;">{{ item.medication.name }}</a></div>
+                                        <div class="rx-med-detail">{{ item.dosage }}, {{ item.frequency }} · {{ item.quantity }} units</div>
                                     {% endfor %}
                                     {% if medications.count > 2 %}
-                                        <small class="text-muted fst-italic">+{{ medications.count|add:"-2" }} more</small>
+                                        <span class="text-muted" style="font-size: 10px;">+{{ medications.count|add:"-2" }} more</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="text-muted">No medications</span>
+                                    <span class="text-muted">-</span>
                                 {% endif %}
                             {% endwith %}
                         </td>
                         <td class="text-center">
-                            {% if prescription.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
-                            {% elif prescription.status == 'dispensed' %}<span class="badge bg-success">Dispensed</span>
-                            {% elif prescription.status == 'cancelled' %}<span class="badge bg-danger">Cancelled</span>
-                            {% else %}<span class="badge bg-secondary">{{ prescription.status|title }}</span>{% endif %}
+                            {% if prescription.status == 'pending' %}<span class="rx-badge pending">Pending</span>
+                            {% elif prescription.status == 'dispensed' %}<span class="rx-badge dispensed">Dispensed</span>
+                            {% elif prescription.status == 'cancelled' %}<span class="rx-badge cancelled">Cancelled</span>
+                            {% else %}<span class="rx-badge">{{ prescription.status }}</span>{% endif %}
                         </td>
                         <td class="text-center">
-                            <div class="btn-group btn-group-sm" role="group">
-                                {% if prescription.status == 'pending' %}
-                                <a href="{% url 'pharmacy:dispense_prescription' prescription.pk %}" class="btn btn-success py-0 px-2" title="Dispense" style="font-size:.72rem;">
-                                    <i class="bi bi-check-lg"></i> Dispense
-                                </a>
-                                {% endif %}
-                                <a href="{% url 'pharmacy:prescription_print' prescription.id %}" class="btn btn-outline-primary py-0 px-1" title="Print" target="_blank" style="font-size:.72rem;">
-                                    <i class="bi bi-printer"></i>
-                                </a>
-                            </div>
+                            {% if prescription.status == 'pending' %}
+                            <button type="button" class="btn btn-success btn-sm" style="font-size: 10px; padding: 2px 8px;" onclick="openDispenseModal({{ prescription.pk }})">
+                                <i class="bi bi-check-lg"></i> Dispense
+                            </button>
+                            {% endif %}
+                            <a href="{% url 'pharmacy:prescription_print' prescription.id %}" class="btn btn-outline-secondary btn-sm" style="font-size: 10px; padding: 2px 6px;" target="_blank">
+                                <i class="bi bi-printer"></i>
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -108,10 +175,10 @@
             </table>
         </div>
         {% else %}
-        <div class="text-center py-4">
-            <i class="bi bi-prescription2 text-muted" style="font-size:2rem;"></i>
-            <p class="text-muted mt-1 mb-2 small">No prescriptions found</p>
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#prescriptionCreateModal">
+        <div class="rx-empty">
+            <i class="bi bi-prescription2 d-block mb-2"></i>
+            <p class="mb-2">No prescriptions found</p>
+            <button type="button" class="btn btn-sm" style="background: #0d9488; color: white;" data-bs-toggle="modal" data-bs-target="#prescriptionCreateModal">
                 <i class="bi bi-plus-circle me-1"></i>Create First Prescription
             </button>
         </div>

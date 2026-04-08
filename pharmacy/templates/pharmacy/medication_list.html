@@ -100,9 +100,9 @@
                                 <a href="{% url 'pharmacy:medication_detail' medication.pk %}" class="btn btn-outline-primary py-0 px-1" title="View" style="font-size:.72rem;">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{% url 'pharmacy:medication_edit' medication.pk %}" class="btn btn-outline-warning py-0 px-1" title="Edit" style="font-size:.72rem;">
+                                <button type="button" class="btn btn-outline-warning py-0 px-1" title="Edit" style="font-size:.72rem;" onclick="openMedicationEditModal({{ medication.pk }})">
                                     <i class="bi bi-pencil"></i>
-                                </a>
+                                </button>
                                 <button type="button" class="btn btn-outline-danger py-0 px-1" onclick="toggleStatus({{ medication.pk }})" title="Toggle Status" style="font-size:.72rem;">
                                     <i class="bi bi-power"></i>
                                 </button>

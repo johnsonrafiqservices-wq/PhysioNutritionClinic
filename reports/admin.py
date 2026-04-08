@@ -248,7 +248,3 @@ class ReportExportAdmin(admin.ModelAdmin):
         self.message_user(request, f'Cleaned up {count} expired exports.')
     cleanup_expired.short_description = 'Clean up expired exports'
 
-# Custom admin site configuration
-admin.site.site_header = "Physio & Nutrition Clinic - Reports Administration"
-admin.site.site_title = "Reports Admin"
-admin.site.index_title = "Reports Management"

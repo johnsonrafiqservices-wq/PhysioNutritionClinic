@@ -4,262 +4,651 @@
 
 {% block title %}{{ medication.name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+:root {
+    --med-primary: #0d9488;
+    --med-primary-light: #ccfbf1;
+    --med-success: #10b981;
+    --med-warning: #f59e0b;
+    --med-dark: #1e293b;
+    --med-text: #334155;
+    --med-muted: #64748b;
+    --med-border: #e2e8f0;
+    --med-blue: #1a5276;
+}
+
+.med-container {
+    max-width: 100%;
+    padding: 16px;
+    background: white;
+    border-radius: 12px;
+}
+
+/* Header */
+.med-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding: 16px 20px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid var(--med-border);
+}
+
+.med-info-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.med-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--med-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.med-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--med-dark);
+    margin-bottom: 4px;
+}
+
+.med-name .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.med-details {
+    color: var(--med-muted);
+    font-size: 12px;
+}
+
+.med-details i {
+    margin-right: 4px;
+}
+
+.med-details span {
+    margin-right: 12px;
+}
+
+.med-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.med-actions .btn-receive {
+    background: var(--med-primary);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.med-actions .btn-manage {
+    background: white;
+    color: var(--med-dark);
+    border: 1px solid var(--med-border);
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Tabs */
+.med-tabs {
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--med-border);
+}
+
+.med-tabs .nav-link {
+    padding: 10px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--med-muted);
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.med-tabs .nav-link:hover {
+    color: var(--med-primary);
+}
+
+.med-tabs .nav-link.active {
+    border-bottom-color: var(--med-blue);
+    color: var(--med-blue);
+    font-weight: 600;
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 16px 20px;
+    border: 1px solid var(--med-border);
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--med-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--med-dark);
+    line-height: 1;
+}
+
+.stat-sub {
+    font-size: 11px;
+    color: var(--med-muted);
+    margin-top: 4px;
+}
+
+.stat-sub.green { color: var(--med-success); }
+.stat-sub.orange { color: var(--med-warning); }
+
+/* Content Grid */
+.content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+/* Info Card */
+.info-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--med-border);
+    padding: 20px;
+}
+
+.info-badge {
+    display: inline-block;
+    background: var(--med-blue);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.info-item {
+    margin-bottom: 16px;
+}
+
+.info-item-label {
+    font-size: 10px;
+    color: var(--med-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+}
+
+.info-item-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--med-dark);
+}
+
+/* Management Flow */
+.flow-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--med-border);
+    padding: 20px;
+}
+
+.flow-badge {
+    display: inline-block;
+    background: var(--med-blue);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+}
+
+.flow-item {
+    padding: 14px 0;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.flow-item:last-child {
+    border-bottom: none;
+}
+
+.flow-item:hover {
+    background: #f8fafc;
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.flow-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--med-dark);
+    margin-bottom: 2px;
+}
+
+.flow-item-desc {
+    font-size: 12px;
+    color: var(--med-muted);
+}
+
+/* Batches Table */
+.batches-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--med-border);
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.batches-header {
+    background: var(--med-primary);
+    color: white;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.batches-table {
+    width: 100%;
+    font-size: 12px;
+}
+
+.batches-table th {
+    background: #f8fafc;
+    color: var(--med-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--med-border);
+}
+
+.batches-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--med-text);
+}
+
+.batches-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.batch-link {
+    color: var(--med-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.batch-link:hover {
+    text-decoration: underline;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--med-muted);
+}
+
+.empty-state i {
+    font-size: 40px;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .content-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .med-header { flex-direction: column; gap: 12px; }
+    .med-actions { align-items: flex-start; flex-direction: row; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .info-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+{% endblock %}
+
 {% block page_title %}
 <div class="d-flex align-items-center">
-    <i class="bi bi-capsule-pill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
-    <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Medication Details</span>
+    <div style="width: 28px; height: 28px; border-radius: 50%; background: #0d9488; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-right: 10px;">
+        {{ medication.name|slice:":2"|upper }}
+    </div>
+    <div>
+        <span style="color: #1e293b; font-weight: 700; font-size: 14px;">{{ medication.name }}</span>
+        <span style="color: #64748b; font-size: 12px; display: block;">Medication in {{ medication.category }}</span>
+    </div>
 </div>
 {% endblock %}
 
 {% block page_actions %}
 <div class="d-flex flex-wrap gap-2 align-items-center">
-    <a href="{% url 'pharmacy:medication_edit' medication.pk %}" class="btn btn-warning btn-sm px-3">
-        <i class="bi bi-pencil-square me-1"></i> Edit
-    </a>
-    <button type="button" class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
-        <i class="bi bi-plus-circle me-1"></i> Receive Batch
+    <button type="button" class="btn btn-primary btn-sm px-3" style="font-size: 11px; background: #1a5276; border-color: #1a5276;" onclick="openMedicationEditModal({{ medication.pk }})">
+        <i class="bi bi-pencil me-1"></i> Edit Item
     </button>
-    <a href="{% url 'pharmacy:medication_list' %}" class="btn btn-outline-secondary btn-sm px-3">
+    <button type="button" class="btn btn-sm px-3" style="font-size: 11px; background: #6366f1; border-color: #6366f1; color: white;" onclick="openMedicationUnitModal({{ medication.pk }})">
+        <i class="bi bi-rulers me-1"></i> Selling Units
+    </button>
+    <button type="button" class="btn btn-sm px-3" style="font-size: 11px; background: #0d9488; border-color: #0d9488; color: white;" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+        <i class="bi bi-box-seam me-1"></i> Receive Batch
+    </button>
+    <a href="{% url 'pharmacy:sales_list' %}" class="btn btn-sm px-3" style="font-size: 11px; background: #f59e0b; border-color: #f59e0b; color: white;">
+        <i class="bi bi-cart me-1"></i> Sales Desk
+    </a>
+    <a href="{% url 'pharmacy:prescription_list' %}" class="btn btn-outline-secondary btn-sm px-3" style="font-size: 11px;">
+        <i class="bi bi-file-medical me-1"></i> Prescriptions
+    </a>
+    <a href="{% url 'pharmacy:medication_list' %}" class="btn btn-outline-secondary btn-sm px-3" style="font-size: 11px;">
         <i class="bi bi-arrow-left me-1"></i> Back
     </a>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Status Banner -->
-<div class="card mb-4 border">
-    <div class="card-body py-3">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <div class="d-flex align-items-center">
-                    <div class="me-4">
-                        <i class="bi bi-{% if medication.is_active %}check-circle-fill text-success{% else %}x-circle-fill text-danger{% endif %}" style="font-size: 2.5rem;"></i>
-                    </div>
-                    <div>
-                        <h4 class="mb-1 fw-bold">{{ medication.name }} {{ medication.strength }}</h4>
-                        <p class="mb-0 text-muted">
-                            <span class="me-3"><i class="bi bi-capsule"></i> {{ medication.generic_name }}</span>
-                            <span class="me-3"><i class="bi bi-tag"></i> {{ medication.category }}</span>
-                            <span><i class="bi bi-prescription2"></i> {{ medication.get_form_display }}</span>
-                        </p>
-                    </div>
+<div class="med-container">
+    <!-- Header -->
+    <div class="med-header">
+        <div class="med-info-left">
+            <div class="med-avatar">{{ medication.name|slice:":2"|upper }}</div>
+            <div>
+                <div class="med-name">
+                    {{ medication.name }}
+                    <span class="badge" style="background: #64748b;">Medication</span>
+                    {% if medication.is_active %}
+                    <span class="badge" style="background: #10b981;">Active</span>
+                    {% else %}
+                    <span class="badge" style="background: #ef4444;">Inactive</span>
+                    {% endif %}
+                    {% if medication.requires_prescription %}
+                    <span class="badge" style="background: #1a5276;">Prescription only</span>
+                    {% endif %}
                 </div>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                {% if medication.is_active %}
-                <span class="fw-bold text-success">Active</span>
-                {% else %}
-                <span class="fw-bold text-danger">Inactive</span>
-                {% endif %}
-                {% if total_stock <= medication.reorder_level %}
-                <span class="ms-2 fw-bold text-danger">(Low Stock)</span>
-                {% endif %}
+                <div class="med-details">
+                    <span><i class="bi bi-grid"></i> {{ medication.category }}</span>
+                    <span><i class="bi bi-hash"></i> ID {{ medication.pk }}</span>
+                    <span><i class="bi bi-tag"></i> {{ medication.get_form_display }}</span>
+                    <span><i class="bi bi-lightning"></i> {{ medication.strength }}</span>
+                </div>
+                <div class="med-details" style="margin-top: 2px; color: #94a3b8;">
+                    {{ medication.generic_name }}
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="row">
-    <!-- Medication Information -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-                <h6 class="mb-0 fw-bold text-white"><i class="bi bi-capsule-pill me-2"></i>Medication Information</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Category</small>
-                            <span class="fw-semibold"><i class="bi bi-tag me-1"></i>{{ medication.category }}</span>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Dosage Form</small>
-                            <span class="fw-semibold"><i class="bi bi-prescription2 me-1"></i>{{ medication.get_form_display }}</span>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Strength</small>
-                            <span class="fw-semibold"><i class="bi bi-lightning me-1"></i>{{ medication.strength }}</span>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Manufacturer</small>
-                            <span class="fw-semibold"><i class="bi bi-building me-1"></i>{{ medication.manufacturer|default:"N/A" }}</span>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Unit of Measure</small>
-                            <span class="fw-semibold"><i class="bi bi-rulers me-1"></i>{{ medication.unit_of_measure|default:"N/A" }}</span>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Requires Prescription</small>
-                            {% if medication.requires_prescription %}
-                            <span class="fw-bold text-warning"><i class="bi bi-shield-exclamation me-1"></i>Yes</span>
-                            {% else %}
-                            <span class="fw-semibold text-secondary"><i class="bi bi-shield-check me-1"></i>No (OTC)</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                {% if medication.storage_instructions %}
-                <div class="mt-4 p-3 rounded border-start border-3 border-primary" style="background: #e7f3ff;">
-                    <small class="text-muted d-block mb-2"><i class="bi bi-thermometer-half me-1"></i><strong>Storage Instructions</strong></small>
-                    <p class="mb-0">{{ medication.storage_instructions }}</p>
-                </div>
-                {% endif %}
-
-                {% if medication.notes %}
-                <div class="mt-3 p-3 rounded border-start border-3 border-secondary" style="background: #f8f9fa;">
-                    <small class="text-muted d-block mb-2"><i class="bi bi-journal-text me-1"></i><strong>Notes</strong></small>
-                    <p class="mb-0">{{ medication.notes }}</p>
-                </div>
-                {% endif %}
-            </div>
+        <div class="med-actions">
+            <button type="button" class="btn-receive" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+                <i class="bi bi-box-seam me-1"></i> Receive Stock
+            </button>
+            <button type="button" class="btn-manage" onclick="openMedicationEditModal({{ medication.pk }})">
+                <i class="bi bi-sliders me-1"></i> Manage Item Details
+            </button>
         </div>
     </div>
 
-    <!-- Stock & Pricing -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-                <h6 class="mb-0 fw-bold text-white"><i class="bi bi-box-seam me-2"></i>Stock & Pricing</h6>
+    <!-- Tabs -->
+    <div class="med-tabs">
+        <ul class="nav nav-tabs border-0" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#overview">Overview</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#batches">Stock Batches</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#prescriptions">Prescription History</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#sales">Sales History</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#stock-history">Stock History</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#details">Details</a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Total Stock</div>
+                    <div class="stat-value">{{ total_stock|default:0|intcomma }}</div>
+                    <div class="stat-sub">{{ medication.unit_of_measure|default:"Units" }} on hand</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Stock Value</div>
+                    <div class="stat-value">UGX {{ stock_value|default:0|intcomma }}</div>
+                    <div class="stat-sub">Based on active batches</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Reorder Level</div>
+                    <div class="stat-value">{{ medication.reorder_level|intcomma }}</div>
+                    <div class="stat-sub {% if total_stock <= medication.reorder_level %}orange{% else %}green{% endif %}">
+                        {% if total_stock <= medication.reorder_level %}Below{% else %}Above{% endif %} preferred stock
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Prescriptions</div>
+                    <div class="stat-value">{{ prescription_count|default:0 }}</div>
+                    <div class="stat-sub">Linked prescription records</div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Total Stock</small>
-                            <span class="fw-bold text-dark fs-5">{{ total_stock|default:0|intcomma }}</span>
-                            <small class="text-muted d-block">units available</small>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Item Information -->
+                <div class="info-card">
+                    <div class="info-badge">Item Information</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-item-label">Item Type</div>
+                            <div class="info-item-value">Medication</div>
                         </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Active Batches</small>
-                            <span class="fw-bold text-dark fs-5">{{ batches_count }}</span>
-                            <small class="text-muted d-block">batch{{ batches_count|pluralize:"es" }} in stock</small>
+                        <div class="info-item">
+                            <div class="info-item-label">Category</div>
+                            <div class="info-item-value">{{ medication.category }}</div>
                         </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1">Unit Price</small>
-                            <span class="fw-bold text-dark fs-5">{{ medication.unit_price|floatformat:0|intcomma }}</span>
-                            <small class="text-muted d-block">UGX</small>
+                        <div class="info-item">
+                            <div class="info-item-label">Unit Price</div>
+                            <div class="info-item-value">UGX {{ medication.unit_price|floatformat:0|intcomma }}</div>
                         </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 rounded border {% if total_stock <= medication.reorder_level %}border-danger{% else %}border-success{% endif %}">
-                            <small class="text-muted d-block mb-1">Reorder Level</small>
-                            <span class="fw-bold fs-5 {% if total_stock <= medication.reorder_level %}text-danger{% else %}text-success{% endif %}">{{ medication.reorder_level|intcomma }}</span>
-                            {% if total_stock <= medication.reorder_level %}
-                            <small class="text-danger d-block"><i class="bi bi-exclamation-triangle-fill me-1"></i>Low Stock Alert</small>
-                            {% else %}
-                            <small class="text-success d-block"><i class="bi bi-check-circle-fill me-1"></i>Adequate Stock</small>
-                            {% endif %}
+                        <div class="info-item">
+                            <div class="info-item-label">Generic / Alternate Name</div>
+                            <div class="info-item-value">{{ medication.generic_name|default:"-" }}</div>
                         </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="p-3 rounded border">
-                            <small class="text-muted d-block mb-1"><i class="bi bi-circle-fill me-1"></i>Status</small>
-                            {% if medication.is_active %}
-                                <span class="badge bg-success me-2"><i class="bi bi-check-circle me-1"></i>Active</span>
-                            {% else %}
-                                <span class="badge bg-secondary me-2"><i class="bi bi-x-circle me-1"></i>Inactive</span>
-                            {% endif %}
-                            <small class="text-muted">Added {{ medication.created_at|date:"M d, Y" }}</small>
+                        <div class="info-item">
+                            <div class="info-item-label">Form</div>
+                            <div class="info-item-value">{{ medication.get_form_display }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-item-label">Strength</div>
+                            <div class="info-item-value">{{ medication.strength }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-item-label">Manufacturer</div>
+                            <div class="info-item-value">{{ medication.manufacturer|default:"-" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-item-label">Unit of Measure</div>
+                            <div class="info-item-value">{{ medication.unit_of_measure|default:"-" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-item-label">Prescription Rule</div>
+                            <div class="info-item-value">{% if medication.requires_prescription %}Required{% else %}Not Required{% endif %}</div>
                         </div>
                     </div>
                 </div>
 
-                {% if medication.is_active %}
-                <div class="mt-3 p-3 rounded border-start border-3 {% if total_stock <= medication.reorder_level %}border-danger{% else %}border-success{% endif %}" style="background: {% if total_stock <= medication.reorder_level %}#fef2f2{% else %}#f0fdf4{% endif %};">
-                    <small class="text-muted d-block mb-2"><i class="bi bi-graph-up me-1"></i><strong>Stock Summary</strong></small>
-                    <p class="mb-0">
-                        {% if total_stock <= medication.reorder_level %}
-                        <span class="text-danger fw-semibold">Stock is below the reorder level of {{ medication.reorder_level }} units. Consider placing a purchase order.</span>
-                        {% else %}
-                        <span class="text-success fw-semibold">Stock levels are healthy at {{ total_stock|intcomma }} units (reorder at {{ medication.reorder_level }}).</span>
+                <!-- Selling Units Card -->
+                <div class="info-card" style="margin-top: 16px;">
+                    <div class="info-card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-rulers me-2"></i>Selling Units</span>
+                        <button type="button" class="btn btn-link btn-sm p-0" style="font-size: 10px; color: #6366f1;" onclick="openMedicationUnitModal({{ medication.pk }})">
+                            <i class="bi bi-plus-circle me-1"></i>Manage
+                        </button>
+                    </div>
+                    <div class="info-card-body">
+                        <!-- Base Unit -->
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="font-size: 12px;">
+                            <div>
+                                <span class="fw-semibold">{{ medication.unit_of_measure }}</span>
+                                <span class="badge ms-1" style="background: #0d9488; font-size: 9px;">Base</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-bold">UGX {{ medication.unit_price|floatformat:0|intcomma }}</span>
+                            </div>
+                        </div>
+                        <!-- Additional Units -->
+                        {% for unit in medication.units.all %}
+                        {% if unit.is_active %}
+                        <div class="d-flex justify-content-between align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}" style="font-size: 12px;">
+                            <div>
+                                <span class="fw-semibold">{{ unit.unit_name }}</span>
+                                {% if unit.is_default %}<span class="badge ms-1" style="background: #6366f1; font-size: 9px;">Default</span>{% endif %}
+                                <span class="text-muted" style="font-size: 10px;"> · {{ unit.quantity_per_base }} per {{ medication.unit_of_measure }}</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-bold">UGX {{ unit.selling_price|floatformat:0|intcomma }}</span>
+                            </div>
+                        </div>
                         {% endif %}
-                    </p>
+                        {% empty %}
+                        <div class="text-center text-muted py-2" style="font-size: 11px;">
+                            <i class="bi bi-info-circle me-1"></i>No additional units defined
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                {% endif %}
+
+                <!-- Management Flow -->
+                <div class="flow-card">
+                    <div class="flow-badge">Management Flow</div>
+                    
+                    <a href="javascript:void(0)" onclick="openMedicationEditModal({{ medication.pk }})" class="flow-item d-block text-decoration-none">
+                        <div class="flow-item-title">Update item profile</div>
+                        <div class="flow-item-desc">Adjust item type, pricing, packaging, and operational rules.</div>
+                    </a>
+                    
+                    <div class="flow-item" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+                        <div class="flow-item-title">Receive a new batch</div>
+                        <div class="flow-item-desc">Record incoming stock directly against this item.</div>
+                    </div>
+                    
+                    <a href="{% url 'pharmacy:sales_list' %}" class="flow-item d-block text-decoration-none">
+                        <div class="flow-item-title">Sell or dispense</div>
+                        <div class="flow-item-desc">Move from this item into the pharmacy sales workflow.</div>
+                    </a>
+                    
+                    <a href="{% url 'pharmacy:prescription_list' %}" class="flow-item d-block text-decoration-none">
+                        <div class="flow-item-title">Review prescriptions</div>
+                        <div class="flow-item-desc">Track pending and dispensed prescription records for this medication.</div>
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Active Batches Table -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-boxes me-2"></i>Active Batches</h6>
-                    <span class="badge bg-white text-dark">{{ batches_count }} batch{{ batches_count|pluralize:"es" }}</span>
+        <!-- Batches Tab -->
+        <div class="tab-pane fade" id="batches" role="tabpanel">
+            <div class="batches-card" style="margin-top: 0;">
+                <div class="batches-header">
+                    <i class="bi bi-boxes me-2"></i>Stock Batches ({{ batches_count }})
                 </div>
-            </div>
-            {% if batches %}
-            <div class="card-body p-0">
+                {% if batches %}
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                    <table class="batches-table">
                         <thead>
-                            <tr style="background: #f0f4f8;">
-                                <th class="ps-3 text-muted" style="width: 40px;">#</th>
-                                <th style="min-width: 140px;">Batch Number</th>
-                                <th style="min-width: 160px;">Supplier</th>
-                                <th class="text-center" style="width: 100px;">Qty Remaining</th>
-                                <th class="text-center" style="min-width: 120px;">Cost Price</th>
-                                <th class="text-center" style="min-width: 120px;">Sell Price</th>
-                                <th class="text-center" style="min-width: 120px;">Expiry Date</th>
-                                <th class="text-center" style="width: 100px;">Days Left</th>
-                                <th class="text-center" style="width: 80px;">Actions</th>
+                            <tr>
+                                <th>#</th>
+                                <th>Batch Number</th>
+                                <th>Supplier</th>
+                                <th class="text-center">Qty Remaining</th>
+                                <th class="text-center">Cost Price</th>
+                                <th class="text-center">Sell Price</th>
+                                <th class="text-center">Expiry Date</th>
+                                <th class="text-center">Days Left</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for batch in batches %}
                             <tr>
-                                <td class="ps-3 text-muted small">{{ forloop.counter }}</td>
-                                <td>
-                                    <a href="{% url 'pharmacy:batch_detail' batch.pk %}" class="fw-semibold text-decoration-none">{{ batch.batch_number }}</a>
-                                </td>
-                                <td>
-                                    <span class="fw-semibold small">{{ batch.supplier.name|default:"N/A" }}</span>
-                                </td>
-                                <td class="text-center">
-                                    {% if batch.quantity_remaining <= 10 %}
-                                        <span class="badge rounded-pill bg-danger px-3">{{ batch.quantity_remaining }}</span>
-                                    {% elif batch.quantity_remaining <= 50 %}
-                                        <span class="badge rounded-pill bg-warning text-dark px-3">{{ batch.quantity_remaining }}</span>
-                                    {% else %}
-                                        <span class="badge rounded-pill bg-success px-3">{{ batch.quantity_remaining }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center small">{{ batch.cost_price|floatformat:0|intcomma }} <small class="text-muted">UGX</small></td>
-                                <td class="text-center small">{{ batch.selling_price|floatformat:0|intcomma }} <small class="text-muted">UGX</small></td>
-                                <td class="text-center small">{{ batch.expiry_date|date:"M d, Y" }}</td>
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td><a href="{% url 'pharmacy:batch_detail' batch.pk %}" class="batch-link">{{ batch.batch_number }}</a></td>
+                                <td>{{ batch.supplier.name|default:"N/A" }}</td>
+                                <td class="text-center fw-semibold">{{ batch.quantity_remaining }}</td>
+                                <td class="text-center">{{ batch.cost_price|floatformat:0|intcomma }}</td>
+                                <td class="text-center">{{ batch.selling_price|floatformat:0|intcomma }}</td>
+                                <td class="text-center">{{ batch.expiry_date|date:"d M Y" }}</td>
                                 <td class="text-center">
                                     {% with days=batch.get_remaining_shelf_life_days %}
                                         {% if days <= 30 %}
-                                            <span class="badge rounded-pill bg-danger px-3"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ days }}d</span>
+                                            <span style="color: #ef4444; font-weight: 600;">{{ days }}d</span>
                                         {% elif days <= 90 %}
-                                            <span class="badge rounded-pill bg-warning text-dark px-3"><i class="bi bi-clock me-1"></i>{{ days }}d</span>
+                                            <span style="color: #f59e0b; font-weight: 600;">{{ days }}d</span>
                                         {% else %}
-                                            <span class="badge rounded-pill bg-success px-3"><i class="bi bi-check-circle me-1"></i>{{ days }}d</span>
+                                            <span style="color: #10b981; font-weight: 600;">{{ days }}d</span>
                                         {% endif %}
                                     {% endwith %}
                                 </td>
                                 <td class="text-center">
-                                    <a href="{% url 'pharmacy:batch_edit' batch.pk %}" class="btn btn-sm btn-outline-primary px-2">
-                                        <i class="bi bi-pencil-square"></i>
+                                    <a href="{% url 'pharmacy:batch_edit' batch.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size: 10px; padding: 2px 8px;">
+                                        <i class="bi bi-pencil"></i>
                                     </a>
                                 </td>
                             </tr>
@@ -267,19 +656,215 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
-            {% else %}
-            <div class="card-body text-center py-5">
-                <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-inbox" style="font-size: 2rem; color: #95a5a6;"></i>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox d-block"></i>
+                    <p>No batches in stock for this medication</p>
+                    <button type="button" class="btn btn-sm mt-2" style="background: #0d9488; color: white;" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
+                        <i class="bi bi-plus-circle me-1"></i> Receive First Batch
+                    </button>
                 </div>
-                <h5 class="fw-bold mb-2" style="color: #2c3e50;">No Active Batches</h5>
-                <p class="text-muted mb-4">This medication doesn't have any batches in stock.</p>
-                <button type="button" class="btn btn-success px-4 py-2" data-bs-toggle="modal" data-bs-target="#batchCreateModal">
-                    <i class="bi bi-plus-circle me-2"></i>Receive First Batch
-                </button>
+                {% endif %}
             </div>
-            {% endif %}
+        </div>
+
+        <!-- Prescription History Tab -->
+        <div class="tab-pane fade" id="prescriptions" role="tabpanel">
+            <div class="batches-card" style="margin-top: 0;">
+                <div class="batches-header">
+                    <i class="bi bi-file-medical me-2"></i>Prescription History ({{ prescription_count }})
+                </div>
+                {% if prescription_items %}
+                <div class="table-responsive">
+                    <table class="batches-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Prescription #</th>
+                                <th>Patient</th>
+                                <th>Dosage</th>
+                                <th>Frequency</th>
+                                <th>Duration</th>
+                                <th class="text-center">Qty</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in prescription_items %}
+                            <tr>
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td>
+                                    <a href="{% url 'pharmacy:prescription_print' item.prescription.pk %}" class="batch-link" target="_blank">
+                                        {{ item.prescription.prescription_number|default:"#"|truncatechars:12 }}
+                                    </a>
+                                </td>
+                                <td>{{ item.prescription.patient.get_full_name }}</td>
+                                <td>{{ item.dosage }}</td>
+                                <td>{{ item.frequency }}</td>
+                                <td>{{ item.duration }}</td>
+                                <td class="text-center fw-semibold">{{ item.quantity }}</td>
+                                <td>{{ item.prescription.prescribed_date|date:"d M Y" }}</td>
+                                <td>
+                                    {% if item.prescription.status == 'dispensed' %}
+                                    <span style="color: #10b981; font-weight: 600;">Dispensed</span>
+                                    {% elif item.prescription.status == 'pending' %}
+                                    <span style="color: #f59e0b; font-weight: 600;">Pending</span>
+                                    {% else %}
+                                    <span style="color: #64748b;">{{ item.prescription.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-file-medical d-block"></i>
+                    <p>No prescription records found for this medication</p>
+                    <a href="{% url 'pharmacy:prescription_list' %}" class="btn btn-sm mt-2" style="background: #0d9488; color: white;">
+                        <i class="bi bi-eye me-1"></i> View All Prescriptions
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sales History Tab -->
+        <div class="tab-pane fade" id="sales" role="tabpanel">
+            <div class="batches-card" style="margin-top: 0;">
+                <div class="batches-header">
+                    <i class="bi bi-cart me-2"></i>Sales / Dispensing History
+                </div>
+                {% if dispensed_items %}
+                <div class="table-responsive">
+                    <table class="batches-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Batch #</th>
+                                <th class="text-center">Quantity</th>
+                                <th>Dispensed By</th>
+                                <th>Date</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in dispensed_items %}
+                            <tr>
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td class="batch-link">{{ item.batch.batch_number }}</td>
+                                <td class="text-center fw-semibold">{{ item.quantity }}</td>
+                                <td>{{ item.dispensed_by.get_full_name|default:item.dispensed_by.username }}</td>
+                                <td>{{ item.dispensed_at|date:"d M Y H:i" }}</td>
+                                <td>{{ item.notes|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-cart d-block"></i>
+                    <p>No sales/dispensing records found for this medication</p>
+                    <a href="{% url 'pharmacy:sales_list' %}" class="btn btn-sm mt-2" style="background: #0d9488; color: white;">
+                        <i class="bi bi-eye me-1"></i> View All Sales
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stock History Tab -->
+        <div class="tab-pane fade" id="stock-history" role="tabpanel">
+            <div class="batches-card" style="margin-top: 0;">
+                <div class="batches-header">
+                    <i class="bi bi-clock-history me-2"></i>Stock Movement History
+                </div>
+                {% if stock_movements %}
+                <div class="table-responsive">
+                    <table class="batches-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Batch #</th>
+                                <th>Type</th>
+                                <th class="text-center">Quantity</th>
+                                <th>Reference</th>
+                                <th>By</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movement in stock_movements %}
+                            <tr>
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td class="batch-link">{{ movement.batch.batch_number }}</td>
+                                <td>
+                                    {% if movement.movement_type == 'in' %}
+                                    <span style="color: #10b981; font-weight: 600;"><i class="bi bi-arrow-down-circle me-1"></i>Stock In</span>
+                                    {% elif movement.movement_type == 'out' %}
+                                    <span style="color: #ef4444; font-weight: 600;"><i class="bi bi-arrow-up-circle me-1"></i>Stock Out</span>
+                                    {% else %}
+                                    <span style="color: #f59e0b; font-weight: 600;"><i class="bi bi-arrow-left-right me-1"></i>Adjustment</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center fw-semibold">
+                                    {% if movement.movement_type == 'in' %}+{% elif movement.movement_type == 'out' %}-{% endif %}{{ movement.quantity }}
+                                </td>
+                                <td>{{ movement.reference|default:"-" }}</td>
+                                <td>{{ movement.created_by.get_full_name|default:movement.created_by.username }}</td>
+                                <td>{{ movement.created_at|date:"d M Y H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-clock-history d-block"></i>
+                    <p>No stock movement records found for this medication</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Details Tab -->
+        <div class="tab-pane fade" id="details" role="tabpanel">
+            <div class="info-card">
+                <div class="info-badge">Medication Details</div>
+                <div class="info-grid" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="info-item">
+                        <div class="info-item-label">Created On</div>
+                        <div class="info-item-value">{{ medication.created_at|date:"F d, Y" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">Last Updated</div>
+                        <div class="info-item-value">{{ medication.updated_at|date:"F d, Y"|default:medication.created_at|date:"F d, Y" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">Status</div>
+                        <div class="info-item-value">{% if medication.is_active %}Active{% else %}Inactive{% endif %}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">Requires Prescription</div>
+                        <div class="info-item-value">{% if medication.requires_prescription %}Yes{% else %}No{% endif %}</div>
+                    </div>
+                    {% if medication.storage_instructions %}
+                    <div class="info-item" style="grid-column: span 2;">
+                        <div class="info-item-label">Storage Instructions</div>
+                        <div class="info-item-value">{{ medication.storage_instructions }}</div>
+                    </div>
+                    {% endif %}
+                    {% if medication.notes %}
+                    <div class="info-item" style="grid-column: span 2;">
+                        <div class="info-item-label">Notes</div>
+                        <div class="info-item-value">{{ medication.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 </div>

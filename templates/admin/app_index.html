@@ -9,129 +9,131 @@
     #content { padding: 24px !important; max-width: 100%; }
     #content > h1 { display: none; }
 
-    /* Stats Row */
-    .stats-row {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin-bottom: 30px;
-    }
-    .stat-card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        border: 1px solid #e8ecf1;
+    /* App Header */
+    .app-header {
         display: flex;
         align-items: center;
         gap: 16px;
-        transition: transform 0.15s, box-shadow 0.15s;
+        margin-bottom: 28px;
+        padding: 24px 28px;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e8ecf1;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    }
-    .stat-icon {
-        width: 50px; height: 50px;
-        border-radius: 12px;
+    .app-header-icon {
+        width: 60px; height: 60px;
+        border-radius: 14px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 22px; flex-shrink: 0;
+        font-size: 28px; flex-shrink: 0;
     }
-    .stat-icon.ic-blue    { background: #dbeafe; color: #2563eb; }
-    .stat-icon.ic-pink    { background: #fce7f3; color: #db2777; }
-    .stat-icon.ic-green   { background: #d1fae5; color: #059669; }
-    .stat-icon.ic-purple  { background: #ede9fe; color: #7c3aed; }
-    .stat-info h3 { margin: 0; font-size: 24px; font-weight: 700; color: #1e293b; }
-    .stat-info p  { margin: 2px 0 0; font-size: 12px; color: #64748b; font-weight: 500; }
-    .stat-sub     { font-size: 11px; color: #94a3b8; margin-top: 1px; }
-
-    /* Quick Actions */
-    .section-title {
-        font-size: 15px; font-weight: 600; color: #334155;
-        margin: 0 0 14px; padding-bottom: 8px;
-        border-bottom: 2px solid #e2e8f0;
+    .app-header-info h1 {
+        margin: 0; font-size: 22px; font-weight: 700; color: #1e293b;
     }
-    .actions-row {
-        display: flex; flex-wrap: wrap; gap: 8px;
-        margin-bottom: 30px;
+    .app-header-info p {
+        margin: 4px 0 0; font-size: 13px; color: #64748b;
     }
-    .qa-btn {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 9px 16px;
-        background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
-        color: #475569; text-decoration: none;
-        font-size: 13px; font-weight: 500;
+    .app-header-back {
+        margin-left: auto;
+        padding: 8px 16px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        color: #475569;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
         transition: all 0.12s;
     }
-    .qa-btn:hover {
-        background: #f8fafc; border-color: #94a3b8; color: #0f172a;
-        text-decoration: none;
+    .app-header-back:hover {
+        background: #e2e8f0; color: #1e293b; text-decoration: none;
     }
 
-    /* App Cards Grid */
-    .apps-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 16px;
-        margin-bottom: 30px;
+    /* Icon bg colors */
+    .aih-patients        { background: #dbeafe; color: #2563eb; }
+    .aih-appointments    { background: #fce7f3; color: #db2777; }
+    .aih-billing         { background: #d1fae5; color: #059669; }
+    .aih-pharmacy        { background: #fef3c7; color: #d97706; }
+    .aih-laboratory      { background: #ede9fe; color: #7c3aed; }
+    .aih-medical_records { background: #cffafe; color: #0891b2; }
+    .aih-staff_management{ background: #e0e7ff; color: #4f46e5; }
+    .aih-budget          { background: #ffedd5; color: #ea580c; }
+    .aih-reports         { background: #fce7f3; color: #be185d; }
+    .aih-clinic_settings { background: #f1f5f9; color: #475569; }
+    .aih-accounts        { background: #ccfbf1; color: #0d9488; }
+    .aih-auth            { background: #ccfbf1; color: #0d9488; }
+    .aih-tenants         { background: #ede9fe; color: #6d28d9; }
+    .aih-inventory       { background: #fef9c3; color: #a16207; }
+    .aih-default         { background: #f1f5f9; color: #64748b; }
+
+    /* Section title */
+    .section-title {
+        font-size: 15px; font-weight: 600; color: #334155;
+        margin: 0 0 16px; padding-bottom: 8px;
+        border-bottom: 2px solid #e2e8f0;
     }
-    .app-card {
+
+    /* Model Cards Grid */
+    .models-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+        margin-bottom: 32px;
+    }
+    .model-card {
         background: #fff;
         border-radius: 12px;
         border: 1px solid #e8ecf1;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        overflow: hidden;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
         text-decoration: none;
-        display: block;
-        transition: transform 0.15s, box-shadow 0.15s;
+        transition: transform 0.12s, box-shadow 0.12s;
     }
-    .app-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    .model-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
         text-decoration: none;
     }
-    .app-card-top {
-        padding: 24px 20px 18px;
-        text-align: center;
+    .model-icon {
+        width: 42px; height: 42px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; flex-shrink: 0;
+        background: #f1f5f9; color: #64748b;
     }
-    .app-card-icon {
-        width: 56px; height: 56px;
-        border-radius: 14px;
-        display: inline-flex; align-items: center; justify-content: center;
-        font-size: 26px;
-        margin-bottom: 10px;
-    }
-    .app-card-top h3 {
+    .model-info { flex: 1; min-width: 0; }
+    .model-info h3 {
         margin: 0; font-size: 14px; font-weight: 600; color: #1e293b;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .app-card-top .app-count {
-        font-size: 11px; color: #94a3b8; margin-top: 4px;
+    .model-actions {
+        display: flex; gap: 6px; margin-top: 6px;
     }
-    .app-card-bottom {
-        padding: 10px 20px;
-        background: #f8fafc;
-        border-top: 1px solid #f1f5f9;
-        text-align: center;
-        font-size: 12px; font-weight: 500; color: #64748b;
+    .model-actions a {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px; font-weight: 500;
+        text-decoration: none;
+        transition: all 0.1s;
     }
-    .app-card:hover .app-card-bottom { color: #2563eb; }
+    .btn-view {
+        background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;
+    }
+    .btn-view:hover { background: #dbeafe; text-decoration: none; }
+    .btn-add {
+        background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
+    }
+    .btn-add:hover { background: #dcfce7; text-decoration: none; }
 
-    /* Card icon colors */
-    .aic-patients      { background: #dbeafe; color: #2563eb; }
-    .aic-appointments  { background: #fce7f3; color: #db2777; }
-    .aic-billing       { background: #d1fae5; color: #059669; }
-    .aic-pharmacy      { background: #fef3c7; color: #d97706; }
-    .aic-laboratory    { background: #ede9fe; color: #7c3aed; }
-    .aic-medical_records { background: #cffafe; color: #0891b2; }
-    .aic-staff_management { background: #e0e7ff; color: #4f46e5; }
-    .aic-budget        { background: #ffedd5; color: #ea580c; }
-    .aic-reports       { background: #fce7f3; color: #be185d; }
-    .aic-clinic_settings { background: #f1f5f9; color: #475569; }
-    .aic-accounts      { background: #ccfbf1; color: #0d9488; }
-    .aic-auth          { background: #ccfbf1; color: #0d9488; }
-    .aic-tenants       { background: #ede9fe; color: #6d28d9; }
-    .aic-inventory     { background: #fef9c3; color: #a16207; }
-    .aic-default       { background: #f1f5f9; color: #64748b; }
+    .model-arrow {
+        color: #cbd5e1; font-size: 18px; flex-shrink: 0;
+        transition: color 0.1s;
+    }
+    .model-card:hover .model-arrow { color: #64748b; }
 
     /* Recent Actions Dropdown */
     .ra-dropdown {
@@ -250,18 +252,10 @@
     .popup-body iframe {
         width: 100%; height: 100%; border: none;
     }
-    .popup-loading {
-        display: flex; align-items: center; justify-content: center;
-        height: 100%; color: #94a3b8; font-size: 14px;
-    }
 
-    @media (max-width: 900px) {
-        .stats-row { grid-template-columns: 1fr 1fr; }
-        .apps-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
-    }
-    @media (max-width: 520px) {
-        .stats-row { grid-template-columns: 1fr; }
-        .apps-grid { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 640px) {
+        .models-grid { grid-template-columns: 1fr; }
+        .app-header { flex-wrap: wrap; }
     }
 </style>
 {% endblock %}
@@ -269,89 +263,106 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-    &rsaquo; {% trans 'Dashboard' %}
+    {% for app in app_list %}
+    &rsaquo; {{ app.name }}
+    {% endfor %}
 </div>
 {% endblock %}
 
 {% block content %}
 
-<!-- Stats -->
-<div class="stats-row">
-    <div class="stat-card">
-        <div class="stat-icon ic-blue">👥</div>
-        <div class="stat-info">
-            <h3>{{ total_patients|default:"0" }}</h3>
-            <p>{% trans 'Patients' %}</p>
-        </div>
+{% for app in app_list %}
+<!-- App Header -->
+<div class="app-header">
+    <div class="app-header-icon aih-{{ app.app_label|default:'default' }}">
+        {% if app.app_label == 'patients' %}👥
+        {% elif app.app_label == 'appointments' %}📅
+        {% elif app.app_label == 'billing' %}💰
+        {% elif app.app_label == 'pharmacy' %}💊
+        {% elif app.app_label == 'laboratory' %}🔬
+        {% elif app.app_label == 'medical_records' %}📋
+        {% elif app.app_label == 'staff_management' %}👨‍⚕️
+        {% elif app.app_label == 'budget' %}📈
+        {% elif app.app_label == 'reports' %}📊
+        {% elif app.app_label == 'clinic_settings' %}⚙️
+        {% elif app.app_label == 'accounts' or app.app_label == 'auth' %}🔐
+        {% elif app.app_label == 'tenants' %}🏢
+        {% elif app.app_label == 'inventory' %}📦
+        {% else %}📁{% endif %}
     </div>
-    <div class="stat-card">
-        <div class="stat-icon ic-pink">📅</div>
-        <div class="stat-info">
-            <h3>{{ total_appointments|default:"0" }}</h3>
-            <p>{% trans 'Appointments' %}</p>
-            <div class="stat-sub">{{ todays_appointments|default:"0" }} {% trans "today" %}</div>
-        </div>
+    <div class="app-header-info">
+        <h1>{{ app.name }}</h1>
+        <p>{{ app.models|length }} model{{ app.models|length|pluralize }} available</p>
     </div>
-    <div class="stat-card">
-        <div class="stat-icon ic-green">💰</div>
-        <div class="stat-info">
-            <h3>{{ total_invoices|default:"0" }}</h3>
-            <p>{% trans 'Invoices' %}</p>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon ic-purple">🏥</div>
-        <div class="stat-info">
-            <h3>{{ total_staff|default:"0" }}</h3>
-            <p>{% trans 'Staff' %}</p>
-        </div>
-    </div>
+    <a href="{% url 'admin:index' %}" class="app-header-back">← {% trans 'Back to Dashboard' %}</a>
 </div>
 
-<!-- Quick Actions -->
-<h2 class="section-title">{% trans 'Quick Actions' %}</h2>
-<div class="actions-row">
-    <a class="qa-btn popup-add" href="{% url 'admin:patients_patient_add' %}" data-title="New Patient">➕ {% trans 'New Patient' %}</a>
-    <a class="qa-btn popup-add" href="{% url 'admin:appointments_appointment_add' %}" data-title="Schedule Appointment">📅 {% trans 'Appointment' %}</a>
-    <a class="qa-btn popup-add" href="{% url 'admin:billing_invoice_add' %}" data-title="Create Invoice">🧾 {% trans 'Invoice' %}</a>
-    <a class="qa-btn popup-add" href="{% url 'admin:laboratory_labtestrequest_add' %}" data-title="Lab Test Request">🔬 {% trans 'Lab Request' %}</a>
-    <a class="qa-btn popup-add" href="{% url 'admin:pharmacy_medication_add' %}" data-title="Add Medication">💊 {% trans 'Medication' %}</a>
-    <a class="qa-btn" href="/dashboard/">📊 {% trans 'Main Dashboard' %}</a>
-</div>
-
-<!-- App Cards -->
-<h2 class="section-title">{% trans 'Modules' %}</h2>
-<div class="apps-grid">
-    {% for app in app_list %}
-    <a class="app-card" href="{{ app.app_url }}">
-        <div class="app-card-top">
-            <div class="app-card-icon aic-{{ app.app_label|default:'default' }}">
-                {% if app.app_label == 'patients' %}👥
-                {% elif app.app_label == 'appointments' %}📅
-                {% elif app.app_label == 'billing' %}💰
-                {% elif app.app_label == 'pharmacy' %}💊
-                {% elif app.app_label == 'laboratory' %}🔬
-                {% elif app.app_label == 'medical_records' %}📋
-                {% elif app.app_label == 'staff_management' %}👨‍⚕️
-                {% elif app.app_label == 'budget' %}📈
-                {% elif app.app_label == 'reports' %}📊
-                {% elif app.app_label == 'clinic_settings' %}⚙️
-                {% elif app.app_label == 'accounts' or app.app_label == 'auth' %}🔐
-                {% elif app.app_label == 'tenants' %}🏢
-                {% elif app.app_label == 'inventory' %}�
-                {% else %}📁{% endif %}
+<!-- Models -->
+<h2 class="section-title">{% trans 'Models' %}</h2>
+<div class="models-grid">
+    {% for model in app.models %}
+    <div class="model-card">
+        <div class="model-icon">
+            {% if 'patient' in model.object_name|lower %}👤
+            {% elif 'appointment' in model.object_name|lower %}📅
+            {% elif 'invoice' in model.object_name|lower %}🧾
+            {% elif 'payment' in model.object_name|lower %}💳
+            {% elif 'insurance' in model.object_name|lower %}🛡️
+            {% elif 'medication' in model.object_name|lower or 'drug' in model.object_name|lower %}💊
+            {% elif 'batch' in model.object_name|lower %}📦
+            {% elif 'supplier' in model.object_name|lower %}🏭
+            {% elif 'category' in model.object_name|lower %}🏷️
+            {% elif 'prescription' in model.object_name|lower %}📝
+            {% elif 'stock' in model.object_name|lower %}📊
+            {% elif 'order' in model.object_name|lower %}🛒
+            {% elif 'lab' in model.object_name|lower or 'test' in model.object_name|lower %}🔬
+            {% elif 'result' in model.object_name|lower or 'parameter' in model.object_name|lower %}📋
+            {% elif 'record' in model.object_name|lower or 'document' in model.object_name|lower %}📄
+            {% elif 'staff' in model.object_name|lower %}👨‍⚕️
+            {% elif 'department' in model.object_name|lower %}🏢
+            {% elif 'roster' in model.object_name|lower or 'attendance' in model.object_name|lower %}📆
+            {% elif 'leave' in model.object_name|lower or 'shift' in model.object_name|lower %}🔄
+            {% elif 'budget' in model.object_name|lower %}💼
+            {% elif 'expense' in model.object_name|lower %}💸
+            {% elif 'report' in model.object_name|lower %}📊
+            {% elif 'setting' in model.object_name|lower %}⚙️
+            {% elif 'module' in model.object_name|lower %}🧩
+            {% elif 'user' in model.object_name|lower %}🔐
+            {% elif 'hospital' in model.object_name|lower %}🏥
+            {% elif 'service' in model.object_name|lower %}🩺
+            {% elif 'session' in model.object_name|lower or 'consultation' in model.object_name|lower %}🗓️
+            {% elif 'group' in model.object_name|lower %}👥
+            {% elif 'vital' in model.object_name|lower or 'triage' in model.object_name|lower %}❤️
+            {% elif 'assessment' in model.object_name|lower %}📝
+            {% elif 'audit' in model.object_name|lower or 'log' in model.object_name|lower %}📜
+            {% elif 'price' in model.object_name|lower %}💲
+            {% elif 'profile' in model.object_name|lower %}📑
+            {% elif 'sale' in model.object_name|lower %}🛍️
+            {% elif 'alert' in model.object_name|lower %}🔔
+            {% else %}📄{% endif %}
+        </div>
+        <div class="model-info">
+            <h3>{{ model.name }}</h3>
+            <div class="model-actions">
+                {% if model.admin_url %}
+                <a href="{{ model.admin_url }}" class="btn-view">{% trans 'View All' %}</a>
+                {% endif %}
+                {% if model.add_url %}
+                <a href="{{ model.add_url }}" class="btn-add popup-add" data-title="Add {{ model.name }}">+ {% trans 'Add' %}</a>
+                {% endif %}
             </div>
-            <h3>{{ app.name }}</h3>
-            <div class="app-count">{{ app.models|length }} model{{ app.models|length|pluralize }}</div>
         </div>
-        <div class="app-card-bottom">{% trans 'Open' %} &rarr;</div>
-    </a>
-    {% empty %}
-    <p style="color:#94a3b8; padding:20px;">{% trans "No modules available." %}</p>
+        {% if model.admin_url %}
+        <a href="{{ model.admin_url }}" class="model-arrow">›</a>
+        {% endif %}
+    </div>
     {% endfor %}
 </div>
+{% endfor %}
 
 {% endblock %}
+
+{% block sidebar %}{% endblock %}
 
 {% block footer %}
 <!-- Popup Modal -->
@@ -417,6 +428,7 @@
     document.querySelectorAll('.popup-add').forEach(function(link){
         link.addEventListener('click', function(e){
             e.preventDefault();
+            e.stopPropagation();
             addUrl = this.href;
             titleEl.textContent = this.getAttribute('data-title') || 'Add New';
             frame.src = addUrl;

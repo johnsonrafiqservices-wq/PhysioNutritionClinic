@@ -9,9 +9,9 @@ from billing.models import Invoice
 User = get_user_model()
 
 class AlafiaAdminSite(AdminSite):
-    site_header = 'Alafia Point Wellness Clinic Administration'
-    site_title = 'Alafia Admin'
-    index_title = 'Welcome to Alafia Point Wellness Clinic Administration'
+    site_header = 'PhysioNutrition Clinic Administration'
+    site_title = 'PhysioNutrition Admin'
+    index_title = 'Welcome to PhysioNutrition Clinic Administration'
 
     def index(self, request, extra_context=None):
         """

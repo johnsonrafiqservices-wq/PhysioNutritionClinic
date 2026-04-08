@@ -44,23 +44,32 @@ urlpatterns = [
     # Sales Management
     path('sales/', views.sales_dashboard, name='sales_dashboard'),
     path('sales/list/', views.sales_list, name='sales_list'),
+    path('sales/<int:pk>/', views.sale_detail, name='sale_detail'),
     path('sales/report/', views.sales_report, name='sales_report'),
     path('sales/record-ajax/', views.record_sale_ajax, name='record_sale_ajax'),
     path('sales/add-to-invoice-ajax/', views.add_sale_to_invoice_ajax, name='add_sale_to_invoice_ajax'),
     
     # AJAX endpoints
     path('ajax/medication/create/', views.medication_create_ajax, name='medication_create_ajax'),
+    path('ajax/medication/<int:pk>/details/', views.medication_details_ajax, name='medication_details_ajax'),
     path('ajax/medication/<int:pk>/update/', views.medication_update_ajax, name='medication_update_ajax'),
     path('ajax/medications/list/', views.get_medications_ajax, name='get_medications_ajax'),
     path('ajax/batches/list/', views.get_batches_ajax, name='get_batches_ajax'),
     path('ajax/batch/create/', views.batch_create_ajax, name='batch_create_ajax'),
     path('ajax/batch/<int:pk>/update/', views.batch_update_ajax, name='batch_update_ajax'),
     path('ajax/prescription/create/', views.prescription_create_ajax, name='prescription_create_ajax'),
+    path('ajax/prescription/<int:pk>/details/', views.prescription_details_ajax, name='prescription_details_ajax'),
     path('ajax/prescription/<int:pk>/dispense/', views.dispense_prescription_ajax, name='dispense_prescription_ajax'),
     path('ajax/prescription/<int:prescription_id>/total/', views.get_prescription_total_ajax, name='get_prescription_total_ajax'),
     path('ajax/stock/adjustment/<int:batch_id>/', views.stock_adjustment_ajax, name='stock_adjustment_ajax'),
     path('ajax/supplier/create/', views.supplier_create_ajax, name='supplier_create_ajax'),
     path('ajax/supplier/<int:pk>/update/', views.supplier_update_ajax, name='supplier_update_ajax'),
+    
+    # Medication Units AJAX
+    path('ajax/medication/<int:medication_id>/units/', views.medication_units_list_ajax, name='medication_units_list_ajax'),
+    path('ajax/medication/<int:medication_id>/units/create/', views.medication_unit_create_ajax, name='medication_unit_create_ajax'),
+    path('ajax/medication-unit/<int:pk>/update/', views.medication_unit_update_ajax, name='medication_unit_update_ajax'),
+    path('ajax/medication-unit/<int:pk>/delete/', views.medication_unit_delete_ajax, name='medication_unit_delete_ajax'),
     
     # Reports and analytics
     path('alerts/expiry/', expiry_alerts, name='expiry_alerts'),
