@@ -7,6 +7,11 @@ from .admin_views import admin_dashboard
 from django.shortcuts import redirect
 from accounts.views import dashboard
 from .views import serve_firestore_pdf
+from reports.admin_stats import (
+    stats_dashboard, stats_patients, stats_appointments,
+    stats_billing, stats_pharmacy, stats_laboratory, stats_staff,
+    export_stats_csv, export_stats_excel,
+)
 
 # Admin branding
 admin.site.site_header = 'PhysioNutrition Clinic Administration'
@@ -42,6 +47,16 @@ urlpatterns = [
     path('jet/', include('jet.urls', 'jet')),  # Django Jet URLS
     path('jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),  # Django Jet dashboard URLS
     path('admin/dashboard/', admin_dashboard, name='admin_dashboard'),
+    # Stats URLs — must come BEFORE admin.site.urls catch-all
+    path('admin/stats/', stats_dashboard, name='stats_dashboard'),
+    path('admin/stats/patients/', stats_patients, name='stats_patients'),
+    path('admin/stats/appointments/', stats_appointments, name='stats_appointments'),
+    path('admin/stats/billing/', stats_billing, name='stats_billing'),
+    path('admin/stats/pharmacy/', stats_pharmacy, name='stats_pharmacy'),
+    path('admin/stats/laboratory/', stats_laboratory, name='stats_laboratory'),
+    path('admin/stats/staff/', stats_staff, name='stats_staff'),
+    path('admin/stats/export/<str:module>/csv/', export_stats_csv, name='export_stats_csv'),
+    path('admin/stats/export/<str:module>/excel/', export_stats_excel, name='export_stats_excel'),
     path('admin/', admin.site.urls),
     path('', lambda request: redirect('accounts:login' if not request.user.is_authenticated else 'dashboard'), name='root_redirect'),
     path('dashboard/', dashboard, name='dashboard'),

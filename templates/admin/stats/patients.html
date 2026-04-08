@@ -1,0 +1,146 @@
+{% extends "admin/stats/base_stats.html" %}
+{% load i18n humanize %}
+
+{% block stats_content %}
+<div class="stats-header">
+    <h1>👥 Patient Statistics</h1>
+    <div class="stats-header-actions">
+        <form class="date-filter" method="get">
+            <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            <span>to</span>
+            <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            <button type="submit">Apply</button>
+        </form>
+        <div class="export-btns">
+            <a class="btn-export csv" href="{% url 'export_stats_csv' module='patients' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📄 CSV</a>
+            <a class="btn-export excel" href="{% url 'export_stats_excel' module='patients' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📊 Excel</a>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon blue">👥</div>
+        <div class="kpi-label">Total Active Patients</div>
+        <div class="kpi-value">{{ total|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green">🆕</div>
+        <div class="kpi-label">New Patients (Period)</div>
+        <div class="kpi-value">{{ new|intcomma }}</div>
+        <div class="kpi-change {% if change > 0 %}up{% elif change < 0 %}down{% else %}flat{% endif %}">
+            {% if change > 0 %}↑{% elif change < 0 %}↓{% else %}→{% endif %} {{ change }}% vs prev period
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon purple">📋</div>
+        <div class="kpi-label">Assessments (Period)</div>
+        <div class="kpi-value">{{ total_assessments|intcomma }}</div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="chart-grid">
+    <div class="chart-card full">
+        <div class="chart-header">
+            <span class="chart-title">Monthly Patient Registration Trend</span>
+            <span class="chart-badge">12 Months</span>
+        </div>
+        <div class="chart-body tall">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Gender Distribution</span></div>
+        <div class="chart-body"><canvas id="genderChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Age Distribution</span></div>
+        <div class="chart-body"><canvas id="ageChart"></canvas></div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Insurance Provider Distribution</span></div>
+        <div class="chart-body"><canvas id="insChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Department Assessments</span></div>
+        <div class="chart-body"><canvas id="deptChart"></canvas></div>
+    </div>
+</div>
+
+{% if triage_data != '[]' %}
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Triage Priority Distribution</span></div>
+        <div class="chart-body"><canvas id="triageChart"></canvas></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Patients Table -->
+{% if recent_patients %}
+<div class="stats-table-wrap">
+    <div class="stats-table-header">
+        <span class="stats-table-title">Recent Patients</span>
+    </div>
+    <table class="stats-table">
+        <thead><tr>
+            <th>Name</th><th>Gender</th><th>Phone</th><th>Registration</th><th>Insurance</th>
+        </tr></thead>
+        <tbody>
+        {% for p in recent_patients %}
+        <tr>
+            <td><strong>{{ p.first_name }} {{ p.last_name }}</strong></td>
+            <td>{{ p.gender }}</td>
+            <td>{{ p.phone }}</td>
+            <td>{{ p.registration_date|date:"M d, Y" }}</td>
+            <td>{{ p.insurance_provider|default:"None" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<script>
+new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: { labels: {{ trend_labels|safe }}, datasets: [{ label: 'New Patients', data: {{ trend_data|safe }}, borderColor: '#1B5E96', backgroundColor: 'rgba(27,94,150,0.1)', fill: true, pointRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+new Chart(document.getElementById('genderChart'), {
+    type: 'doughnut',
+    data: { labels: {{ gender_labels|safe }}, datasets: [{ data: {{ gender_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+new Chart(document.getElementById('ageChart'), {
+    type: 'bar',
+    data: { labels: {{ age_labels|safe }}, datasets: [{ label: 'Patients', data: {{ age_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+new Chart(document.getElementById('insChart'), {
+    type: 'bar',
+    data: { labels: {{ ins_labels|safe }}, datasets: [{ label: 'Patients', data: {{ ins_data|safe }}, backgroundColor: '#6366f1', borderRadius: 4 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+});
+new Chart(document.getElementById('deptChart'), {
+    type: 'doughnut',
+    data: { labels: {{ dept_labels|safe }}, datasets: [{ data: {{ dept_data|safe }}, backgroundColor: ['#1B5E96','#10b981','#f59e0b','#ef4444'] }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+{% if triage_data != '[]' %}
+new Chart(document.getElementById('triageChart'), {
+    type: 'bar',
+    data: { labels: {{ triage_labels|safe }}, datasets: [{ label: 'Count', data: {{ triage_data|safe }}, backgroundColor: ['#ef4444','#f59e0b','#1B5E96','#10b981','#94a3b8'] }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+{% endif %}
+</script>
+{% endblock %}

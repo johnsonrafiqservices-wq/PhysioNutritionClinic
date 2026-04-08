@@ -1,0 +1,127 @@
+{% extends "admin/stats/base_stats.html" %}
+{% load i18n humanize %}
+
+{% block stats_content %}
+<div class="stats-header">
+    <h1>👨‍⚕️ Staff Statistics</h1>
+    <div class="stats-header-actions">
+        <form class="date-filter" method="get">
+            <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            <span>to</span>
+            <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            <button type="submit">Apply</button>
+        </form>
+        <div class="export-btns">
+            <a class="btn-export csv" href="{% url 'export_stats_csv' module='staff' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📄 CSV</a>
+            <a class="btn-export excel" href="{% url 'export_stats_excel' module='staff' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📊 Excel</a>
+        </div>
+    </div>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon blue">👨‍⚕️</div>
+        <div class="kpi-label">Total Active Staff</div>
+        <div class="kpi-value">{{ total_staff }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green">✅</div>
+        <div class="kpi-label">Attendance Rate</div>
+        <div class="kpi-value">{{ att_rate }}%</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon blue">📋</div>
+        <div class="kpi-label">Total Attendance Records</div>
+        <div class="kpi-value">{{ total_att|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green">👤</div>
+        <div class="kpi-label">Present</div>
+        <div class="kpi-value">{{ present|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon red">❌</div>
+        <div class="kpi-label">Absent</div>
+        <div class="kpi-value">{{ absent|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon orange">⏰</div>
+        <div class="kpi-label">Late</div>
+        <div class="kpi-value">{{ late|intcomma }}</div>
+    </div>
+</div>
+
+<!-- Leave Stats -->
+<div class="quick-stats">
+    <div class="quick-stat"><strong>📝 Leave Requests:</strong> <span>{{ leave_total }} total</span></div>
+    <div class="quick-stat"><strong>✅ Approved:</strong> <span>{{ leave_approved }}</span></div>
+    <div class="quick-stat"><strong>⏳ Pending:</strong> <span>{{ leave_pending }}</span></div>
+    <div class="quick-stat"><strong>❌ Rejected:</strong> <span>{{ leave_rejected }}</span></div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Employment Status</span></div>
+        <div class="chart-body"><canvas id="statusChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Staff by Department</span></div>
+        <div class="chart-body"><canvas id="deptChart"></canvas></div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Attendance Distribution</span></div>
+        <div class="chart-body"><canvas id="attChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Leave Type Distribution</span></div>
+        <div class="chart-body"><canvas id="leaveChart"></canvas></div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card full">
+        <div class="chart-header">
+            <span class="chart-title">Monthly Attendance Trend</span>
+            <span class="chart-badge">12 Months</span>
+        </div>
+        <div class="chart-body tall"><canvas id="attTrendChart"></canvas></div>
+    </div>
+</div>
+
+<script>
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: { labels: {{ status_labels|safe }}, datasets: [{ data: {{ status_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+new Chart(document.getElementById('deptChart'), {
+    type: 'bar',
+    data: { labels: {{ dept_labels|safe }}, datasets: [{ label: 'Staff', data: {{ dept_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+});
+new Chart(document.getElementById('attChart'), {
+    type: 'doughnut',
+    data: { labels: {{ att_labels|safe }}, datasets: [{ data: {{ att_data|safe }}, backgroundColor: ['#10b981','#ef4444','#f59e0b'] }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+new Chart(document.getElementById('leaveChart'), {
+    type: 'doughnut',
+    data: { labels: {{ leave_type_labels|safe }}, datasets: [{ data: {{ leave_type_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+new Chart(document.getElementById('attTrendChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ att_trend_labels|safe }},
+        datasets: [
+            { label: 'Present', data: {{ att_trend_present|safe }}, backgroundColor: '#10b981' },
+            { label: 'Total', data: {{ att_trend_total|safe }}, backgroundColor: '#e2e8f0' }
+        ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends "admin/stats/base_stats.html" %}
+{% load i18n humanize %}
+
+{% block stats_content %}
+<!-- Header -->
+<div class="stats-header">
+    <h1>📊 Statistics Overview</h1>
+    <div class="stats-header-actions">
+        <form class="date-filter" method="get">
+            <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            <span>to</span>
+            <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            <button type="submit">Apply</button>
+        </form>
+        <div class="export-btns">
+            <a class="btn-export csv" href="{% url 'export_stats_csv' module='overview' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📄 CSV</a>
+            <a class="btn-export excel" href="{% url 'export_stats_excel' module='overview' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📊 Excel</a>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards Row 1: Main metrics -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon blue">👥</div>
+        <div class="kpi-label">Total Patients</div>
+        <div class="kpi-value">{{ total_patients|intcomma }}</div>
+        <div class="kpi-change {% if patients_change > 0 %}up{% elif patients_change < 0 %}down{% else %}flat{% endif %}">
+            {% if patients_change > 0 %}↑{% elif patients_change < 0 %}↓{% else %}→{% endif %} {{ patients_change }}% new
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green">📅</div>
+        <div class="kpi-label">Appointments</div>
+        <div class="kpi-value">{{ total_appts|intcomma }}</div>
+        <div class="kpi-change {% if appts_change > 0 %}up{% elif appts_change < 0 %}down{% else %}flat{% endif %}">
+            {% if appts_change > 0 %}↑{% elif appts_change < 0 %}↓{% else %}→{% endif %} {{ appts_change }}%
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon purple">💰</div>
+        <div class="kpi-label">Revenue</div>
+        <div class="kpi-value">{{ total_revenue|intcomma }}</div>
+        <div class="kpi-change {% if revenue_change > 0 %}up{% elif revenue_change < 0 %}down{% else %}flat{% endif %}">
+            {% if revenue_change > 0 %}↑{% elif revenue_change < 0 %}↓{% else %}→{% endif %} {{ revenue_change }}%
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon orange">📋</div>
+        <div class="kpi-label">Outstanding</div>
+        <div class="kpi-value">{{ outstanding|intcomma }}</div>
+        <div class="kpi-label" style="margin-top:4px">Collection: {{ collection_rate }}%</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon red">💊</div>
+        <div class="kpi-label">Low Stock Meds</div>
+        <div class="kpi-value">{{ low_stock }}</div>
+        <div class="kpi-label" style="margin-top:4px">of {{ total_meds }} total</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon blue">🔬</div>
+        <div class="kpi-label">Lab Requests</div>
+        <div class="kpi-value">{{ lab_requests|intcomma }}</div>
+        <div class="kpi-label" style="margin-top:4px">{{ lab_completion_rate }}% completed</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green">👨‍⚕️</div>
+        <div class="kpi-label">Active Staff</div>
+        <div class="kpi-value">{{ total_staff }}</div>
+        <div class="kpi-label" style="margin-top:4px">{{ attendance_today }} present today</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon {% if net_income >= 0 %}green{% else %}red{% endif %}">📈</div>
+        <div class="kpi-label">Net Income</div>
+        <div class="kpi-value" style="{% if net_income < 0 %}color:var(--s-danger){% endif %}">{{ net_income|floatformat:0|intcomma }}</div>
+        <div class="kpi-change {% if expenses_change > 0 %}down{% elif expenses_change < 0 %}up{% else %}flat{% endif %}">
+            Expenses {% if expenses_change > 0 %}↑{% elif expenses_change < 0 %}↓{% else %}→{% endif %} {{ expenses_change }}%
+        </div>
+    </div>
+</div>
+
+<!-- Alert banners -->
+{% if low_stock > 0 %}
+<div class="alert-card">
+    <span class="alert-icon">⚠️</span>
+    <span class="alert-text">{{ low_stock }} medication(s) are below reorder level. <a href="{% url 'stats_pharmacy' %}">View pharmacy stats →</a></span>
+</div>
+{% endif %}
+{% if expired_batches > 0 %}
+<div class="alert-card danger">
+    <span class="alert-icon">🚨</span>
+    <span class="alert-text">{{ expired_batches }} expired batch(es) found. {{ expiring_soon }} more expiring within 90 days.</span>
+</div>
+{% endif %}
+
+<!-- Charts Row 1: Revenue & Appointments Trends -->
+<div class="chart-grid">
+    <div class="chart-card full">
+        <div class="chart-header">
+            <span class="chart-title">Revenue vs Expenses (12 Months)</span>
+            <span class="chart-badge">Trend</span>
+        </div>
+        <div class="chart-body tall">
+            <canvas id="revExpChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Patient Registration Trend</span>
+            <span class="chart-badge">12 Months</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="patientTrendChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Daily Appointments (30 days)</span>
+            <span class="chart-badge">{{ completion_rate }}% completion</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="dailyApptChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2: Distributions -->
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Gender Distribution</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="genderChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Appointment Status</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="apptStatusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Top Services</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="servicesChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Payment Methods</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="payMethodChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Monthly Revenue Trend</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="revTrendChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header">
+            <span class="chart-title">Expense Categories</span>
+        </div>
+        <div class="chart-body">
+            <canvas id="expCatChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+// Revenue vs Expenses
+new Chart(document.getElementById('revExpChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ rev_vs_exp_labels|safe }},
+        datasets: [
+            { label: 'Revenue', data: {{ rev_vs_exp_rev|safe }}, backgroundColor: '#10b981', borderRadius: 4 },
+            { label: 'Expenses', data: {{ rev_vs_exp_exp|safe }}, backgroundColor: '#ef4444', borderRadius: 4 }
+        ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } }
+    }
+});
+
+// Patient Registration Trend
+new Chart(document.getElementById('patientTrendChart'), {
+    type: 'line',
+    data: {
+        labels: {{ patient_trend_labels|safe }},
+        datasets: [{ label: 'New Patients', data: {{ patient_trend_data|safe }}, borderColor: '#1B5E96', backgroundColor: 'rgba(27,94,150,0.1)', fill: true, pointRadius: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+
+// Daily Appointments
+new Chart(document.getElementById('dailyApptChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ daily_appt_labels|safe }},
+        datasets: [{ label: 'Appointments', data: {{ daily_appt_data|safe }}, backgroundColor: '#6366f1', borderRadius: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+});
+
+// Gender Distribution
+new Chart(document.getElementById('genderChart'), {
+    type: 'doughnut',
+    data: { labels: {{ gender_labels|safe }}, datasets: [{ data: {{ gender_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+});
+
+// Appointment Status
+new Chart(document.getElementById('apptStatusChart'), {
+    type: 'doughnut',
+    data: { labels: {{ appt_status_labels|safe }}, datasets: [{ data: {{ appt_status_data|safe }}, backgroundColor: ['#10b981','#ef4444','#f59e0b','#94a3b8'] }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+});
+
+// Top Services
+new Chart(document.getElementById('servicesChart'), {
+    type: 'bar',
+    data: { labels: {{ svc_labels|safe }}, datasets: [{ label: 'Appointments', data: {{ svc_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+});
+
+// Payment Methods
+new Chart(document.getElementById('payMethodChart'), {
+    type: 'pie',
+    data: { labels: {{ pm_labels|safe }}, datasets: [{ data: {{ pm_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+// Revenue Trend
+new Chart(document.getElementById('revTrendChart'), {
+    type: 'line',
+    data: { labels: {{ rev_trend_labels|safe }}, datasets: [{ label: 'Revenue', data: {{ rev_trend_data|safe }}, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, pointRadius: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } } }
+});
+
+// Expense Categories
+new Chart(document.getElementById('expCatChart'), {
+    type: 'doughnut',
+    data: { labels: {{ exp_cat_labels|safe }}, datasets: [{ data: {{ exp_cat_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "admin/stats/base_stats.html" %}
+{% load i18n humanize %}
+
+{% block stats_content %}
+<div class="stats-header">
+    <h1>💰 Billing & Revenue Statistics</h1>
+    <div class="stats-header-actions">
+        <form class="date-filter" method="get">
+            <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            <span>to</span>
+            <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            <button type="submit">Apply</button>
+        </form>
+        <div class="export-btns">
+            <a class="btn-export csv" href="{% url 'export_stats_csv' module='billing' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📄 CSV</a>
+            <a class="btn-export excel" href="{% url 'export_stats_excel' module='billing' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">📊 Excel</a>
+        </div>
+    </div>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon green">💰</div>
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value">{{ revenue|intcomma }}</div>
+        <div class="kpi-change {% if rev_change > 0 %}up{% elif rev_change < 0 %}down{% else %}flat{% endif %}">
+            {% if rev_change > 0 %}↑{% elif rev_change < 0 %}↓{% else %}→{% endif %} {{ rev_change }}%
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon blue">🧾</div>
+        <div class="kpi-label">Invoices Created</div>
+        <div class="kpi-value">{{ invoices_created|intcomma }}</div>
+        <div class="kpi-label" style="margin-top:4px">{{ invoices_paid }} paid</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon orange">⏰</div>
+        <div class="kpi-label">Overdue Invoices</div>
+        <div class="kpi-value">{{ invoices_overdue }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon red">📋</div>
+        <div class="kpi-label">Outstanding</div>
+        <div class="kpi-value">{{ outstanding|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon purple">📊</div>
+        <div class="kpi-label">Avg Invoice</div>
+        <div class="kpi-value">{{ avg_invoice|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green">✅</div>
+        <div class="kpi-label">Collection Rate</div>
+        <div class="kpi-value">{{ collection_rate }}%</div>
+    </div>
+</div>
+
+<!-- Insurance Claims -->
+<div class="quick-stats">
+    <div class="quick-stat"><strong>🏥 Insurance Claims:</strong> <span>{{ claims_total }} total</span></div>
+    <div class="quick-stat"><strong>✅ Approved:</strong> <span>{{ claims_approved }}</span></div>
+    <div class="quick-stat"><strong>⏳ Pending:</strong> <span>{{ claims_pending }}</span></div>
+    <div class="quick-stat"><strong>❌ Denied:</strong> <span>{{ claims_denied }}</span></div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card full">
+        <div class="chart-header">
+            <span class="chart-title">Monthly Revenue Trend</span>
+            <span class="chart-badge">12 Months</span>
+        </div>
+        <div class="chart-body tall"><canvas id="revChart"></canvas></div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Daily Revenue (30 days)</span></div>
+        <div class="chart-body"><canvas id="dailyRevChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Payment Methods</span></div>
+        <div class="chart-body"><canvas id="pmChart"></canvas></div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Invoice Status Distribution</span></div>
+        <div class="chart-body"><canvas id="invChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Outstanding Aging</span></div>
+        <div class="chart-body"><canvas id="agingChart"></canvas></div>
+    </div>
+</div>
+
+{% if recent_payments %}
+<div class="stats-table-wrap">
+    <div class="stats-table-header"><span class="stats-table-title">Recent Payments</span></div>
+    <table class="stats-table">
+        <thead><tr><th>Date</th><th>Patient</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for p in recent_payments %}
+        <tr>
+            <td>{{ p.payment_date|date:"M d, Y" }}</td>
+            <td>{% if p.invoice and p.invoice.patient %}{{ p.invoice.patient.first_name }} {{ p.invoice.patient.last_name }}{% else %}—{% endif %}</td>
+            <td><strong>{{ p.amount|intcomma }}</strong></td>
+            <td>{{ p.get_payment_method_display }}</td>
+            <td><span class="badge badge-success">{{ p.status }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<script>
+new Chart(document.getElementById('revChart'), {
+    type: 'line',
+    data: { labels: {{ rev_labels|safe }}, datasets: [{ label: 'Revenue', data: {{ rev_data|safe }}, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, pointRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } } }
+});
+new Chart(document.getElementById('dailyRevChart'), {
+    type: 'bar',
+    data: { labels: {{ daily_rev_labels|safe }}, datasets: [{ label: 'Revenue', data: {{ daily_rev_data|safe }}, backgroundColor: '#1B5E96', borderRadius: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } } }
+});
+new Chart(document.getElementById('pmChart'), {
+    type: 'doughnut',
+    data: { labels: {{ pm_labels|safe }}, datasets: [{ data: {{ pm_data|safe }}, backgroundColor: CHART_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+new Chart(document.getElementById('invChart'), {
+    type: 'doughnut',
+    data: { labels: {{ inv_st_labels|safe }}, datasets: [{ data: {{ inv_st_data|safe }}, backgroundColor: ['#10b981','#6366f1','#f59e0b','#ef4444','#94a3b8'] }] },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+new Chart(document.getElementById('agingChart'), {
+    type: 'bar',
+    data: { labels: {{ aging_labels|safe }}, datasets: [{ label: 'Amount', data: {{ aging_data|safe }}, backgroundColor: ['#10b981','#f59e0b','#f97316','#ef4444'] }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } } }
+});
+</script>
+{% endblock %}
