@@ -144,8 +144,9 @@ def labtest_list(request):
 @app_access_required('laboratory')
 def labtest_detail(request, pk):
 	"""View details of a specific laboratory test"""
-	from datetime import timedelta
-	
+	from datetime import timedelta, datetime
+	from django.core.paginator import Paginator
+
 	test = get_object_or_404(LabTest.objects.select_related('profile'), pk=pk)
 	profile = test.profile
 	parameters = []
@@ -166,6 +167,42 @@ def labtest_detail(request, pk):
 	monthly_requests = test.requests.filter(date_requested__date__gte=month_start).count()
 	completed_requests = test.requests.filter(status='completed').count()
 
+	# Requests & Results data (inline tab)
+	test_requests = LabTestRequest.objects.filter(test=test).select_related(
+		'patient', 'result'
+	).order_by('-date_requested')
+
+	# Apply filters
+	rr_date_from = request.GET.get('date_from', '')
+	rr_date_to = request.GET.get('date_to', '')
+	rr_status = request.GET.get('rr_status', '')
+	rr_patient = request.GET.get('rr_patient', '')
+
+	if rr_date_from:
+		try:
+			test_requests = test_requests.filter(date_requested__date__gte=datetime.strptime(rr_date_from, '%Y-%m-%d').date())
+		except ValueError:
+			rr_date_from = ''
+	if rr_date_to:
+		try:
+			test_requests = test_requests.filter(date_requested__date__lte=datetime.strptime(rr_date_to, '%Y-%m-%d').date())
+		except ValueError:
+			rr_date_to = ''
+	if rr_status:
+		test_requests = test_requests.filter(status=rr_status)
+	if rr_patient:
+		test_requests = test_requests.filter(
+			Q(patient__first_name__icontains=rr_patient) |
+			Q(patient__last_name__icontains=rr_patient) |
+			Q(patient__patient_id__icontains=rr_patient)
+		)
+
+	rr_paginator = Paginator(test_requests, 25)
+	rr_page = rr_paginator.get_page(request.GET.get('rr_page'))
+
+	# Determine active tab
+	active_tab = request.GET.get('tab', 'parameters')
+
 	context = {
 		'test': test,
 		'profile': profile,
@@ -178,6 +215,15 @@ def labtest_detail(request, pk):
 		'weekly_requests': weekly_requests,
 		'monthly_requests': monthly_requests,
 		'completed_requests': completed_requests,
+		# Requests & Results tab
+		'rr_page_obj': rr_page,
+		'rr_total': test.requests.count(),
+		'rr_completed': completed_requests,
+		'rr_date_from': rr_date_from,
+		'rr_date_to': rr_date_to,
+		'rr_status': rr_status,
+		'rr_patient': rr_patient,
+		'active_tab': active_tab,
 	}
 	return render(request, 'laboratory/labtest_detail.html', context)
 

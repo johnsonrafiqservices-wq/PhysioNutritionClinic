@@ -21,7 +21,6 @@ urlpatterns = [
     path('tests/<int:pk>/edit/', views.labtest_edit, name='labtest_edit'),
     path('tests/<int:pk>/toggle-active/', views.labtest_toggle_active, name='labtest_toggle_active'),
     path('tests/<int:pk>/usage-report/', views.test_usage_report, name='test_usage_report'),
-    path('tests/<int:pk>/requests-results/', views.test_requests_results, name='test_requests_results'),
     
     # Test Parameters
     path('parameters/', views.test_parameter_list, name='test_parameter_list'),

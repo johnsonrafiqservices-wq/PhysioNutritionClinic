@@ -1,13 +1,134 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import Patient, PatientGroup, VitalSigns, Triage, Assessment, TriageAssessment
+
+
+class PatientInline(admin.TabularInline):
+    model = Patient
+    fk_name = 'patient_group'
+    fields = ('patient_id', 'first_name', 'last_name', 'phone', 'gender', 'is_active')
+    readonly_fields = ('patient_id', 'first_name', 'last_name', 'phone', 'gender', 'is_active')
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    verbose_name = 'Member'
+    verbose_name_plural = 'Group Members'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+try:
+    from billing.models import ServicePriceGroup
+
+    class ServicePriceGroupInline(admin.TabularInline):
+        model = ServicePriceGroup
+        fk_name = 'patient_group'
+        fields = ('service', 'price')
+        extra = 0
+        verbose_name = 'Service Price Override'
+        verbose_name_plural = 'Service Price Overrides'
+except ImportError:
+    ServicePriceGroupInline = None
+
+
+try:
+    from laboratory.models import LabTestPriceGroup
+
+    class LabTestPriceGroupInline(admin.TabularInline):
+        model = LabTestPriceGroup
+        fk_name = 'patient_group'
+        fields = ('lab_test', 'price')
+        extra = 0
+        verbose_name = 'Lab Test Price Override'
+        verbose_name_plural = 'Lab Test Price Overrides'
+except ImportError:
+    LabTestPriceGroupInline = None
+
+
+try:
+    from billing.models import GroupInvoice
+
+    class GroupInvoiceInline(admin.TabularInline):
+        model = GroupInvoice
+        fk_name = 'patient_group'
+        fields = ('invoice_number', 'invoice_type', 'status', 'subtotal', 'total_amount', 'created_at')
+        readonly_fields = ('invoice_number', 'invoice_type', 'status', 'subtotal', 'total_amount', 'created_at')
+        extra = 0
+        can_delete = False
+        show_change_link = True
+        verbose_name = 'Group Invoice'
+        verbose_name_plural = 'Group Invoices'
+
+        def has_add_permission(self, request, obj=None):
+            return False
+except ImportError:
+    GroupInvoiceInline = None
 
 
 @admin.register(PatientGroup)
 class PatientGroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description', 'is_active', 'created_at')
+    list_display = ('name', 'description', 'member_count', 'is_active', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('name', 'description')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'member_count_display', 'service_prices_count', 'lab_prices_count', 'invoices_count')
+
+    fieldsets = (
+        ('Group Details', {
+            'fields': ('name', 'description', 'is_active'),
+        }),
+        ('Statistics', {
+            'fields': ('member_count_display', 'service_prices_count', 'lab_prices_count', 'invoices_count'),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def get_inlines(self, request, obj):
+        inlines = [PatientInline]
+        if ServicePriceGroupInline is not None:
+            inlines.append(ServicePriceGroupInline)
+        if LabTestPriceGroupInline is not None:
+            inlines.append(LabTestPriceGroupInline)
+        if GroupInvoiceInline is not None:
+            inlines.append(GroupInvoiceInline)
+        return inlines
+
+    @admin.display(description='Members')
+    def member_count(self, obj):
+        return obj.patients.count()
+
+    @admin.display(description='Total Members')
+    def member_count_display(self, obj):
+        count = obj.patients.count()
+        active = obj.patients.filter(is_active=True).count()
+        return format_html('<strong>{}</strong> total ({} active)', count, active)
+
+    @admin.display(description='Service Price Overrides')
+    def service_prices_count(self, obj):
+        try:
+            count = obj.service_prices.count()
+            return format_html('{} service(s) with custom pricing', count)
+        except Exception:
+            return '—'
+
+    @admin.display(description='Lab Test Price Overrides')
+    def lab_prices_count(self, obj):
+        try:
+            count = obj.lab_test_prices.count()
+            return format_html('{} lab test(s) with custom pricing', count)
+        except Exception:
+            return '—'
+
+    @admin.display(description='Group Invoices')
+    def invoices_count(self, obj):
+        try:
+            count = obj.group_invoices.count()
+            return format_html('{} invoice(s)', count)
+        except Exception:
+            return '—'
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):

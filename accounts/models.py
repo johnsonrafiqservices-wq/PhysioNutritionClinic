@@ -18,59 +18,60 @@ SYSTEM_APPS = [
 
 class User(AbstractUser):
     ROLE_CHOICES = [
-        # Administration & Management
-        ('admin', 'System Administrator'),
-        ('clinic_manager', 'Clinic Manager'),
-        ('medical_director', 'Medical Director'),
-        
-        # Clinical Staff (Patients & Appointments)
-        ('doctor', 'Doctor/General Practitioner'),
-        ('physiotherapist', 'Physiotherapist'),
-        ('nutritionist', 'Nutritionist/Dietitian'),
-        ('nurse', 'Nurse'),
-        ('clinical_assistant', 'Clinical Assistant'),
-        
-        # Reception & Front Desk (Appointments & Patient Registration)
-        ('receptionist', 'Receptionist'),
-        ('front_desk', 'Front Desk Officer'),
-        ('appointment_coordinator', 'Appointment Coordinator'),
-        
-        # Laboratory (Laboratory App)
-        ('lab_technician', 'Laboratory Technician'),
-        ('lab_manager', 'Laboratory Manager'),
-        ('pathologist', 'Pathologist'),
-        
-        # Pharmacy (Pharmacy App)
-        ('pharmacist', 'Pharmacist'),
-        ('pharmacy_assistant', 'Pharmacy Assistant'),
-        ('pharmacy_manager', 'Pharmacy Manager'),
-        
-        # Billing & Finance (Billing App)
-        ('billing_officer', 'Billing Officer'),
-        ('accountant', 'Accountant'),
-        ('finance_manager', 'Finance Manager'),
-        ('cashier', 'Cashier'),
-        
-        # Medical Records (Medical Records App)
-        ('medical_records_officer', 'Medical Records Officer'),
-        ('records_manager', 'Records Manager'),
-        ('data_entry_clerk', 'Data Entry Clerk'),
-        
-        # Reports & Analytics (Reports App)
-        ('reports_analyst', 'Reports Analyst'),
-        ('statistician', 'Statistician'),
-        
-        # Staff Management (Staff Management App)
-        ('hr_manager', 'HR Manager'),
-        ('hr_officer', 'HR Officer'),
-        
-        # Budget & Financial Planning (Budget App)
-        ('budget_officer', 'Budget Officer'),
-        ('financial_controller', 'Financial Controller'),
-        
-        # Support & Maintenance
-        ('it_support', 'IT Support'),
-        ('maintenance_staff', 'Maintenance Staff'),
+        ('Administration & Management', [
+            ('admin', 'System Administrator'),
+            ('clinic_manager', 'Clinic Manager'),
+            ('medical_director', 'Medical Director'),
+        ]),
+        ('Clinical Staff', [
+            ('doctor', 'Doctor/General Practitioner'),
+            ('physiotherapist', 'Physiotherapist'),
+            ('nutritionist', 'Nutritionist/Dietitian'),
+            ('nurse', 'Nurse'),
+            ('clinical_assistant', 'Clinical Assistant'),
+        ]),
+        ('Reception & Front Desk', [
+            ('receptionist', 'Receptionist'),
+            ('front_desk', 'Front Desk Officer'),
+            ('appointment_coordinator', 'Appointment Coordinator'),
+        ]),
+        ('Laboratory', [
+            ('lab_technician', 'Laboratory Technician'),
+            ('lab_manager', 'Laboratory Manager'),
+            ('pathologist', 'Pathologist'),
+        ]),
+        ('Pharmacy', [
+            ('pharmacist', 'Pharmacist'),
+            ('pharmacy_assistant', 'Pharmacy Assistant'),
+            ('pharmacy_manager', 'Pharmacy Manager'),
+        ]),
+        ('Billing & Finance', [
+            ('billing_officer', 'Billing Officer'),
+            ('accountant', 'Accountant'),
+            ('finance_manager', 'Finance Manager'),
+            ('cashier', 'Cashier'),
+        ]),
+        ('Medical Records', [
+            ('medical_records_officer', 'Medical Records Officer'),
+            ('records_manager', 'Records Manager'),
+            ('data_entry_clerk', 'Data Entry Clerk'),
+        ]),
+        ('Reports & Analytics', [
+            ('reports_analyst', 'Reports Analyst'),
+            ('statistician', 'Statistician'),
+        ]),
+        ('Staff Management', [
+            ('hr_manager', 'HR Manager'),
+            ('hr_officer', 'HR Officer'),
+        ]),
+        ('Budget & Financial Planning', [
+            ('budget_officer', 'Budget Officer'),
+            ('financial_controller', 'Financial Controller'),
+        ]),
+        ('Support & Maintenance', [
+            ('it_support', 'IT Support'),
+            ('maintenance_staff', 'Maintenance Staff'),
+        ]),
     ]
     
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='receptionist')

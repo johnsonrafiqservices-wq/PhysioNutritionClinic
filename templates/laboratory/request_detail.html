@@ -50,34 +50,34 @@
 
 {% block content %}
 <!-- Status Banner -->
-<div class="card mb-4 border">
-    <div class="card-body py-3">
+<div class="card mb-2 border">
+    <div class="card-body py-2">
         <div class="row align-items-center">
             <div class="col-md-8">
                 <div class="d-flex align-items-center">
-                    <div class="me-4">
-                        <i class="bi bi-{% if request.status == 'completed' %}check-circle-fill text-success{% elif request.status == 'in_progress' %}hourglass-split text-info{% elif request.status == 'cancelled' %}x-circle-fill text-danger{% else %}clock-fill text-warning{% endif %}" style="font-size: 2.5rem;"></i>
+                    <div class="me-3">
+                        <i class="bi bi-{% if request.status == 'completed' %}check-circle-fill text-success{% elif request.status == 'in_progress' %}hourglass-split text-info{% elif request.status == 'cancelled' %}x-circle-fill text-danger{% else %}clock-fill text-warning{% endif %}" style="font-size: 1.8rem;"></i>
                     </div>
                     <div>
-                        <h4 class="mb-1 fw-bold">
+                        <h5 class="mb-0 fw-bold" style="font-size:1rem;">
                             <a href="{% url 'laboratory:labtest_detail' request.test.pk %}" class="text-decoration-none text-dark">
                                 {{ request.test.name }}
                             </a>
-                        </h4>
-                        <p class="mb-0 text-muted">
-                            <span class="me-3"><i class="bi bi-person"></i> {{ request.patient.get_full_name }}</span>
-                            <span class="me-3"><i class="bi bi-upc"></i> {{ request.test.code }}</span>
+                        </h5>
+                        <p class="mb-0 text-muted" style="font-size:0.78rem;">
+                            <span class="me-2"><i class="bi bi-person"></i> {{ request.patient.get_full_name }}</span>
+                            <span class="me-2"><i class="bi bi-upc"></i> {{ request.test.code }}</span>
                             {% if request.sample_id %}<span><i class="bi bi-droplet"></i> {{ request.sample_id }}</span>{% endif %}
                         </p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <span class="fw-bold text-{% if request.status == 'completed' %}success{% elif request.status == 'in_progress' %}info{% elif request.status == 'cancelled' %}danger{% else %}warning{% endif %}">
+            <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                <span class="fw-bold text-{% if request.status == 'completed' %}success{% elif request.status == 'in_progress' %}info{% elif request.status == 'cancelled' %}danger{% else %}warning{% endif %}" style="font-size:0.85rem;">
                     {{ request.get_status_display }}
                 </span>
                 {% if request.priority == 'stat' or request.priority == 'urgent' %}
-                <span class="ms-2 fw-bold text-{% if request.priority == 'stat' %}danger{% else %}warning{% endif %}">
+                <span class="ms-1 fw-bold text-{% if request.priority == 'stat' %}danger{% else %}warning{% endif %}" style="font-size:0.8rem;">
                     ({{ request.get_priority_display }})
                 </span>
                 {% endif %}
@@ -88,79 +88,79 @@
 
 <div class="row">
     <!-- Request Information -->
-    <div class="col-lg-6 mb-3">
+    <div class="col-lg-6 mb-2">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-clipboard2-pulse me-2"></i>Request Information</h6>
+            <div class="card-header py-1 px-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.82rem;"><i class="bi bi-clipboard2-pulse me-2"></i>Request Information</h6>
             </div>
             <div class="card-body py-2 px-3">
-                <div class="row g-2">
+                <div class="row g-1">
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Patient</small>
-                            <a href="{% url 'patients:patient_detail' request.patient.patient_id %}" class="fw-semibold text-decoration-none" style="font-size: 0.85rem;">
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Patient</small>
+                            <a href="{% url 'patients:patient_detail' request.patient.patient_id %}" class="fw-semibold text-decoration-none" style="font-size: 0.8rem;">
                                 <i class="bi bi-person-circle me-1"></i>{{ request.patient.get_full_name }}
                             </a>
-                            <small class="text-muted d-block" style="font-size: 0.7rem;">{{ request.patient.patient_id }}</small>
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">{{ request.patient.patient_id }}</small>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Requested By</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-person-badge me-1"></i>{{ request.requested_by.get_full_name|default:request.requested_by }}</span>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Requested By</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-person-badge me-1"></i>{{ request.requested_by.get_full_name|default:request.requested_by }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Date Requested</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-calendar-event me-1"></i>{{ request.date_requested|date:"M d, Y" }}</span>
-                            <small class="text-muted d-block" style="font-size: 0.7rem;">{{ request.date_requested|time:"g:i A" }}</small>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Date Requested</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-calendar-event me-1"></i>{{ request.date_requested|date:"M d, Y" }}</span>
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">{{ request.date_requested|time:"g:i A" }}</small>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Priority Level</small>
-                            <span class="fw-bold text-{% if request.priority == 'stat' %}danger{% elif request.priority == 'urgent' %}warning{% else %}secondary{% endif %}" style="font-size: 0.85rem;">
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Priority Level</small>
+                            <span class="fw-bold text-{% if request.priority == 'stat' %}danger{% elif request.priority == 'urgent' %}warning{% else %}secondary{% endif %}" style="font-size: 0.8rem;">
                                 <i class="bi bi-flag-fill me-1"></i>{{ request.get_priority_display }}
                             </span>
                         </div>
                     </div>
                     {% if request.sample_id %}
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Sample ID</small>
-                            <code class="fw-semibold" style="font-size: 0.85rem;">{{ request.sample_id }}</code>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Sample ID</small>
+                            <code class="fw-semibold" style="font-size: 0.8rem;">{{ request.sample_id }}</code>
                         </div>
                     </div>
                     {% endif %}
                     {% if request.sample_collected_at %}
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Sample Collected</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-droplet-fill me-1 text-info"></i>{{ request.sample_collected_at|date:"M d, Y g:i A" }}</span>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Sample Collected</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-droplet-fill me-1 text-info"></i>{{ request.sample_collected_at|date:"M d, Y g:i A" }}</span>
                         </div>
                     </div>
                     {% endif %}
                 </div>
                 
                 {% if request.reason_for_test %}
-                <div class="mt-2 p-2 rounded border-start border-3 border-primary" style="background: #e7f3ff;">
-                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-question-circle me-1"></i><strong>Reason for Test</strong></small>
-                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.reason_for_test }}</p>
+                <div class="mt-1 px-2 py-1 rounded-2 border-start border-3 border-primary" style="background: #e7f3ff;">
+                    <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;"><i class="bi bi-question-circle me-1"></i>Reason for Test</small>
+                    <p class="mb-0" style="font-size: 0.78rem;">{{ request.reason_for_test }}</p>
                 </div>
                 {% endif %}
                 
                 {% if request.samples_required %}
-                <div class="mt-2 p-2 rounded border-start border-3 border-info" style="background: #e7f9ff;">
-                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-droplet-half me-1"></i><strong>Samples Required</strong></small>
-                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.samples_required }}</p>
+                <div class="mt-1 px-2 py-1 rounded-2 border-start border-3 border-info" style="background: #e7f9ff;">
+                    <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;"><i class="bi bi-droplet-half me-1"></i>Samples Required</small>
+                    <p class="mb-0" style="font-size: 0.78rem;">{{ request.samples_required }}</p>
                 </div>
                 {% endif %}
                 
                 {% if request.clinical_notes %}
-                <div class="mt-2 p-2 rounded border-start border-3 border-secondary" style="background: #f8f9fa;">
-                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-journal-medical me-1"></i>Clinical Notes</small>
-                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.clinical_notes }}</p>
+                <div class="mt-1 px-2 py-1 rounded-2 border-start border-3 border-secondary" style="background: #f8f9fa;">
+                    <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;"><i class="bi bi-journal-medical me-1"></i>Clinical Notes</small>
+                    <p class="mb-0" style="font-size: 0.78rem;">{{ request.clinical_notes }}</p>
                 </div>
                 {% endif %}
             </div>
@@ -168,54 +168,54 @@
     </div>
     
     <!-- Test Information -->
-    <div class="col-lg-6 mb-3">
+    <div class="col-lg-6 mb-2">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.9rem;"><i class="bi bi-flask me-2"></i>Test Information</h6>
+            <div class="card-header py-1 px-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.82rem;"><i class="bi bi-flask me-2"></i>Test Information</h6>
             </div>
             <div class="card-body py-2 px-3">
-                <div class="row g-2">
+                <div class="row g-1">
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Category</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-tag me-1"></i>{{ request.test.get_category_display }}</span>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Category</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-tag me-1"></i>{{ request.test.get_category_display }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Sample Type</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-droplet me-1"></i>{{ request.test.sample_type|default:"Not specified" }}</span>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Sample Type</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-droplet me-1"></i>{{ request.test.sample_type|default:"Not specified" }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Expected Duration</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-clock me-1"></i>{{ request.test.duration_hours }} hours</span>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Expected Duration</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-clock me-1"></i>{{ request.test.duration_hours }}h</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;">Price</small>
-                            <span class="fw-bold text-dark" style="font-size: 1rem;">{{ request.test.price|intcomma }} <small>{{ request.test.currency }}</small></span>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;">Price</small>
+                            <span class="fw-bold text-dark" style="font-size: 0.9rem;">{{ request.test.price|intcomma }} <small style="font-size:0.7rem;">{{ request.test.currency }}</small></span>
                         </div>
                     </div>
                     <div class="col-12">
-                        <div class="p-2 rounded border">
-                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem;"><i class="bi bi-diagram-3 me-1"></i>Profile</small>
+                        <div class="px-2 py-1 rounded-2 border">
+                            <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;"><i class="bi bi-diagram-3 me-1"></i>Profile</small>
                             {% if profile %}
-                                <span class="badge bg-primary me-2" style="font-size: 0.75rem;">{{ profile.name }}</span>
-                                <small class="text-muted" style="font-size: 0.7rem;">{{ profile_parameters|length }} parameter(s)</small>
+                                <span class="badge bg-primary me-2" style="font-size: 0.7rem;">{{ profile.name }}</span>
+                                <small class="text-muted" style="font-size: 0.65rem;">{{ profile_parameters|length }} parameter(s)</small>
                             {% else %}
-                                <span class="text-muted" style="font-size: 0.85rem;">No profile linked</span>
+                                <span class="text-muted" style="font-size: 0.78rem;">No profile linked</span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
 
                 {% if request.test.description %}
-                <div class="mt-2 p-2 rounded border">
-                    <small class="text-muted d-block mb-1" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>Test Description</small>
-                    <p class="mb-0" style="font-size: 0.85rem;">{{ request.test.description }}</p>
+                <div class="mt-1 px-2 py-1 rounded-2 border">
+                    <small class="text-muted d-block fw-semibold" style="font-size: 0.6rem;"><i class="bi bi-info-circle me-1"></i>Test Description</small>
+                    <p class="mb-0" style="font-size: 0.78rem;">{{ request.test.description }}</p>
                 </div>
                 {% endif %}
             </div>
@@ -225,19 +225,19 @@
 
 {% if profile and profile_parameters %}
 <!-- Profile Parameters & Results Section -->
-<div class="row mb-4">
+<div class="row mb-2">
     <div class="col-12">
         <div class="card shadow-sm border-0">
-            <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+            <div class="card-header py-1 px-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-list-check me-2"></i>{{ profile.name }}</h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-white text-dark">{{ profile_parameters|length }} parameter{{ profile_parameters|length|pluralize }}</span>
+                    <h6 class="mb-0 fw-bold text-white" style="font-size:0.82rem;"><i class="bi bi-list-check me-2"></i>{{ profile.name }}</h6>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="badge bg-white text-dark" style="font-size:0.68rem;">{{ profile_parameters|length }} parameter{{ profile_parameters|length|pluralize }}</span>
                         {% if result %}
                             {% if result.verified %}
-                            <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+                            <span class="badge bg-success" style="font-size:0.68rem;"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
                             {% else %}
-                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Unverified</span>
+                            <span class="badge bg-warning text-dark" style="font-size:0.68rem;"><i class="bi bi-hourglass-split me-1"></i>Unverified</span>
                             {% endif %}
                         {% endif %}
                     </div>
@@ -245,29 +245,29 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                    <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.8rem;">
                         <thead>
                             <tr style="background: #f0f4f8;">
-                                <th class="ps-3 text-muted" style="width: 40px;">#</th>
-                                <th style="min-width: 180px;">Parameter</th>
-                                <th class="text-center" style="width: 80px;">Unit</th>
-                                <th class="text-center" style="min-width: 140px;">Reference Range</th>
+                                <th class="ps-2 text-muted" style="width: 32px;">#</th>
+                                <th style="min-width: 160px;">Parameter</th>
+                                <th class="text-center" style="width: 70px;">Unit</th>
+                                <th class="text-center" style="min-width: 130px;">Reference Range</th>
                                 {% if result %}
-                                <th class="text-center" style="min-width: 120px; background: #e8f4fd;">Result</th>
-                                <th class="text-center" style="width: 100px; background: #e8f4fd;">Flag</th>
+                                <th class="text-center" style="min-width: 110px; background: #e8f4fd;">Result</th>
+                                <th class="text-center" style="width: 90px; background: #e8f4fd;">Flag</th>
                                 {% endif %}
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in profile_parameters %}
                             <tr class="{% if item.pr and item.pr.flag == 'critical_low' or item.pr and item.pr.flag == 'critical_high' %}table-danger{% elif item.pr and item.pr.flag == 'low' or item.pr and item.pr.flag == 'high' or item.pr and item.pr.flag == 'abnormal' %}table-warning{% endif %}">
-                                <td class="ps-3 text-muted small">{{ forloop.counter }}</td>
+                                <td class="ps-2 text-muted">{{ forloop.counter }}</td>
                                 <td>
-                                    <span class="fw-semibold">{{ item.param.name }}</span>
-                                    <br><small class="text-muted">{{ item.param.code }}</small>
+                                    <span class="fw-semibold" style="font-size:0.78rem;">{{ item.param.name }}</span>
+                                    <br><small class="text-muted" style="font-size:0.68rem;">{{ item.param.code }}</small>
                                 </td>
-                                <td class="text-center text-muted small">{{ item.param.unit|default:"—" }}</td>
-                                <td class="text-center small">
+                                <td class="text-center text-muted" style="font-size:0.78rem;">{{ item.param.unit|default:"—" }}</td>
+                                <td class="text-center" style="font-size:0.78rem;">
                                     {% if item.param.reference_range_text %}
                                         {{ item.param.reference_range_text }}
                                     {% elif item.param.reference_range_min is not None and item.param.reference_range_max is not None %}
@@ -292,17 +292,17 @@
                                 <td class="text-center" style="background: rgba(232,244,253,0.3);">
                                     {% if item.pr %}
                                         {% if item.pr.flag == 'normal' %}
-                                            <span class="badge rounded-pill bg-success px-3">Normal</span>
+                                            <span class="badge rounded-pill bg-success px-2" style="font-size:0.65rem;">Normal</span>
                                         {% elif item.pr.flag == 'low' %}
-                                            <span class="badge rounded-pill bg-info text-dark px-3"><i class="bi bi-arrow-down-short"></i> Low</span>
+                                        <span class="badge rounded-pill bg-info text-dark px-2" style="font-size:0.65rem;"><i class="bi bi-arrow-down-short"></i> Low</span>
                                         {% elif item.pr.flag == 'high' %}
-                                            <span class="badge rounded-pill bg-warning text-dark px-3"><i class="bi bi-arrow-up-short"></i> High</span>
+                                        <span class="badge rounded-pill bg-warning text-dark px-2" style="font-size:0.65rem;"><i class="bi bi-arrow-up-short"></i> High</span>
                                         {% elif item.pr.flag == 'critical_low' %}
-                                            <span class="badge rounded-pill bg-danger px-3"><i class="bi bi-exclamation-triangle-fill me-1"></i>Crit Low</span>
+                                        <span class="badge rounded-pill bg-danger px-2" style="font-size:0.65rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Crit Low</span>
                                         {% elif item.pr.flag == 'critical_high' %}
-                                            <span class="badge rounded-pill bg-danger px-3"><i class="bi bi-exclamation-triangle-fill me-1"></i>Crit High</span>
+                                        <span class="badge rounded-pill bg-danger px-2" style="font-size:0.65rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Crit High</span>
                                         {% elif item.pr.flag == 'abnormal' %}
-                                            <span class="badge rounded-pill bg-danger px-3">Abnormal</span>
+                                        <span class="badge rounded-pill bg-danger px-2" style="font-size:0.65rem;">Abnormal</span>
                                         {% else %}
                                             <span class="text-muted">—</span>
                                         {% endif %}
@@ -326,95 +326,95 @@
 
 <!-- Results Section -->
 {% if result %}
-<div class="row mb-4">
+<div class="row mb-2">
     <div class="col-12">
         <div class="card shadow-sm border-0">
-            <div class="card-header py-3" style="background: linear-gradient(135deg, {% if result.verified %}#27ae60, #2ecc71{% else %}#7f8c8d, #95a5a6{% endif %});">
+            <div class="card-header py-1 px-3" style="background: linear-gradient(135deg, {% if result.verified %}#27ae60, #2ecc71{% else %}#7f8c8d, #95a5a6{% endif %});">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-white"><i class="bi bi-clipboard-check me-2"></i>Test Result Summary</h6>
-                    <div class="d-flex align-items-center gap-2">
+                    <h6 class="mb-0 fw-bold text-white" style="font-size:0.82rem;"><i class="bi bi-clipboard-check me-2"></i>Test Result Summary</h6>
+                    <div class="d-flex align-items-center gap-1">
                         {% if result.is_abnormal %}
-                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Abnormal</span>
+                        <span class="badge bg-danger" style="font-size:0.68rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Abnormal</span>
                         {% else %}
-                        <span class="badge bg-light text-success"><i class="bi bi-check-circle-fill me-1"></i>Normal</span>
+                        <span class="badge bg-light text-success" style="font-size:0.68rem;"><i class="bi bi-check-circle-fill me-1"></i>Normal</span>
                         {% endif %}
                         {% if result.verified %}
-                        <span class="badge bg-light text-success"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+                        <span class="badge bg-light text-success" style="font-size:0.68rem;"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
                         {% else %}
-                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending Verification</span>
+                        <span class="badge bg-warning text-dark" style="font-size:0.68rem;"><i class="bi bi-clock me-1"></i>Pending Verification</span>
                         {% endif %}
                     </div>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body py-2 px-3">
                 <!-- Meta row -->
-                <div class="row g-3 mb-4">
+                <div class="row g-1 mb-2">
                     <div class="col-md-3">
-                        <div class="p-3 rounded-3 h-100" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Reported By</small>
-                            <span class="fw-semibold"><i class="bi bi-person-check me-1 text-primary"></i>{{ result.reported_by.get_full_name|default:result.reported_by }}</span>
+                        <div class="px-2 py-1 rounded-2 h-100" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Reported By</small>
+                            <span class="fw-semibold" style="font-size:0.78rem;"><i class="bi bi-person-check me-1 text-primary"></i>{{ result.reported_by.get_full_name|default:result.reported_by }}</span>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 rounded-3 h-100" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Date Reported</small>
-                            <span class="fw-semibold"><i class="bi bi-calendar-check me-1 text-primary"></i>{{ result.date_reported|date:"M d, Y" }}</span>
-                            <small class="text-muted d-block">{{ result.date_reported|time:"g:i A" }}</small>
+                        <div class="px-2 py-1 rounded-2 h-100" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Date Reported</small>
+                            <span class="fw-semibold" style="font-size:0.78rem;"><i class="bi bi-calendar-check me-1 text-primary"></i>{{ result.date_reported|date:"M d, Y" }}</span>
+                            <small class="text-muted d-block" style="font-size:0.65rem;">{{ result.date_reported|time:"g:i A" }}</small>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 rounded-3 h-100 {% if result.verified %}border border-success{% endif %}" style="background: {% if result.verified %}#f0fdf4{% else %}#f8f9fa{% endif %};">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Verification</small>
+                        <div class="px-2 py-1 rounded-2 h-100 {% if result.verified %}border border-success{% endif %}" style="background: {% if result.verified %}#f0fdf4{% else %}#f8f9fa{% endif %};">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Verification</small>
                             {% if result.verified %}
-                            <span class="fw-bold text-success"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
-                            <small class="text-muted d-block">{{ result.verified_by.get_full_name }}</small>
-                            <small class="text-muted d-block">{{ result.verified_at|date:"M d, Y g:i A" }}</small>
+                            <span class="fw-bold text-success" style="font-size:0.78rem;"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+                            <small class="text-muted d-block" style="font-size:0.65rem;">{{ result.verified_by.get_full_name }}</small>
+                            <small class="text-muted d-block" style="font-size:0.65rem;">{{ result.verified_at|date:"M d, Y g:i A" }}</small>
                             {% else %}
-                            <span class="text-warning fw-semibold"><i class="bi bi-hourglass-split me-1"></i>Awaiting</span>
+                            <span class="text-warning fw-semibold" style="font-size:0.78rem;"><i class="bi bi-hourglass-split me-1"></i>Awaiting</span>
                             {% endif %}
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 rounded-3 h-100 text-center {% if result.is_abnormal %}border border-danger{% else %}border border-success{% endif %}" style="background: {% if result.is_abnormal %}#fef2f2{% else %}#f0fdf4{% endif %};">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Overall Status</small>
+                        <div class="px-2 py-1 rounded-2 h-100 text-center {% if result.is_abnormal %}border border-danger{% else %}border border-success{% endif %}" style="background: {% if result.is_abnormal %}#fef2f2{% else %}#f0fdf4{% endif %};">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Overall Status</small>
                             {% if result.is_abnormal %}
-                            <span class="fw-bold text-danger fs-5"><i class="bi bi-exclamation-triangle-fill me-1"></i>Abnormal</span>
+                            <span class="fw-bold text-danger" style="font-size:1.1rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Abnormal</span>
                             {% else %}
-                            <span class="fw-bold text-success fs-5"><i class="bi bi-check-circle-fill me-1"></i>Normal</span>
+                            <span class="fw-bold text-success" style="font-size:1.1rem;"><i class="bi bi-check-circle-fill me-1"></i>Normal</span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
 
                 {% if not profile_parameters and result.result_value %}
-                <div class="row mb-4">
+                <div class="row mb-2">
                     <div class="col-lg-5 mx-auto">
-                        <div class="text-center p-4 rounded-3 border-2 {% if result.is_abnormal %}border-danger{% else %}border-success{% endif %}" style="border-style: dashed !important; background: {% if result.is_abnormal %}#fef2f2{% else %}#f0fdf4{% endif %};">
-                            <small class="text-uppercase text-muted d-block mb-2 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Result Value</small>
-                            <h2 class="fw-bold {% if result.is_abnormal %}text-danger{% else %}text-success{% endif %} mb-0">
+                        <div class="text-center px-3 py-2 rounded-2 border-2 {% if result.is_abnormal %}border-danger{% else %}border-success{% endif %}" style="border-style: dashed !important; background: {% if result.is_abnormal %}#fef2f2{% else %}#f0fdf4{% endif %};">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Result Value</small>
+                            <h4 class="fw-bold {% if result.is_abnormal %}text-danger{% else %}text-success{% endif %} mb-0" style="font-size:1.3rem;">
                                 {{ result.result_value }}
-                            </h2>
-                            {% if result.result_unit %}<span class="text-muted">{{ result.result_unit }}</span>{% endif %}
+                            </h4>
+                            {% if result.result_unit %}<span class="text-muted" style="font-size:0.78rem;">{{ result.result_unit }}</span>{% endif %}
                         </div>
                     </div>
                 </div>
                 {% endif %}
 
                 {% if result.interpretation or result.remarks %}
-                <div class="row g-3">
+                <div class="row g-1">
                     {% if result.interpretation %}
                     <div class="{% if result.remarks %}col-md-6{% else %}col-12{% endif %}">
-                        <div class="p-3 rounded-3 border-start border-3 border-primary h-100" style="background: #f0f7ff;">
-                            <small class="text-uppercase text-muted d-block mb-2 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;"><i class="bi bi-chat-square-text me-1"></i>Interpretation</small>
-                            <p class="mb-0">{{ result.interpretation }}</p>
+                        <div class="px-2 py-1 rounded-2 border-start border-3 border-primary h-100" style="background: #f0f7ff;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;"><i class="bi bi-chat-square-text me-1"></i>Interpretation</small>
+                            <p class="mb-0" style="font-size:0.78rem;">{{ result.interpretation }}</p>
                         </div>
                     </div>
                     {% endif %}
                     {% if result.remarks %}
                     <div class="{% if result.interpretation %}col-md-6{% else %}col-12{% endif %}">
-                        <div class="p-3 rounded-3 border-start border-3 border-secondary h-100" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-2 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;"><i class="bi bi-sticky me-1"></i>Remarks</small>
-                            <p class="mb-0">{{ result.remarks }}</p>
+                        <div class="px-2 py-1 rounded-2 border-start border-3 border-secondary h-100" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;"><i class="bi bi-sticky me-1"></i>Remarks</small>
+                            <p class="mb-0" style="font-size:0.78rem;">{{ result.remarks }}</p>
                         </div>
                     </div>
                     {% endif %}
@@ -425,17 +425,17 @@
     </div>
 </div>
 {% else %}
-<div class="row mb-4">
+<div class="row mb-2">
     <div class="col-12">
         <div class="card shadow-sm border-0">
-            <div class="card-body text-center py-5">
-                <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-hourglass-split" style="font-size: 2rem; color: #95a5a6;"></i>
+            <div class="card-body text-center py-3">
+                <div class="mb-2" style="width: 56px; height: 56px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-hourglass-split" style="font-size: 1.5rem; color: #95a5a6;"></i>
                 </div>
-                <h5 class="fw-bold mb-2" style="color: #2c3e50;">Result Pending</h5>
-                <p class="text-muted mb-4">No result has been recorded for this test yet.</p>
-                <button type="button" class="btn btn-success px-4 py-2" data-bs-toggle="modal" data-bs-target="#addResultModal">
-                    <i class="bi bi-plus-circle me-2"></i>Add Result Now
+                <h6 class="fw-bold mb-1" style="color: #2c3e50;">Result Pending</h6>
+                <p class="text-muted mb-2" style="font-size:0.82rem;">No result has been recorded for this test yet.</p>
+                <button type="button" class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addResultModal">
+                    <i class="bi bi-plus-circle me-1"></i>Add Result Now
                 </button>
             </div>
         </div>

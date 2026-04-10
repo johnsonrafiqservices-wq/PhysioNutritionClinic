@@ -451,6 +451,9 @@
             <a href="#" class="nav-link active" data-section="overview">
                 <i class="bi bi-info-circle me-2"></i>Overview
             </a>
+            <a href="#" class="nav-link" data-section="medications">
+                <i class="bi bi-capsule me-2"></i>Medications ({{ medications_count }})
+            </a>
             <a href="#" class="nav-link" data-section="batches">
                 <i class="bi bi-boxes me-2"></i>Batches ({{ total_batches }})
             </a>
@@ -527,8 +530,68 @@
         </div>
     </div>
 
+    <!-- Medications Section -->
+    <div id="medications-section" style="display: none;">
+        <div class="data-card">
+            <div class="data-card-header">
+                <h6><i class="bi bi-capsule me-2"></i>Medications Supplied by {{ supplier.name }}</h6>
+                <span style="font-size: 12px; opacity: 0.8;">{{ medications_count }} medication{{ medications_count|pluralize }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Medication</th>
+                            <th>Form</th>
+                            <th>Strength</th>
+                            <th class="text-center">Batches</th>
+                            <th class="text-center">Stock (from supplier)</th>
+                            <th>Last Supplied</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for med in supplied_medications %}
+                        <tr>
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'pharmacy:medication_detail' med.pk %}" class="medication-link">
+                                    {{ med.name }}
+                                </a>
+                                <div style="font-size:10px;color:var(--supplier-muted);">{{ med.generic_name }}</div>
+                            </td>
+                            <td>{{ med.get_form_display }}</td>
+                            <td>{{ med.strength }}</td>
+                            <td class="text-center"><span class="badge bg-primary" style="font-size:10px;">{{ med.batch_count }}</span></td>
+                            <td class="text-center fw-semibold">{{ med.total_stock|default:0 }}</td>
+                            <td>{{ med.last_supplied|date:"d M Y" }}</td>
+                            <td class="text-center">
+                                {% if med.is_active %}
+                                <span class="status-badge status-active">Active</span>
+                                {% else %}
+                                <span class="status-badge status-inactive">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="bi bi-capsule"></i>
+                                    <p>No medications supplied by this supplier yet</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Batches Section -->
-    <div id="batches-section">
+    <div id="batches-section" style="display: none;">
         <div class="data-card">
             <div class="data-card-header">
                 <h6><i class="bi bi-boxes me-2"></i>Recent Batches from {{ supplier.name }}</h6>
@@ -590,28 +653,29 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Tab navigation
     const navLinks = document.querySelectorAll('.supplier-nav-tabs .nav-link');
-    const overviewSection = document.getElementById('overview-section');
-    const batchesSection = document.getElementById('batches-section');
-    
+    const sections = {
+        'overview': document.getElementById('overview-section'),
+        'medications': document.getElementById('medications-section'),
+        'batches': document.getElementById('batches-section'),
+    };
+
     navLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
-            
-            // Remove active class from all links
             navLinks.forEach(l => l.classList.remove('active'));
-            
-            // Add active class to clicked link
             this.classList.add('active');
-            
-            // Show/hide sections
-            const section = this.dataset.section;
-            if (section === 'overview') {
-                overviewSection.style.display = 'block';
-                batchesSection.style.display = 'block';
-            } else if (section === 'batches') {
-                overviewSection.style.display = 'none';
-                batchesSection.style.display = 'block';
-            }
+
+            const target = this.dataset.section;
+            Object.keys(sections).forEach(key => {
+                if (sections[key]) {
+                    if (target === 'overview') {
+                        // Overview shows overview only
+                        sections[key].style.display = key === 'overview' ? 'block' : 'none';
+                    } else {
+                        sections[key].style.display = key === target ? 'block' : 'none';
+                    }
+                }
+            });
         });
     });
 });

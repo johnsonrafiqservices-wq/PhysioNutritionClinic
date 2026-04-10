@@ -1,9 +1,36 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib import messages
 from django.db import transaction
 from django.apps import apps
 from .models import User
+from .widgets import GroupedPermissionsWidget
+
+
+class CustomUserChangeForm(UserChangeForm):
+    role = forms.CharField(
+        widget=forms.Select(attrs={'size': '15', 'style': 'width:100%;'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = User.ROLE_CHOICES
+        self.fields['role'].widget.choices = User.ROLE_CHOICES
+        if 'user_permissions' in self.fields:
+            self.fields['user_permissions'].widget = GroupedPermissionsWidget()
+
+
+class CustomUserCreationForm(UserCreationForm):
+    role = forms.CharField(
+        widget=forms.Select(attrs={'size': '15', 'style': 'width:100%;'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = User.ROLE_CHOICES
+        self.fields['role'].widget.choices = User.ROLE_CHOICES
 
 def wipe_all_clinic_data(modeladmin, request, queryset):
     if not request.user.is_superuser:
@@ -39,6 +66,8 @@ wipe_all_clinic_data.short_description = "WIPE ALL CLINIC DATA (SUPERUSER ONLY)"
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
+    form = CustomUserChangeForm
+    add_form = CustomUserCreationForm
     list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'is_active_employee', 'date_joined_clinic')
     list_filter = ('role', 'is_active_employee', 'date_joined_clinic', 'is_staff', 'is_active')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'employee_id')

@@ -180,13 +180,24 @@ def supplier_detail(request, pk):
     active_batches_count = supplier.batch_set.filter(is_active=True).count()
     medications_count = supplier.batch_set.values('medication').distinct().count()
     batches = supplier.batch_set.all().order_by('-received_date')[:15]
-    
+
+    # Medications supplied by this supplier (aggregated)
+    from pharmacy.models import Medication
+    supplied_medications = Medication.objects.filter(
+        batches__supplier=supplier
+    ).annotate(
+        batch_count=Count('batches', filter=Q(batches__supplier=supplier)),
+        total_stock=Sum('batches__quantity_remaining', filter=Q(batches__supplier=supplier, batches__is_active=True)),
+        last_supplied=models.Max('batches__received_date', filter=Q(batches__supplier=supplier)),
+    ).order_by('-last_supplied')
+
     context = {
         'supplier': supplier,
         'active_batches_count': active_batches_count,
         'medications_count': medications_count,
         'batches': batches,
         'total_batches': supplier.batch_set.count(),
+        'supplied_medications': supplied_medications,
     }
     return render(request, 'pharmacy/supplier_detail.html', context)
 
@@ -1767,6 +1778,24 @@ def sales_report(request):
     # Convert to list to ensure it's evaluated
     daily_sales = list(daily_sales_raw)
     
+    # Prescriptions in period
+    from pharmacy.models import Prescription
+    prescriptions_count = Prescription.objects.filter(
+        prescribed_date__date__gte=start_date,
+        prescribed_date__date__lte=end_date,
+    ).count()
+    prescriptions_dispensed = Prescription.objects.filter(
+        prescribed_date__date__gte=start_date,
+        prescribed_date__date__lte=end_date,
+        status='dispensed',
+    ).count()
+
+    # Recent individual transactions (last 20)
+    recent_transactions = sales.order_by('-created_at')[:20]
+
+    # Top 10 products
+    top_products = sales_by_drug[:10]
+
     # Prepare JSON-serializable data for charts
     import json
     from decimal import Decimal
@@ -1796,10 +1825,14 @@ def sales_report(request):
         'total_revenue': total_revenue,
         'total_quantity': total_quantity,
         'avg_sale_value': avg_sale_value,
+        'prescriptions_count': prescriptions_count,
+        'prescriptions_dispensed': prescriptions_dispensed,
         'sales_by_drug': sales_by_drug,
+        'top_products': top_products,
         'daily_sales': daily_sales,
         'daily_sales_json': json.dumps(daily_sales_json),
         'sales_by_drug_json': json.dumps(sales_by_drug_json),
+        'recent_transactions': recent_transactions,
     }
     return render(request, 'pharmacy/sales_report.html', context)
 

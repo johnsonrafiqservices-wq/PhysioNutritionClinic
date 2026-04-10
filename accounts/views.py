@@ -182,6 +182,15 @@ def edit_user_permissions_view(request, user_id):
     target_user = get_object_or_404(User, pk=user_id)
 
     if request.method == 'POST':
+        # Handle role change
+        new_role = request.POST.get('role')
+        if new_role and new_role != target_user.role:
+            # Validate the role value against flat choices
+            valid_roles = [val for group_label, group_choices in User.ROLE_CHOICES for val, _ in group_choices]
+            if new_role in valid_roles:
+                target_user.role = new_role
+                target_user.save(update_fields=['role'])
+
         for app_code, app_label in SYSTEM_APPS:
             field_value = request.POST.get(f'app_{app_code}')
             # field_value: 'default' = remove override, 'allow' = force allow, 'block' = force block
@@ -233,5 +242,6 @@ def edit_user_permissions_view(request, user_id):
         'target_user': target_user,
         'app_states': app_states,
         'role_display': target_user.get_role_display(),
+        'role_choices': User.ROLE_CHOICES,
     }
     return render(request, 'accounts/edit_user_permissions.html', context)

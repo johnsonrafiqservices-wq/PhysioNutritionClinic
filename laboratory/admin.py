@@ -23,9 +23,41 @@ class LabTestPriceGroupAdmin(admin.ModelAdmin):
         return '0'
     price_difference.short_description = 'Diff from Base'
 
+class LabTestRequestInline(admin.TabularInline):
+    model = LabTestRequest
+    fk_name = 'test'
+    fields = ('patient', 'status', 'priority', 'requested_by', 'date_requested', 'sample_collected_at', 'sample_id', 'has_result_display')
+    readonly_fields = ('patient', 'status', 'priority', 'requested_by', 'date_requested', 'sample_collected_at', 'sample_id', 'has_result_display')
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    ordering = ['-date_requested']
+    verbose_name = 'Test Request'
+    verbose_name_plural = 'All Test Requests (History)'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_result_display(self, obj):
+        has = hasattr(obj, 'result') and obj.result is not None
+        if has:
+            return format_html('<span style="color:green;">&#10004; Yes</span>')
+        return format_html('<span style="color:#999;">&#10008; No</span>')
+    has_result_display.short_description = 'Result'
+
+
+class LabTestPriceGroupInline(admin.TabularInline):
+    model = LabTestPriceGroup
+    fk_name = 'lab_test'
+    fields = ('patient_group', 'price')
+    extra = 0
+    verbose_name = 'Group Price Override'
+    verbose_name_plural = 'Group Price Overrides'
+
+
 @admin.register(LabTest)
 class LabTestAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'category', 'price', 'currency', 'sample_type', 'duration_hours', 'is_active', 'created_at']
+    list_display = ['name', 'code', 'category', 'price', 'currency', 'sample_type', 'duration_hours', 'is_active', 'total_requests', 'created_at']
     list_editable = ['category', 'is_active']
     list_filter = ['category', 'is_active', 'created_at']
     search_fields = ['name', 'code', 'description']
@@ -33,6 +65,8 @@ class LabTestAdmin(admin.ModelAdmin):
     list_per_page = 50
     date_hierarchy = 'created_at'
     actions = ['activate_tests', 'deactivate_tests', 'duplicate_tests']
+    readonly_fields = ('created_at', 'updated_at', 'total_requests_display', 'completed_requests_display')
+    inlines = [LabTestPriceGroupInline, LabTestRequestInline]
     
     fieldsets = (
         ('Basic Information', {
@@ -44,11 +78,34 @@ class LabTestAdmin(admin.ModelAdmin):
         ('Pricing', {
             'fields': ('price', 'currency')
         }),
+        ('Statistics', {
+            'fields': ('total_requests_display', 'completed_requests_display'),
+        }),
         ('Profile Link', {
             'fields': ('profile',),
             'classes': ('collapse',)
         }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
     )
+
+    def total_requests(self, obj):
+        return obj.requests.count()
+    total_requests.short_description = 'Requests'
+
+    def total_requests_display(self, obj):
+        count = obj.requests.count()
+        return format_html('<strong>{}</strong> total request(s)', count)
+    total_requests_display.short_description = 'Total Requests'
+
+    def completed_requests_display(self, obj):
+        completed = obj.requests.filter(status='completed').count()
+        total = obj.requests.count()
+        pct = round(completed / total * 100) if total > 0 else 0
+        return format_html('<strong>{}</strong> / {} completed ({}%)', completed, total, pct)
+    completed_requests_display.short_description = 'Completed Requests'
     
     def activate_tests(self, request, queryset):
         updated = queryset.update(is_active=True)

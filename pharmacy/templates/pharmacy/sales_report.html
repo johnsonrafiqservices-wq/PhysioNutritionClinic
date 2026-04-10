@@ -1,203 +1,227 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
+{% block title %}Sales Report{% endblock %}
+
 {% block page_title %}
 <div class="d-flex align-items-center">
-    <i class="bi bi-file-earmark-bar-graph me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
+    <i class="bi bi-bar-chart-line me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
     <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">Sales Report</span>
 </div>
 {% endblock %}
 
 {% block page_actions %}
-<a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-speedometer2 me-1"></i> Dashboard
-</a>
-<a href="{% url 'pharmacy:sales_list' %}" class="btn btn-secondary btn-sm">
-    <i class="bi bi-list-ul me-1"></i> Sales List
-</a>
-<button onclick="window.print()" class="btn btn-success btn-sm">
-    <i class="bi bi-printer me-1"></i> Print Report
-</button>
+<div class="d-flex gap-2 align-items-center">
+    <a href="{% url 'pharmacy:sales_dashboard' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+    <a href="{% url 'pharmacy:sales_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-ul me-1"></i>Sales List</a>
+    <button onclick="window.print()" class="btn btn-outline-success btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+</div>
 {% endblock %}
 
 {% block content %}
-<!-- Date Range Filter -->
-<div class="card border-0 shadow-sm mb-4 no-print">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-4">
-                <label for="start_date" class="form-label">Report Period</label>
-                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
-            </div>
-            <div class="col-md-4">
-                <label for="end_date" class="form-label">&nbsp;</label>
-                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label d-block">&nbsp;</label>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-search"></i> Generate Report
-                </button>
-            </div>
+<!-- Date Filter -->
+<div class="card border-0 shadow-sm mb-3 no-print">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small fw-bold me-1"><i class="bi bi-funnel me-1"></i>Period:</span>
+            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|date:'Y-m-d' }}" style="width:auto;">
+            <span class="text-muted small">to</span>
+            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|date:'Y-m-d' }}" style="width:auto;">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter me-1"></i>Apply</button>
+            <span class="ms-auto text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ start_date|date:"M d, Y" }} — {{ end_date|date:"M d, Y" }}</span>
         </form>
     </div>
 </div>
 
-<!-- Report Header -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body text-center">
-        <h2 class="mb-3">Sales Performance Report</h2>
-        <p class="text-muted mb-0">
-            <i class="bi bi-calendar-range"></i>
-            Period: <strong>{{ start_date|date:"M d, Y" }}</strong> to <strong>{{ end_date|date:"M d, Y" }}</strong>
-        </p>
-    </div>
-</div>
-
-<!-- Summary Statistics -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body">
-                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
-                    <i class="bi bi-cart-check fs-3 text-primary"></i>
-                </div>
-                <h3 class="mb-1">{{ total_sales|intcomma }}</h3>
-                <p class="text-muted mb-0">Total Sales</p>
+<!-- KPI Cards -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #0d6efd !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#0d6efd;">{{ total_sales|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Total Sales</div>
             </div>
         </div>
     </div>
-
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body">
-                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
-                    <i class="bi bi-cash-stack fs-3 text-success"></i>
-                </div>
-                <h3 class="mb-1">UGX {{ total_revenue|floatformat:0|intcomma }}</h3>
-                <p class="text-muted mb-0">Total Revenue</p>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #198754 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#198754;">{{ total_revenue|floatformat:0|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Revenue (UGX)</div>
             </div>
         </div>
     </div>
-
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body">
-                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
-                    <i class="bi bi-box-seam fs-3 text-info"></i>
-                </div>
-                <h3 class="mb-1">{{ total_quantity|intcomma }}</h3>
-                <p class="text-muted mb-0">Units Sold</p>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #6f42c1 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#6f42c1;">{{ prescriptions_count|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Prescriptions</div>
             </div>
         </div>
     </div>
-
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body">
-                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
-                    <i class="bi bi-graph-up fs-3 text-warning"></i>
-                </div>
-                <h3 class="mb-1">UGX {{ avg_sale_value|floatformat:0|intcomma }}</h3>
-                <p class="text-muted mb-0">Avg Sale Value</p>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #0dcaf0 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#0dcaf0;">{{ total_quantity|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Units Sold</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #e67e22 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#e67e22;">{{ avg_sale_value|floatformat:0|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Avg Order (UGX)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card border-0 shadow-sm" style="border-left:3px solid #20c997 !important;">
+            <div class="card-body p-2 text-center">
+                <div class="fw-bold fs-5" style="color:#20c997;">{{ prescriptions_dispensed|intcomma }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Dispensed</div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Sales by Drug -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white">
-        <h5 class="mb-0">
-            <i class="bi bi-pie-chart text-primary me-2"></i>Sales by Drug
-        </h5>
+<!-- Charts Row -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up text-primary me-1"></i>Sales Trend</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="salesTrendChart" height="220"></canvas>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        {% if sales_by_drug %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>#</th>
-                        <th>Drug Name</th>
-                        <th class="text-center">Quantity Sold</th>
-                        <th class="text-center">Number of Sales</th>
-                        <th class="text-end">Total Revenue</th>
-                        <th class="text-center">% of Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for drug in sales_by_drug %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td><strong>{{ drug.batch__medication__name }}</strong></td>
-                        <td class="text-center">
-                            <span class="badge bg-primary">{{ drug.quantity }}</span>
-                        </td>
-                        <td class="text-center">{{ drug.count }}</td>
-                        <td class="text-end">
-                            <strong class="text-success">UGX {{ drug.revenue|floatformat:0|intcomma }}</strong>
-                        </td>
-                        <td class="text-center">
-                            {% widthratio drug.revenue total_revenue 100 as percentage %}
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ percentage }}%" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100">
-                                    {{ percentage }}%
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart text-success me-1"></i>Revenue by Product</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="productChart" height="220"></canvas>
+            </div>
         </div>
-        {% else %}
-        <div class="text-center text-muted py-4">
-            <i class="bi bi-inbox fs-1"></i>
-            <p class="mt-2">No sales data available for this period.</p>
-        </div>
-        {% endif %}
     </div>
 </div>
 
-<!-- Daily Sales Trend -->
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white">
-        <h5 class="mb-0">
-            <i class="bi bi-graph-up-arrow text-success me-2"></i>Daily Sales Trend
-        </h5>
+<!-- Tables Row -->
+<div class="row g-3 mb-3">
+    <!-- Top Products -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-trophy text-warning me-1"></i>Top Products</h6>
+                <span class="badge bg-primary" style="font-size:.7rem;">{{ top_products|length }} items</span>
+            </div>
+            <div class="card-body p-0">
+                {% if top_products %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">#</th>
+                                <th class="border-0">Medication</th>
+                                <th class="border-0 text-center">Qty Sold</th>
+                                <th class="border-0 text-center">Sales</th>
+                                <th class="border-0 text-end pe-3">Revenue (UGX)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for drug in top_products %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+                                <td class="fw-medium">{{ drug.batch__medication__name }}</td>
+                                <td class="text-center"><span class="badge bg-primary" style="font-size:.7rem;">{{ drug.quantity }}</span></td>
+                                <td class="text-center text-muted">{{ drug.count }}</td>
+                                <td class="text-end pe-3 fw-medium text-success">{{ drug.revenue|floatformat:0|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No product data for this period</p></div>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    <div class="card-body">
+
+    <!-- Recent Transactions -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-2 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-receipt text-info me-1"></i>Recent Transactions</h6>
+                <a href="{% url 'pharmacy:sales_list' %}" class="text-decoration-none" style="font-size:.7rem;">View all <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 ps-3">Date</th>
+                                <th class="border-0">Medication</th>
+                                <th class="border-0 text-center">Qty</th>
+                                <th class="border-0">Ref</th>
+                                <th class="border-0">By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in recent_transactions %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ txn.created_at|date:"m/d H:i" }}</td>
+                                <td class="fw-medium">{{ txn.batch.medication.name|truncatewords:3 }}</td>
+                                <td class="text-center"><span class="badge bg-info text-dark" style="font-size:.7rem;">{{ txn.quantity }}</span></td>
+                                <td class="text-muted" style="font-size:.75rem;">{{ txn.reference|truncatewords:2 }}</td>
+                                <td class="text-muted">{{ txn.created_by.get_short_name|default:txn.created_by.username }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No transactions for this period</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Breakdown Table -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white py-2 border-bottom">
+        <h6 class="mb-0 fw-bold" style="font-size:.85rem;"><i class="bi bi-calendar-week text-primary me-1"></i>Daily Breakdown</h6>
+    </div>
+    <div class="card-body p-0">
         {% if daily_sales %}
         <div class="table-responsive">
-            <table class="table table-hover table-sm">
+            <table class="table table-hover table-sm mb-0" style="font-size:.8rem;">
                 <thead class="table-light">
                     <tr>
-                        <th>Date</th>
-                        <th class="text-center">Number of Sales</th>
-                        <th class="text-end">Daily Revenue</th>
-                        <th style="width: 40%;">Trend</th>
+                        <th class="border-0 ps-3">Date</th>
+                        <th class="border-0 text-center">Transactions</th>
+                        <th class="border-0 text-end">Revenue (UGX)</th>
+                        <th class="border-0" style="width:40%;">Share</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for day in daily_sales %}
                     <tr>
+                        <td class="ps-3"><i class="bi bi-calendar3 text-muted me-1"></i>{{ day.date|date:"M d, Y" }}</td>
+                        <td class="text-center"><span class="badge bg-info text-dark" style="font-size:.7rem;">{{ day.count }}</span></td>
+                        <td class="text-end fw-medium">{{ day.revenue|floatformat:0|intcomma }}</td>
                         <td>
-                            <i class="bi bi-calendar3"></i>
-                            {{ day.date|date:"M d, Y" }}
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-info">{{ day.count }}</span>
-                        </td>
-                        <td class="text-end">
-                            <strong>UGX {{ day.revenue|floatformat:0|intcomma }}</strong>
-                        </td>
-                        <td>
-                            {% widthratio day.revenue total_revenue 100 as day_percentage %}
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio day_percentage 1 10 %}%" aria-valuenow="{{ day_percentage }}" aria-valuemin="0" aria-valuemax="100">
-                                    {{ day.revenue|floatformat:0|intcomma %}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:8px;">
+                                    {% widthratio day.revenue total_revenue 100 as pct %}
+                                    <div class="progress-bar bg-success" style="width:{{ pct }}%;"></div>
                                 </div>
+                                <small class="text-muted fw-bold" style="min-width:32px;">{{ pct }}%</small>
                             </div>
                         </td>
                     </tr>
@@ -206,46 +230,87 @@
             </table>
         </div>
         {% else %}
-        <div class="text-center text-muted py-4">
-            <i class="bi bi-inbox fs-1"></i>
-            <p class="mt-2">No daily sales data available.</p>
-        </div>
+        <div class="text-center py-4"><i class="bi bi-inbox text-muted" style="font-size:2rem;"></i><p class="text-muted small mt-1 mb-0">No daily data available</p></div>
         {% endif %}
     </div>
 </div>
 
 <style>
 @media print {
-    .no-print {
-        display: none !important;
-    }
-    
-    .card {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-    
-    body {
-        padding: 0;
-        margin: 0;
-    }
-    
-    .sidebar {
-        display: none;
-    }
-    
-    .main-content {
-        margin-left: 0;
-        padding: 20px;
-    }
-}
-
-.progress {
-    background-color: #e9ecef;
-}
-
-.table th {
-    font-weight: 600;
+    .no-print { display: none !important; }
+    .card { break-inside: avoid; page-break-inside: avoid; }
+    body { padding: 0; margin: 0; }
+    .sidebar { display: none; }
+    .main-content { margin-left: 0; padding: 20px; }
 }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Sales Trend Chart
+const dailyData = {{ daily_sales_json|safe }};
+const trendLabels = dailyData.map(d => {
+    const dt = new Date(d.date);
+    return dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+});
+const trendRevenue = dailyData.map(d => d.revenue);
+const trendCount = dailyData.map(d => d.count);
+
+const trendCtx = document.getElementById('salesTrendChart').getContext('2d');
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: trendLabels,
+        datasets: [
+            {
+                label: 'Revenue (UGX)',
+                data: trendRevenue,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13,110,253,0.08)',
+                borderWidth: 2, fill: true, tension: 0.35,
+                yAxisID: 'y'
+            },
+            {
+                label: 'Transactions',
+                data: trendCount,
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25,135,84,0.08)',
+                borderWidth: 2, borderDash: [5,3], tension: 0.35,
+                yAxisID: 'y1'
+            }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+            y: { beginAtZero: true, position: 'left', ticks: { callback: v => v.toLocaleString(), font: {size:10} }, grid: {color:'#f1f5f9'} },
+            y1: { beginAtZero: true, position: 'right', grid: {drawOnChartArea: false}, ticks: {font:{size:10}} },
+            x: { ticks: {font:{size:10}}, grid: {display:false} }
+        },
+        plugins: { legend: { labels: { font: {size:11}, usePointStyle:true, pointStyle:'circle' } } }
+    }
+});
+
+// Product Revenue Doughnut
+const drugData = {{ sales_by_drug_json|safe }};
+const topDrugs = drugData.slice(0, 8);
+const prodLabels = topDrugs.map(d => d.batch__medication__name);
+const prodValues = topDrugs.map(d => d.revenue);
+const prodColors = ['#0d6efd','#198754','#e67e22','#6f42c1','#dc3545','#0dcaf0','#20c997','#fd7e14'];
+
+const prodCtx = document.getElementById('productChart').getContext('2d');
+new Chart(prodCtx, {
+    type: 'doughnut',
+    data: {
+        labels: prodLabels,
+        datasets: [{ data: prodValues, backgroundColor: prodColors, borderWidth: 0 }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: { legend: { position:'bottom', labels: { font:{size:10}, padding:8, usePointStyle:true, pointStyle:'circle' } } }
+    }
+});
+</script>
 {% endblock %}

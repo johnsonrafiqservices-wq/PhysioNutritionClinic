@@ -166,6 +166,32 @@
     .legend-dot.yellow { background: #eab308; }
     .legend-dot.red { background: #ef4444; }
     .legend-dot.gray { background: #94a3b8; }
+
+    /* Role Select */
+    select[name="role"] {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 4px;
+        width: 100%;
+        font-size: 13px;
+        line-height: 1.8;
+    }
+    select[name="role"] optgroup {
+        font-weight: 700;
+        font-size: 12px;
+        color: var(--alafia-primary, #1B5E96);
+        padding: 6px 0 2px 0;
+    }
+    select[name="role"] option {
+        font-weight: 400;
+        color: #1e293b;
+        padding: 4px 12px;
+        font-size: 13px;
+    }
+    select[name="role"] option:checked {
+        background: linear-gradient(135deg, #1B5E96, #2980b9);
+        color: #fff;
+    }
 </style>
 {% endblock %}
 
@@ -196,6 +222,27 @@
     <div class="col-lg-8">
         <form method="post">
             {% csrf_token %}
+
+            <!-- Change Role -->
+            <div class="ep-card">
+                <div class="ep-card-header">
+                    <h3><i class="bi bi-person-gear"></i> Assign Role</h3>
+                    <span style="font-size:12px; color:#64748b;">Current: <strong>{{ role_display }}</strong></span>
+                </div>
+                <div class="ep-card-body" style="padding:20px 24px;">
+                    <p style="font-size:12px;color:#64748b;margin:0 0 10px 0;">Select a role — roles are grouped by department. Changing the role also updates default app permissions.</p>
+                    <select name="role" class="form-select" style="font-size:13px;" size="12">
+                        {% for group_label, group_roles in role_choices %}
+                        <optgroup label="{{ group_label }}">
+                            {% for value, label in group_roles %}
+                            <option value="{{ value }}" {% if value == target_user.role %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
             <div class="ep-card">
                 <div class="ep-card-header">
                     <h3><i class="bi bi-grid"></i> App Access</h3>

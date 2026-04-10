@@ -31,75 +31,75 @@
 
 {% block content %}
 <!-- Status Badge -->
-<div class="mb-4">
+<div class="mb-2">
     {% if test.is_active %}
-    <span class="badge bg-success px-3 py-2"><i class="bi bi-check-circle me-1"></i> Active</span>
+    <span class="badge bg-success px-2 py-1" style="font-size:0.75rem;"><i class="bi bi-check-circle me-1"></i>Active</span>
     {% else %}
-    <span class="badge bg-danger px-3 py-2"><i class="bi bi-x-circle me-1"></i> Inactive</span>
+    <span class="badge bg-danger px-2 py-1" style="font-size:0.75rem;"><i class="bi bi-x-circle me-1"></i>Inactive</span>
     {% endif %}
-    <span class="badge bg-primary px-3 py-2 ms-1">{{ test.get_category_display }}</span>
+    <span class="badge bg-primary px-2 py-1 ms-1" style="font-size:0.75rem;">{{ test.get_category_display }}</span>
     {% if profile %}
-    <span class="badge bg-info text-dark px-3 py-2 ms-1"><i class="bi bi-diagram-3 me-1"></i> Profile Test</span>
+    <span class="badge bg-info text-dark px-2 py-1 ms-1" style="font-size:0.75rem;"><i class="bi bi-diagram-3 me-1"></i>Profile Test</span>
     {% endif %}
 </div>
 
 <div class="row">
     <!-- Test Info -->
-    <div class="col-lg-6 mb-4">
+    <div class="col-lg-6 mb-2">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.95rem;"><i class="bi bi-clipboard-data me-2"></i>Test Information</h6>
+            <div class="card-header py-1 px-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+                <h6 class="mb-0 fw-bold text-white" style="font-size: 0.85rem;"><i class="bi bi-clipboard-data me-2"></i>Test Information</h6>
             </div>
-            <div class="card-body py-3">
-                <div class="row g-2">
+            <div class="card-body py-2 px-3">
+                <div class="row g-1">
                     <div class="col-6">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Test Name</small>
-                            <span class="fw-bold" style="font-size: 0.9rem;">{{ test.name }}</span>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Test Name</small>
+                            <span class="fw-bold" style="font-size: 0.82rem;">{{ test.name }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Test Code</small>
-                            <code style="font-size: 0.9rem;">{{ test.code }}</code>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Test Code</small>
+                            <code style="font-size: 0.82rem;">{{ test.code }}</code>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Category</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-tag me-1"></i>{{ test.get_category_display }}</span>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Category</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-tag me-1"></i>{{ test.get_category_display }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Sample Type</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-droplet me-1"></i>{{ test.sample_type|default:"Not specified" }}</span>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Sample Type</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-droplet me-1"></i>{{ test.sample_type|default:"Not specified" }}</span>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Price</small>
-                            <span class="fw-bold text-dark" style="font-size: 1.1rem;">{{ test.price|intcomma }}</span>
-                            <small class="text-muted">{{ test.currency }}</small>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Price</small>
+                            <span class="fw-bold text-dark" style="font-size: 0.95rem;">{{ test.price|intcomma }}</span>
+                            <small class="text-muted" style="font-size:0.7rem;">{{ test.currency }}</small>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Duration</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-clock me-1"></i>{{ test.duration_hours }} hours</span>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Duration</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-clock me-1"></i>{{ test.duration_hours }}h</span>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Parameters</small>
-                            <span class="fw-bold" style="font-size: 1.1rem;">{{ parameters|length }}</span>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Parameters</small>
+                            <span class="fw-bold" style="font-size: 0.95rem;">{{ parameters|length }}</span>
                         </div>
                     </div>
                 </div>
                 {% if test.description %}
-                <div class="mt-2 p-2 rounded-3 border-start border-3 border-primary" style="background: #f0f7ff;">
-                    <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.5px;"><i class="bi bi-info-circle me-1"></i>Description</small>
-                    <p class="mb-0" style="font-size: 0.85rem;">{{ test.description }}</p>
+                <div class="mt-1 px-2 py-1 rounded-2 border-start border-3 border-primary" style="background: #f0f7ff;">
+                    <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem; letter-spacing: 0.5px;"><i class="bi bi-info-circle me-1"></i>Description</small>
+                    <p class="mb-0" style="font-size: 0.8rem;">{{ test.description }}</p>
                 </div>
                 {% endif %}
             </div>
@@ -107,74 +107,74 @@
     </div>
 
     <!-- Usage Stats -->
-    <div class="col-lg-6 mb-4">
+    <div class="col-lg-6 mb-2">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-2" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+            <div class="card-header py-1 px-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-white" style="font-size: 0.95rem;"><i class="bi bi-bar-chart me-2"></i>Usage & History</h6>
-                    <a href="{% url 'laboratory:test_usage_report' test.pk %}" class="btn btn-sm btn-light" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" title="Download Report">
+                    <h6 class="mb-0 fw-bold text-white" style="font-size: 0.85rem;"><i class="bi bi-bar-chart me-2"></i>Usage & History</h6>
+                    <a href="{% url 'laboratory:test_usage_report' test.pk %}" class="btn btn-sm btn-light" style="padding: 0.15rem 0.4rem; font-size: 0.75rem;" title="Download Report">
                         <i class="bi bi-download"></i> Report
                     </a>
                 </div>
             </div>
-            <div class="card-body py-3">
+            <div class="card-body py-2 px-3">
                 <!-- Time Period Statistics -->
-                <div class="row g-2 mb-3">
+                <div class="row g-1 mb-2">
                     <div class="col-4">
-                        <div class="p-2 rounded-3 text-center border" style="background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;">This Month</small>
-                            <span class="fw-bold fs-5 text-primary">{{ monthly_requests }}</span>
-                            <small class="text-muted d-block" style="font-size: 0.65rem;">requests</small>
+                        <div class="px-2 py-1 rounded-2 text-center border" style="background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;">This Month</small>
+                            <span class="fw-bold text-primary" style="font-size: 1.1rem;">{{ monthly_requests }}</span>
+                            <small class="text-muted d-block" style="font-size: 0.6rem;">requests</small>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="p-2 rounded-3 text-center border" style="background: linear-gradient(135deg, #f3e5f5 0%, #ffffff 100%);">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;">This Week</small>
-                            <span class="fw-bold fs-5 text-purple">{{ weekly_requests }}</span>
-                            <small class="text-muted d-block" style="font-size: 0.65rem;">requests</small>
+                        <div class="px-2 py-1 rounded-2 text-center border" style="background: linear-gradient(135deg, #f3e5f5 0%, #ffffff 100%);">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;">This Week</small>
+                            <span class="fw-bold text-purple" style="font-size: 1.1rem;">{{ weekly_requests }}</span>
+                            <small class="text-muted d-block" style="font-size: 0.6rem;">requests</small>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="p-2 rounded-3 text-center border" style="background: linear-gradient(135deg, #fff3e0 0%, #ffffff 100%);">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;">Today</small>
-                            <span class="fw-bold fs-5 text-warning">{{ daily_requests }}</span>
-                            <small class="text-muted d-block" style="font-size: 0.65rem;">requests</small>
+                        <div class="px-2 py-1 rounded-2 text-center border" style="background: linear-gradient(135deg, #fff3e0 0%, #ffffff 100%);">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;">Today</small>
+                            <span class="fw-bold text-warning" style="font-size: 1.1rem;">{{ daily_requests }}</span>
+                            <small class="text-muted d-block" style="font-size: 0.6rem;">requests</small>
                         </div>
                     </div>
                 </div>
 
                 <!-- Overall Statistics -->
-                <div class="row g-2">
+                <div class="row g-1">
                     <div class="col-6">
-                        <div class="p-2 rounded-3 text-center" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;">Total Requests</small>
-                            <span class="fw-bold text-primary" style="font-size: 1.3rem;">{{ test.requests.count }}</span>
+                        <div class="px-2 py-1 rounded-2 text-center" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;">Total Requests</small>
+                            <span class="fw-bold text-primary" style="font-size: 1.1rem;">{{ test.requests.count }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded-3 text-center" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;">Completed</small>
-                            <span class="fw-bold text-success" style="font-size: 1.3rem;">{{ completed_requests }}</span>
+                        <div class="px-2 py-1 rounded-2 text-center" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;">Completed</small>
+                            <span class="fw-bold text-success" style="font-size: 1.1rem;">{{ completed_requests }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;">Created</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-calendar me-1"></i>{{ test.created_at|date:"M d, Y" }}</span>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;">Created</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-calendar me-1"></i>{{ test.created_at|date:"M d, Y" }}</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 rounded-3" style="background: #f8f9fa;">
-                            <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;">Last Updated</small>
-                            <span class="fw-semibold" style="font-size: 0.85rem;"><i class="bi bi-calendar-check me-1"></i>{{ test.updated_at|date:"M d, Y" }}</span>
+                        <div class="px-2 py-1 rounded-2" style="background: #f8f9fa;">
+                            <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;">Last Updated</small>
+                            <span class="fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-calendar-check me-1"></i>{{ test.updated_at|date:"M d, Y" }}</span>
                         </div>
                     </div>
                 </div>
                 {% if profile %}
-                <div class="mt-2 p-2 rounded-3 border-start border-3 border-info" style="background: #f0faff;">
-                    <small class="text-uppercase text-muted d-block mb-1 fw-semibold" style="font-size: 0.65rem;"><i class="bi bi-diagram-3 me-1"></i>Profile</small>
-                    <span class="fw-semibold" style="font-size: 0.9rem;">{{ profile.name }}</span>
-                    <small class="text-muted d-block" style="font-size: 0.8rem;">Code: {{ profile.code }}</small>
+                <div class="mt-1 px-2 py-1 rounded-2 border-start border-3 border-info" style="background: #f0faff;">
+                    <small class="text-uppercase text-muted d-block fw-semibold" style="font-size: 0.6rem;"><i class="bi bi-diagram-3 me-1"></i>Profile</small>
+                    <span class="fw-semibold" style="font-size: 0.82rem;">{{ profile.name }}</span>
+                    <small class="text-muted d-block" style="font-size: 0.72rem;">Code: {{ profile.code }}</small>
                 </div>
                 {% endif %}
             </div>
@@ -182,32 +182,41 @@
     </div>
 </div>
 
-{% if parameters %}
-<!-- Parameters Table -->
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-header py-3" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h6 class="mb-0 fw-bold text-white"><i class="bi bi-list-check me-2"></i>Test Parameters</h6>
-            <div class="d-flex gap-2 align-items-center">
-                <span class="badge bg-white text-dark">{{ parameters|length }} parameter{{ parameters|length|pluralize }}</span>
-                <a href="{% url 'laboratory:test_requests_results' test.pk %}" class="btn btn-sm btn-light">
-                    <i class="bi bi-file-earmark-medical"></i> View All Requests & Results
-                </a>
-            </div>
+<!-- Tabbed Card: Parameters / Requests & Results -->
+<div class="card shadow-sm border-0 mb-2">
+    <div class="card-header py-1 px-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
+        <div class="d-flex gap-1">
+            <button type="button" class="btn btn-sm detail-tab-btn active" id="tabBtnParams" onclick="switchDetailTab('parameters')" style="padding:0.2rem 0.6rem;font-size:0.78rem;border-radius:4px;">
+                <i class="bi bi-list-check me-1"></i>{{ parameters|length }} Parameters
+            </button>
+            <button type="button" class="btn btn-sm detail-tab-btn" id="tabBtnRR" onclick="switchDetailTab('requests')" style="padding:0.2rem 0.6rem;font-size:0.78rem;border-radius:4px;">
+                <i class="bi bi-file-earmark-medical me-1"></i>Requests & Results
+            </button>
+        </div>
+        <div class="d-flex gap-1 align-items-center" id="rrBulkActions" style="display:none!important;">
+            <button type="button" class="btn btn-success btn-sm" id="bulkExportBtn" onclick="bulkExportReports()" style="display:none;padding:0.15rem 0.4rem;font-size:0.72rem;">
+                <i class="bi bi-download"></i> HTML (<span id="bulkSelectedCount">0</span>)
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" id="bulkExportPdfBtn" onclick="bulkExportReportsPdf()" style="display:none;padding:0.15rem 0.4rem;font-size:0.72rem;">
+                <i class="bi bi-file-pdf"></i> PDF (<span id="bulkSelectedCountPdf">0</span>)
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="bulkUploadBtn" onclick="bulkUploadReports()" style="display:none;padding:0.15rem 0.4rem;font-size:0.72rem;">
+                <i class="bi bi-cloud-upload"></i> R2 (<span id="bulkSelectedCountUpload">0</span>)
+            </button>
         </div>
     </div>
-    <div class="card-body p-3">
-        <!-- Search Box -->
-        <div class="mb-3">
-            <input type="text" id="parameterSearch" class="form-control" placeholder="Search parameters by name, code, or unit...">
+
+    <!-- ===== Parameters Panel ===== -->
+    <div id="panelParameters" class="card-body p-2">
+        {% if parameters %}
+        <div class="mb-2">
+            <input type="text" id="parameterSearch" class="form-control form-control-sm" placeholder="Search parameters by name, code, or unit...">
         </div>
-        
-        <!-- Scrollable Table Container -->
-        <div style="max-height: 500px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
-            <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;" id="parametersTable">
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+            <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.82rem;" id="parametersTable">
                 <thead style="position: sticky; top: 0; z-index: 10; background: #f0f4f8;">
                     <tr style="background: #f0f4f8;">
-                        <th class="ps-3 text-muted" style="width: 40px;">#</th>
+                        <th class="ps-2 text-muted" style="width: 32px;">#</th>
                         <th>Parameter Name</th>
                         <th>Code</th>
                         <th class="text-center">Result Type</th>
@@ -219,10 +228,10 @@
                 <tbody>
                     {% for param in parameters %}
                     <tr class="parameter-row">
-                        <td class="ps-3 text-muted small">{{ forloop.counter }}</td>
+                        <td class="ps-2 text-muted">{{ forloop.counter }}</td>
                         <td class="fw-semibold param-name">{{ param.name }}</td>
                         <td class="param-code"><code>{{ param.code }}</code></td>
-                        <td class="text-center"><span class="badge bg-light text-dark border">{{ param.get_result_type_display }}</span></td>
+                        <td class="text-center"><span class="badge bg-light text-dark border" style="font-size:0.72rem;">{{ param.get_result_type_display }}</span></td>
                         <td class="text-center text-muted param-unit">{{ param.unit|default:"—" }}</td>
                         <td class="text-center small">
                             {% if param.reference_range_text %}
@@ -237,58 +246,264 @@
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td class="text-center"><span class="badge bg-light text-dark border">{{ param.get_flag_criteria_display }}</span></td>
+                        <td class="text-center"><span class="badge bg-light text-dark border" style="font-size:0.72rem;">{{ param.get_flag_criteria_display }}</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div id="noResultsMessage" class="text-center text-muted py-3 d-none">
+        <div id="noResultsMessage" class="text-center text-muted py-2 d-none" style="font-size:0.82rem;">
             <i class="bi bi-search"></i> No parameters match your search
         </div>
+        {% else %}
+        <div class="text-center py-3">
+            <div class="mb-2" style="width: 56px; height: 56px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-list-check" style="font-size: 1.5rem; color: #95a5a6;"></i>
+            </div>
+            <h6 class="fw-bold mb-1" style="color: #2c3e50;">No Parameters Defined</h6>
+            <p class="text-muted mb-2" style="font-size:0.85rem;">This test doesn't have a profile with parameters yet.</p>
+            <button type="button" class="btn btn-primary btn-sm px-3" id="emptyEditBtn"
+                    data-json-url="{% url 'laboratory:labtest_get_json' test.pk %}"
+                    data-edit-url="{% url 'laboratory:labtest_edit' test.pk %}">
+                <i class="bi bi-pencil-square me-1"></i> Edit Test to Add Parameters
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ===== Requests & Results Panel ===== -->
+    <div id="panelRequests" class="card-body p-2" style="display:none;">
+        <!-- Compact filters -->
+        <form method="get" class="row g-1 mb-2 align-items-end">
+            <input type="hidden" name="tab" value="requests">
+            <div class="col">
+                <label class="form-label fw-semibold mb-0" style="font-size:0.65rem;">From</label>
+                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ rr_date_from }}" style="font-size:0.78rem;">
+            </div>
+            <div class="col">
+                <label class="form-label fw-semibold mb-0" style="font-size:0.65rem;">To</label>
+                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ rr_date_to }}" style="font-size:0.78rem;">
+            </div>
+            <div class="col">
+                <label class="form-label fw-semibold mb-0" style="font-size:0.65rem;">Status</label>
+                <select name="rr_status" class="form-select form-select-sm" style="font-size:0.78rem;">
+                    <option value="">All</option>
+                    <option value="requested" {% if rr_status == 'requested' %}selected{% endif %}>Requested</option>
+                    <option value="sample_collected" {% if rr_status == 'sample_collected' %}selected{% endif %}>Sample Collected</option>
+                    <option value="in_progress" {% if rr_status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if rr_status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if rr_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label fw-semibold mb-0" style="font-size:0.65rem;">Patient</label>
+                <input type="text" name="rr_patient" class="form-control form-control-sm" placeholder="Name or ID" value="{{ rr_patient }}" style="font-size:0.78rem;">
+            </div>
+            <div class="col-auto d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm" style="padding:0.2rem 0.5rem;font-size:0.75rem;"><i class="bi bi-search"></i></button>
+                <a href="{% url 'laboratory:labtest_detail' test.pk %}?tab=requests" class="btn btn-outline-secondary btn-sm" style="padding:0.2rem 0.5rem;font-size:0.75rem;"><i class="bi bi-x-circle"></i></a>
+            </div>
+        </form>
+
+        <!-- Summary row -->
+        <div class="d-flex gap-3 mb-2 px-1" style="font-size:0.78rem;">
+            <span class="text-muted">Total: <strong class="text-primary">{{ rr_total }}</strong></span>
+            <span class="text-muted">Completed: <strong class="text-success">{{ rr_completed }}</strong></span>
+        </div>
+
+        <!-- Requests table -->
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+            <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.8rem;">
+                <thead style="position: sticky; top: 0; z-index: 10; background: #f0f4f8;">
+                    <tr>
+                        <th style="padding:0.35rem;width:3%;"><input type="checkbox" class="form-check-input" id="selectAllTests" onchange="toggleSelectAllTests(this)"></th>
+                        <th style="padding:0.35rem;">Request ID</th>
+                        <th style="padding:0.35rem;">Patient</th>
+                        <th style="padding:0.35rem;">Date</th>
+                        <th style="padding:0.35rem;">Status</th>
+                        <th style="padding:0.35rem;">Result</th>
+                        <th style="padding:0.35rem;">Verified</th>
+                        <th class="text-center" style="padding:0.35rem;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in rr_page_obj %}
+                    <tr>
+                        <td style="padding:0.3rem;">
+                            {% if req.result %}<input type="checkbox" class="form-check-input test-request-checkbox" value="{{ req.pk }}" onchange="updateBulkExportButton()">{% endif %}
+                        </td>
+                        <td style="padding:0.3rem;">
+                            <a href="{% url 'laboratory:request_detail' req.pk %}" class="text-decoration-none fw-semibold" style="font-size:0.8rem;">LAB-{{ req.pk|stringformat:"05d" }}</a>
+                        </td>
+                        <td style="padding:0.3rem;">
+                            <div class="fw-semibold" style="font-size:0.8rem;">{{ req.patient.get_full_name }}</div>
+                            <small class="text-muted" style="font-size:0.68rem;">{{ req.patient.patient_id }}</small>
+                        </td>
+                        <td style="padding:0.3rem;">
+                            <div style="font-size:0.78rem;">{{ req.date_requested|date:"d M Y" }}</div>
+                            <small class="text-muted" style="font-size:0.68rem;">{{ req.date_requested|date:"H:i" }}</small>
+                        </td>
+                        <td style="padding:0.3rem;">
+                            {% if req.status == 'requested' %}<span class="badge bg-secondary" style="font-size:0.68rem;">Requested</span>
+                            {% elif req.status == 'sample_collected' %}<span class="badge bg-info" style="font-size:0.68rem;">Sample</span>
+                            {% elif req.status == 'in_progress' %}<span class="badge bg-warning text-dark" style="font-size:0.68rem;">In Progress</span>
+                            {% elif req.status == 'completed' %}<span class="badge bg-success" style="font-size:0.68rem;">Completed</span>
+                            {% elif req.status == 'cancelled' %}<span class="badge bg-danger" style="font-size:0.68rem;">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:0.3rem;">
+                            {% if req.result %}
+                                {% if req.result.verified %}<span class="badge bg-success" style="font-size:0.68rem;"><i class="bi bi-check-circle"></i> Final</span>
+                                {% else %}<span class="badge bg-warning text-dark" style="font-size:0.68rem;"><i class="bi bi-clock"></i> Prelim</span>{% endif %}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td style="padding:0.3rem;">
+                            {% if req.result and req.result.verified %}
+                            <i class="bi bi-check-circle-fill text-success" style="font-size:0.85rem;"></i>
+                            <small class="text-muted d-block" style="font-size:0.65rem;">{{ req.result.verified_at|date:"d M Y" }}</small>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="text-center" style="padding:0.3rem;">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'laboratory:request_detail' req.pk %}" class="btn btn-outline-primary" style="padding:0.15rem 0.3rem;font-size:0.72rem;" title="View"><i class="bi bi-eye"></i></a>
+                                {% if req.result %}
+                                <a href="{% url 'laboratory:test_report' req.pk %}" class="btn btn-outline-info" style="padding:0.15rem 0.3rem;font-size:0.72rem;" title="Report" target="_blank"><i class="bi bi-file-earmark-text"></i></a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-3">
+                            <i class="bi bi-inbox text-muted" style="font-size:1.2rem;"></i>
+                            <p class="text-muted mb-0 mt-1" style="font-size:0.82rem;">No requests found</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if rr_page_obj.has_other_pages %}
+        <nav class="mt-2">
+            <ul class="pagination pagination-sm justify-content-center mb-0">
+                {% if rr_page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?tab=requests&rr_page={{ rr_page_obj.previous_page_number }}&date_from={{ rr_date_from }}&date_to={{ rr_date_to }}&rr_status={{ rr_status }}&rr_patient={{ rr_patient }}"><i class="bi bi-chevron-left"></i></a></li>
+                {% endif %}
+                {% for num in rr_page_obj.paginator.page_range %}
+                    {% if rr_page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > rr_page_obj.number|add:'-3' and num < rr_page_obj.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?tab=requests&rr_page={{ num }}&date_from={{ rr_date_from }}&date_to={{ rr_date_to }}&rr_status={{ rr_status }}&rr_patient={{ rr_patient }}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if rr_page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?tab=requests&rr_page={{ rr_page_obj.next_page_number }}&date_from={{ rr_date_from }}&date_to={{ rr_date_to }}&rr_status={{ rr_status }}&rr_patient={{ rr_patient }}"><i class="bi bi-chevron-right"></i></a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
+<!-- Tab switching + parameter search + bulk export scripts -->
+<style>
+.detail-tab-btn { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
+.detail-tab-btn:hover { background: rgba(255,255,255,0.3); color: #fff; }
+.detail-tab-btn.active { background: #fff; color: #1B5E96; font-weight: 600; border-color: #fff; }
+</style>
 <script>
-// Parameter search functionality
-document.getElementById('parameterSearch').addEventListener('keyup', function() {
-    const searchTerm = this.value.toLowerCase();
-    const rows = document.querySelectorAll('.parameter-row');
-    let visibleCount = 0;
-    
-    rows.forEach(row => {
-        const name = row.querySelector('.param-name').textContent.toLowerCase();
-        const code = row.querySelector('.param-code').textContent.toLowerCase();
-        const unit = row.querySelector('.param-unit').textContent.toLowerCase();
-        
-        if (name.includes(searchTerm) || code.includes(searchTerm) || unit.includes(searchTerm)) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
+function switchDetailTab(tab) {
+    var pp = document.getElementById('panelParameters');
+    var rr = document.getElementById('panelRequests');
+    var btnP = document.getElementById('tabBtnParams');
+    var btnR = document.getElementById('tabBtnRR');
+    var bulkActions = document.getElementById('rrBulkActions');
+    if (tab === 'requests') {
+        pp.style.display = 'none'; rr.style.display = 'block';
+        btnP.classList.remove('active'); btnR.classList.add('active');
+        bulkActions.style.cssText = 'display:flex!important;';
+    } else {
+        pp.style.display = 'block'; rr.style.display = 'none';
+        btnP.classList.add('active'); btnR.classList.remove('active');
+        bulkActions.style.cssText = 'display:none!important;';
+    }
+}
+// Restore active tab from server
+{% if active_tab == 'requests' %}switchDetailTab('requests');{% endif %}
+
+// Parameter search
+var paramSearch = document.getElementById('parameterSearch');
+if (paramSearch) {
+    paramSearch.addEventListener('keyup', function() {
+        var s = this.value.toLowerCase();
+        var rows = document.querySelectorAll('.parameter-row');
+        var vis = 0;
+        rows.forEach(function(row) {
+            var n = row.querySelector('.param-name').textContent.toLowerCase();
+            var c = row.querySelector('.param-code').textContent.toLowerCase();
+            var u = row.querySelector('.param-unit').textContent.toLowerCase();
+            if (n.includes(s) || c.includes(s) || u.includes(s)) { row.style.display = ''; vis++; }
+            else { row.style.display = 'none'; }
+        });
+        document.getElementById('noResultsMessage').classList.toggle('d-none', vis > 0);
+        document.getElementById('parametersTable').style.display = vis > 0 ? '' : 'none';
     });
-    
-    document.getElementById('noResultsMessage').classList.toggle('d-none', visibleCount > 0);
-    document.getElementById('parametersTable').style.display = visibleCount > 0 ? '' : 'none';
-});
+}
+
+// Bulk export
+function toggleSelectAllTests(cb) {
+    document.querySelectorAll('.test-request-checkbox').forEach(function(c) { c.checked = cb.checked; });
+    updateBulkExportButton();
+}
+function updateBulkExportButton() {
+    var checked = document.querySelectorAll('.test-request-checkbox:checked');
+    var n = checked.length;
+    ['bulkExportBtn','bulkExportPdfBtn','bulkUploadBtn'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = n > 0 ? 'inline-block' : 'none';
+    });
+    ['bulkSelectedCount','bulkSelectedCountPdf','bulkSelectedCountUpload'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = n;
+    });
+    var sa = document.getElementById('selectAllTests');
+    var all = document.querySelectorAll('.test-request-checkbox');
+    if (sa && all.length > 0) sa.checked = Array.from(all).every(function(c) { return c.checked; });
+}
+function bulkExportReports() {
+    var ids = Array.from(document.querySelectorAll('.test-request-checkbox:checked')).map(function(c){ return parseInt(c.value); });
+    if (!ids.length) return;
+    var btn = document.getElementById('bulkExportBtn'); var orig = btn.innerHTML; btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>...';
+    fetch('{% url "laboratory:batch_export_reports" %}', { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'}, body:JSON.stringify({test_ids:ids}) })
+    .then(function(r){ if(!r.ok) return r.json().then(function(d){throw new Error(d.error||'Failed');}); return r.blob(); })
+    .then(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='reports_'+ids.length+'.zip'; a.click(); btn.disabled=false; btn.innerHTML=orig; })
+    .catch(function(e){ alert('Error: '+e.message); btn.disabled=false; btn.innerHTML=orig; });
+}
+function bulkExportReportsPdf() {
+    var ids = Array.from(document.querySelectorAll('.test-request-checkbox:checked')).map(function(c){ return parseInt(c.value); });
+    if (!ids.length) return;
+    var btn = document.getElementById('bulkExportPdfBtn'); var orig = btn.innerHTML; btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>...';
+    fetch('{% url "laboratory:batch_export_reports_pdf" %}', { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'}, body:JSON.stringify({test_ids:ids}) })
+    .then(function(r){ if(!r.ok) return r.json().then(function(d){throw new Error(d.error||'Failed');}); return r.blob(); })
+    .then(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='reports_pdf_'+ids.length+'.zip'; a.click(); btn.disabled=false; btn.innerHTML=orig; })
+    .catch(function(e){ alert('Error: '+e.message); btn.disabled=false; btn.innerHTML=orig; });
+}
+function bulkUploadReports() {
+    var ids = Array.from(document.querySelectorAll('.test-request-checkbox:checked')).map(function(c){ return parseInt(c.value); });
+    if (!ids.length) return;
+    if (!confirm('Upload '+ids.length+' report(s) to Cloudflare R2?')) return;
+    var btn = document.getElementById('bulkUploadBtn'); var orig = btn.innerHTML; btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>...';
+    fetch('{% url "laboratory:batch_upload_reports" %}', { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'}, body:JSON.stringify({test_ids:ids,target:'cloudinary'}) })
+    .then(function(r){ if(!r.ok) return r.json().then(function(d){throw new Error(d.error||'Failed');}); return r.json(); })
+    .then(function(d){ alert('Uploaded '+d.uploaded_count+' of '+d.total_count); btn.disabled=false; btn.innerHTML=orig; if(d.uploaded_count>0&&confirm('Reload?')) location.reload(); })
+    .catch(function(e){ alert('Error: '+e.message); btn.disabled=false; btn.innerHTML=orig; });
+}
 </script>
-{% else %}
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body text-center py-5">
-        <div class="mb-3" style="width: 80px; height: 80px; margin: 0 auto; background: #f0f4f8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-            <i class="bi bi-list-check" style="font-size: 2rem; color: #95a5a6;"></i>
-        </div>
-        <h5 class="fw-bold mb-2" style="color: #2c3e50;">No Parameters Defined</h5>
-        <p class="text-muted mb-3">This test doesn't have a profile with parameters yet.</p>
-        <button type="button" class="btn btn-primary px-4" id="emptyEditBtn"
-                data-json-url="{% url 'laboratory:labtest_get_json' test.pk %}"
-                data-edit-url="{% url 'laboratory:labtest_edit' test.pk %}">
-            <i class="bi bi-pencil-square me-1"></i> Edit Test to Add Parameters
-        </button>
-    </div>
-</div>
-{% endif %}
 
 <!-- ============================================================ -->
 <!-- Edit Test Modal                                               -->
