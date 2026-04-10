@@ -40,7 +40,14 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Date of Birth</label>
-                                <input type="date" class="form-control" name="date_of_birth" value="{{ patient.date_of_birth|date:'Y-m-d' }}">
+                                <input type="date" class="form-control" name="date_of_birth" id="date_of_birth" value="{{ patient.date_of_birth|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Age</label>
+                                <input type="number" class="form-control" name="age" id="age" min="0" max="150" placeholder="Enter age">
+                                <small class="text-muted">Auto-calculated from DOB</small>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -327,6 +334,55 @@
 <script>
 // Handle patient information update
 document.addEventListener('DOMContentLoaded', function() {
+    // Age and Date of Birth synchronization
+    const dobInput = document.getElementById('date_of_birth');
+    const ageInput = document.getElementById('age');
+
+    // Calculate age from date of birth
+    function calculateAgeFromDob(dob) {
+        if (!dob) return '';
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
+    }
+
+    // Calculate date of birth from age
+    function calculateDobFromAge(age) {
+        if (!age || age < 0) return '';
+        const today = new Date();
+        const birthYear = today.getFullYear() - parseInt(age);
+        const birthDate = new Date(today.getFullYear() - parseInt(age), today.getMonth(), today.getDate());
+        return birthDate.toISOString().split('T')[0];
+    }
+
+    // Initialize age from existing DOB
+    if (dobInput && dobInput.value && ageInput) {
+        ageInput.value = calculateAgeFromDob(dobInput.value);
+    }
+
+    // Update age when DOB changes
+    if (dobInput) {
+        dobInput.addEventListener('change', function() {
+            if (this.value && ageInput) {
+                ageInput.value = calculateAgeFromDob(this.value);
+            }
+        });
+    }
+
+    // Update DOB when age changes
+    if (ageInput) {
+        ageInput.addEventListener('change', function() {
+            if (this.value && dobInput) {
+                dobInput.value = calculateDobFromAge(this.value);
+            }
+        });
+    }
+
     const savePatientButton = document.getElementById('savePatientInfo');
     if (savePatientButton) {
         savePatientButton.addEventListener('click', function() {
