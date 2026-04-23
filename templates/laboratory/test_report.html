@@ -190,6 +190,30 @@
             page-break-inside: avoid;
         }
 
+        /* ─── Per-test page (each test on a separate printed page) ─── */
+        .test-page {
+            display: flex;
+            flex-direction: column;
+            /* Slightly less than one A4 page so the footer never overflows
+               to the next page (accounts for body + container paddings). */
+            min-height: calc(100vh - 130px);
+            page-break-after: always;
+            break-after: page;
+        }
+        .test-page:last-of-type {
+            page-break-after: auto;
+            break-after: auto;
+        }
+        /* Footer stays anchored 5px from the bottom of each page */
+        .test-page .footer-wrapper {
+            margin-top: auto;
+            margin-bottom: 1px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-before: avoid;
+            break-before: avoid;
+        }
+
         /* ─── Blue services footer ─── */
         .services-footer { 
             background: linear-gradient(135deg, #0099CC 0%, #0077AA 100%); 
@@ -307,6 +331,9 @@
 
     <div class="print-container">
 
+    {% for page_entry in test_pages %}{% with request=page_entry.request_obj result=page_entry.result test_entry=page_entry %}
+    <div class="test-page">
+
         <!-- ═══ CLINIC HEADER ═══ -->
         <div class="header-wrap">
             <div class="header-left">
@@ -377,7 +404,7 @@
             </div>
             <div class="report-dates">
                 
-                Collection Date: <span>{% if request.patient.created_at %}{{ request.patient.created_at|date:"F d, Y" }}{% else %}—{% endif %}</span><br>
+                Collection Date: <span>{{ request.date_requested|date:"F d, Y" }}</span><br>
                 Received Date: <span>{{ request.date_requested|date:"F d, Y" }}</span><br>
                 Analysis Date: <span>{% if result and result.date_reported %}{{ result.date_reported|date:"F d, Y" }}{% else %}—{% endif %}</span><br>
                 Report Date: <span>{% if result and result.date_reported %}{{ result.date_reported|date:"F d, Y" }}{% else %}{% now "F d, Y" %}{% endif %}</span>
@@ -426,17 +453,14 @@
         </div>
         {% endif %}
 
-        <!-- ═══ RESULTS SECTIONS (grouped by test category) ═══ -->
+        <!-- ═══ RESULTS SECTION (single test per page) ═══ -->
         {% if show_results %}
 
-        {% if category_sections %}
-        {% for section in category_sections %}
-        <!-- ═══ {{ section.category_display }} SECTION ═══ -->
-        <div class="dept-heading">{{ section.category_display }} Department Report</div>
-        
-        {% for test_entry in section.tests %}
+        <!-- ═══ {{ test_entry.category_display }} SECTION ═══ -->
+        <div class="dept-heading">{{ test_entry.category_display }} Department Report</div>
+
         {% if test_entry.result and test_entry.profile_parameters %}
-        
+
         <!-- Test Name Header (Blue Bar) -->
         <div style="background: #0099CC; color: white; padding: 4px; font-size: 9.5pt; font-weight: bold; margin-top: 5px; margin-bottom: 2px;">
             {{ test_entry.test.name }}
@@ -546,13 +570,9 @@
                 {% endif %}
                 {% endwith %}
                 {% endfor %}
-                {% endif %}
-                {% endif %}
+                {% endif %}{# closes has_multiple_param_cats #}
             </tbody>
         </table>
-        
-        {% endfor %}
-        {% endfor %}
 
         <table class="results-table" style="margin-top:0;">
             <tbody><tr><td colspan="6" style="text-align:center; border-top:2px solid #1a3a5c;">End of Report</td></tr></tbody>
@@ -561,8 +581,10 @@
             <p style="font-size: 10px;">Results reported are for the samples received and answer to the coresponding samples, reference range is age and sex dependant where applicale</p>
             <p style="font-size: 10px;">Results should be interpreted in conjunction with clinical findings and other laboratory investigations.</p>
         </div>
-        {% endif %}
-        {% endif %}
+        {% else %}
+        <div class="pending-box"><strong>Results Pending.</strong> No results have been recorded yet for {{ test_entry.test.name }}.</div>
+        {% endif %}{# closes test_entry.result and test_entry.profile_parameters #}
+        {% endif %}{# closes show_results #}
 
         <!-- Interpretation / Remarks -->
         {% if result %}
@@ -581,18 +603,22 @@
         </div>
         {% endif %}
 
-        <!-- ═══ SIGNATURES ═══ -->
+        
+
+        <!-- ═══ FOOTER ═══ -->
+        <div class="footer-wrapper">
+            <!-- ═══ SIGNATURES ═══ -->
         <div class="sig-section">
             <div class="sig-grid">
                 <div class="sig-box">
                     <div class="sig-line">
-                        <!-- {% if result and result.reported_by %}<span class="sig-name">{{ result.reported_by.get_full_name }}</span>{% endif %} -->
+                        {% if result and result.reported_by %}<span class="sig-name">{{ result.reported_by.get_full_name }}</span>{% endif %}
                     </div>
                     <div class="sig-label">Analyzed By:</div>
                 </div>
                 <div class="sig-box">
                     <div class="sig-line">
-                        <!-- {% if result and result.verified and result.verified_by %}<span class="sig-name">{{ result.verified_by.get_full_name }}</span>{% endif %} -->
+                        {% if result and result.verified and result.verified_by %}<span class="sig-name">{{ result.verified_by.get_full_name }}</span>{% endif %}
                     </div>
                     <div class="sig-label">Verified By:</div>
                 </div>
@@ -602,10 +628,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- ═══ FOOTER ═══ -->
-        <div class="footer-wrapper">
         <div class="report-footer" style="margin-top: 8px;">
+            
             <div class="footer-text">
                 <strong>{{ clinic_settings.clinic_name|default:"Medical Clinic" }}</strong><br>
                 {% if clinic_settings and clinic_settings.address %}{{ clinic_settings.address }}<br>{% endif %}
@@ -638,6 +662,9 @@
         </div> -->
         </div><!-- /.footer-wrapper -->
 
-    </div>
+    </div><!-- /.test-page -->
+    {% endwith %}{% endfor %}
+
+    </div><!-- /.print-container -->
 </body>
 </html>

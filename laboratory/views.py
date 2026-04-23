@@ -1513,11 +1513,28 @@ def test_report(request, pk):
 			'reason_for_test', 'clinical_notes',
 		]
 
+	# Build per-test page entries (for multi-page rendering — each test on its own page)
+	test_pages = []
+	for _section in category_sections.values():
+		for _t in _section['tests']:
+			test_pages.append({
+				'request_obj': _t['request_obj'],
+				'test': _t['test'],
+				'result': _t['result'],
+				'profile_parameters': _t['profile_parameters'],
+				'category': _section['category'],
+				'category_display': _section['category_display'],
+				'has_multiple_param_cats': _t['has_multiple_param_cats'],
+				'group_id': _t['group_id'],
+			})
+
 	context = {
 		'request': lab_request,
 		'result': result,
 		'profile_parameters': all_profile_parameters,  # backward compat
 		'category_sections': list(category_sections.values()),
+		'test_pages': test_pages,
+		'multi_test': len(test_pages) > 1,
 		'multi_category': len(category_sections) > 1,
 		'clinic_settings': clinic_settings,
 		'qr_code': qr_base64,
@@ -3329,12 +3346,26 @@ def generate_report_html_for_pdf(lab_request, clinic_settings, base_url):
 			logger = logging.getLogger(__name__)
 			logger.warning(f"Could not convert logo to base64: {str(e)}")
 	
+	# Build per-test page entries (single test here, but template expects the list)
+	test_pages = [{
+		'request_obj': lab_request,
+		'test': lab_request.test,
+		'result': result,
+		'profile_parameters': profile_parameters,
+		'category': cat,
+		'category_display': cat_display,
+		'has_multiple_param_cats': has_multiple_param_cats,
+		'group_id': 1,
+	}]
+
 	# Build context
 	context = {
 		'request': lab_request,
 		'result': result,
 		'profile_parameters': profile_parameters,
 		'category_sections': category_sections,
+		'test_pages': test_pages,
+		'multi_test': False,
 		'multi_category': False,
 		'clinic_settings': clinic_settings,
 		'logo_base64': logo_base64,

@@ -1439,12 +1439,18 @@ def download_all_reports(request, patient_id):
     except Exception:
         clinic_settings = None
 
-    # Check Playwright availability
+    # Check PDF engine availability (Playwright preferred, then WeasyPrint)
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # noqa: F401
         use_playwright = True
     except ImportError:
         use_playwright = False
+
+    try:
+        from weasyprint import HTML as _WeasyHTML  # noqa: F401
+        use_weasyprint = True
+    except Exception:
+        use_weasyprint = False
 
     base_url = request.build_absolute_uri('/').rstrip('/')
 
@@ -1475,7 +1481,21 @@ def download_all_reports(request, patient_id):
             pdfs = []
             from playwright.sync_api import sync_playwright as _sp
             with _sp() as p:
-                browser = p.chromium.launch()
+                # Try bundled Chromium, then system Edge/Chrome (falls back when
+                # Playwright browsers haven't been downloaded, e.g. corporate firewall).
+                browser = None
+                for launch_kwargs in (
+                    {},
+                    {'channel': 'msedge'},
+                    {'channel': 'chrome'},
+                ):
+                    try:
+                        browser = p.chromium.launch(**launch_kwargs)
+                        break
+                    except Exception as _e:
+                        logger.warning(f"Playwright launch failed with {launch_kwargs}: {_e}")
+                if browser is None:
+                    raise RuntimeError("No Chromium/Edge/Chrome browser available for Playwright.")
                 page = browser.new_page()
                 for lr in lr_list:
                     try:
@@ -1512,6 +1532,30 @@ def download_all_reports(request, patient_id):
 
         except Exception as e:
             logger.error(f"Batch PDF generation failed for patient {patient_id}: {e}", exc_info=True)
+            messages.error(request, f'Report generation failed: {e}')
+            return redirect('patients:patient_detail', patient_id=patient_id)
+    elif use_weasyprint:
+        # WeasyPrint fallback (pure Python, no browser required)
+        from weasyprint import HTML as _WHTML
+        try:
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                any_ok = False
+                for lr in lab_requests:
+                    try:
+                        html = generate_report_html_for_pdf(lr, clinic_settings, base_url)
+                        pdf_bytes = _WHTML(string=html, base_url=base_url).write_pdf()
+                        test_name = re.sub(r'[^\w]', '_', lr.test.name).strip('_')
+                        date_str = lr.date_requested.strftime('%Y-%m-%d')
+                        fname = f"{test_name}_{date_str}_{lr.pk}.pdf"
+                        zf.writestr(fname, pdf_bytes)
+                        any_ok = True
+                    except Exception as e:
+                        logger.error(f"WeasyPrint PDF generation failed for test {lr.pk}: {e}")
+            if not any_ok:
+                messages.error(request, 'Could not generate any PDF reports.')
+                return redirect('patients:patient_detail', patient_id=patient_id)
+        except Exception as e:
+            logger.error(f"Batch WeasyPrint generation failed for patient {patient_id}: {e}", exc_info=True)
             messages.error(request, f'Report generation failed: {e}')
             return redirect('patients:patient_detail', patient_id=patient_id)
     else:
