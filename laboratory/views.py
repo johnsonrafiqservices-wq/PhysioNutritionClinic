@@ -9,6 +9,7 @@ from accounts.permissions import (
 from django.db.models import Q, Count, Max
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
+import logging
 from .models import LabTest, LabTestRequest, LabTestResult, TestParameter, TestProfile, TestProfileParameter, ParameterResult, ParameterCategory, TestCategory
 from .forms import LabTestForm, LabTestRequestForm, LabTestResultForm, TestParameterForm, TestProfileForm, ParameterResultInlineFormSet
 
@@ -45,6 +46,8 @@ def laboratory_dashboard(request):
 	pending_test_requests = LabTestRequest.objects.filter(
 		status__in=['requested', 'sample_collected', 'in_progress']
 	).select_related('patient', 'test').order_by('-date_requested')
+	# Active categories for forms
+	categories = TestCategory.objects.filter(is_active=True)
 	
 	context = {
 		'total_tests': total_tests,
@@ -57,6 +60,7 @@ def laboratory_dashboard(request):
 		'patients': patients,
 		'available_tests': available_tests,
 		'pending_test_requests': pending_test_requests,
+		'categories': categories,
 		'result_types': TestParameter.RESULT_TYPES,
 		'flag_criteria': TestParameter.FLAG_CRITERIA,
 	}
@@ -203,6 +207,15 @@ def labtest_detail(request, pk):
 	# Determine active tab
 	active_tab = request.GET.get('tab', 'parameters')
 
+	# Group Pricing data
+	from .models import LabTestPriceGroup
+	from patients.models import PatientGroup
+	group_prices = LabTestPriceGroup.objects.filter(lab_test=test).select_related('patient_group')
+	all_groups = PatientGroup.objects.filter(is_active=True)
+	
+	# Create a mapping of group_id to price
+	group_price_map = {gp.patient_group_id: gp.price for gp in group_prices}
+
 	context = {
 		'test': test,
 		'profile': profile,
@@ -224,6 +237,10 @@ def labtest_detail(request, pk):
 		'rr_status': rr_status,
 		'rr_patient': rr_patient,
 		'active_tab': active_tab,
+		# Group Pricing tab
+		'group_prices': group_prices,
+		'all_groups': all_groups,
+		'group_price_map': group_price_map,
 	}
 	return render(request, 'laboratory/labtest_detail.html', context)
 
@@ -446,74 +463,92 @@ def labtest_add(request):
 	FLAG_CRITERIA = TestParameter.FLAG_CRITERIA
 	
 	if request.method == 'POST':
-		form = LabTestForm(request.POST)
-		if form.is_valid():
-			test = form.save(commit=False)
-			
-			# Auto-create a profile for this test
-			profile, _ = TestProfile.objects.get_or_create(
-				code=test.code,
-				defaults={
-					'name': test.name,
-					'description': test.description,
-					'category': test.category,
-					'sample_type': test.sample_type,
-					'duration_hours': test.duration_hours,
-					'price': test.price,
-					'currency': test.currency,
-					'is_active': test.is_active,
-				}
-			)
-			test.profile = profile
-			test.save()
-			
-			# Process inline parameters
-			i = 0
-			while True:
-				param_name = request.POST.get(f'param_{i}_name', '').strip()
-				if not param_name:
-					break
-				param_code = request.POST.get(f'param_{i}_code', '').strip()
-				result_type = request.POST.get(f'param_{i}_result_type', 'numeric')
-				unit = request.POST.get(f'param_{i}_unit', '').strip()
-				ref_min = request.POST.get(f'param_{i}_ref_min', '').strip()
-				ref_max = request.POST.get(f'param_{i}_ref_max', '').strip()
-				ref_text = request.POST.get(f'param_{i}_ref_text', '').strip()
-				flag_criteria = request.POST.get(f'param_{i}_flag_criteria', 'range')
-				
-				if param_code:
-					param, _ = TestParameter.objects.get_or_create(
-						code=param_code,
-						defaults={'name': param_name}
-					)
-					param.name = param_name
-					param.result_type = result_type
-					param.unit = unit
-					param.flag_criteria = flag_criteria
-					if ref_text:
-						param.reference_range_text = ref_text
-					try:
-						param.reference_range_min = float(ref_min) if ref_min else None
-						param.reference_range_max = float(ref_max) if ref_max else None
-					except ValueError:
-						pass
-					param.display_order = i
-					param.save()
-					
-					TestProfileParameter.objects.get_or_create(
-						profile=profile,
-						parameter=param,
-						defaults={'display_order': i}
-					)
-				i += 1
-			
-			messages.success(request, f'Laboratory test "{test.name}" added with {i} parameter(s)!')
+		logger = logging.getLogger(__name__)
+		# Log request metadata to help diagnose 400 Bad Request issues
+		try:
+			logger.debug('labtest_add POST headers: %s', dict(request.headers))
+			logger.debug('labtest_add content_type=%s CONTENT_LENGTH=%s', request.content_type, request.META.get('CONTENT_LENGTH'))
+			logger.debug('labtest_add POST keys: %s', list(request.POST.keys()))
+			# Ensure useful info is printed to console even if logging isn't configured
+			print('labtest_add POST headers:', dict(request.headers))
+			print('labtest_add content_type:', request.content_type, 'CONTENT_LENGTH:', request.META.get('CONTENT_LENGTH'))
+			print('labtest_add POST keys:', list(request.POST.keys()))
+		except Exception:
+			logger.exception('Failed to log request metadata for labtest_add')
+
+		try:
+			form = LabTestForm(request.POST)
+			if form.is_valid():
+				test = form.save(commit=False)
+				# Auto-create a profile for this test
+				profile, _ = TestProfile.objects.get_or_create(
+					code=test.code,
+					defaults={
+						'name': test.name,
+						'description': test.description,
+						'category': test.category,
+						'sample_type': test.sample_type,
+						'duration_hours': test.duration_hours,
+						'price': test.price,
+						'currency': test.currency,
+						'is_active': test.is_active,
+					}
+				)
+				test.profile = profile
+				test.save()
+				# Process inline parameters
+				i = 0
+				while True:
+					param_name = request.POST.get(f'param_{i}_name', '').strip()
+					if not param_name:
+						break
+					param_code = request.POST.get(f'param_{i}_code', '').strip()
+					result_type = request.POST.get(f'param_{i}_result_type', 'numeric')
+					unit = request.POST.get(f'param_{i}_unit', '').strip()
+					ref_min = request.POST.get(f'param_{i}_ref_min', '').strip()
+					ref_max = request.POST.get(f'param_{i}_ref_max', '').strip()
+					ref_text = request.POST.get(f'param_{i}_ref_text', '').strip()
+					flag_criteria = request.POST.get(f'param_{i}_flag_criteria', 'range')
+					if param_code:
+						param, _ = TestParameter.objects.get_or_create(
+							code=param_code,
+							defaults={'name': param_name}
+						)
+						param.name = param_name
+						param.result_type = result_type
+						param.unit = unit
+						param.flag_criteria = flag_criteria
+						if ref_text:
+							param.reference_range_text = ref_text
+						try:
+							param.reference_range_min = float(ref_min) if ref_min else None
+							param.reference_range_max = float(ref_max) if ref_max else None
+						except ValueError:
+							pass
+						param.display_order = i
+						param.save()
+						TestProfileParameter.objects.get_or_create(
+							profile=profile,
+							parameter=param,
+							defaults={'display_order': i}
+						)
+					i += 1
+				messages.success(request, f'Laboratory test "{test.name}" added with {i} parameter(s)!')
+				if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+					return JsonResponse({'success': True, 'message': f'Laboratory test "{test.name}" added successfully!'})
+				return redirect('laboratory:labtest_list')
+			else:
+				logger.debug('labtest_add form errors: %s', form.errors.as_json())
+				print('labtest_add form errors:', form.errors)
+				if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+					return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+		except Exception as e:
+			logger.exception('Exception while processing labtest_add POST')
 			if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-				return JsonResponse({'success': True, 'message': f'Laboratory test "{test.name}" added successfully!'})
-			return redirect('laboratory:labtest_list')
-		else:
-			if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-				return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+				print('labtest_add exception:', str(e))
+				return JsonResponse({'success': False, 'message': 'Server error', 'details': str(e)}, status=500)
+			# Re-raise for non-AJAX to allow error middleware to show traceback during development
+			raise
 		
 	else:
 		form = LabTestForm()

@@ -276,13 +276,9 @@
                             <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
                             <select name="category" class="form-select" required>
                                 <option value="">Select Category</option>
-                                <option value="hematology">Hematology</option>
-                                <option value="biochemistry">Biochemistry</option>
-                                <option value="microbiology">Microbiology</option>
-                                <option value="serology">Serology</option>
-                                <option value="immunology">Immunology</option>
-                                <option value="pathology">Pathology</option>
-                                <option value="other">Other</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">

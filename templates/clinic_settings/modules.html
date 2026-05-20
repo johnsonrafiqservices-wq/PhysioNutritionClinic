@@ -2,182 +2,336 @@
 
 {% block title %}System Modules - {{ clinic_settings.clinic_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    :root {
+        --m-primary: #1B5E96;
+        --m-primary-soft: #eaf2f9;
+        --m-border: #e3eaf2;
+        --m-text: #1a3a5c;
+        --m-muted: #64748b;
+    }
+
+    .modules-hero {
+        background: var(--m-primary);
+        color: #fff;
+        border-radius: 14px;
+        padding: 24px 28px;
+        margin-bottom: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+    .modules-hero h1 { font-size: 22px; font-weight: 700; margin: 0; }
+    .modules-hero p { font-size: 13px; margin: 4px 0 0; opacity: 0.9; }
+    .modules-hero .stats {
+        display: flex; gap: 18px; flex-wrap: wrap;
+    }
+    .modules-hero .stat-tile {
+        background: rgba(255,255,255,0.12);
+        padding: 10px 18px;
+        border-radius: 10px;
+        text-align: center;
+        min-width: 90px;
+    }
+    .modules-hero .stat-tile .num { font-size: 22px; font-weight: 700; line-height: 1; }
+    .modules-hero .stat-tile .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; margin-top: 4px; }
+
+    .panel {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid var(--m-border);
+        padding: 22px 24px;
+        margin-bottom: 18px;
+    }
+    .panel-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--m-primary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0 0 6px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--m-primary-soft);
+        position: relative;
+    }
+    .panel-title::after {
+        content: '';
+        position: absolute;
+        left: 0; bottom: -2px;
+        width: 70px; height: 2px;
+        background: var(--m-primary);
+    }
+    .panel-subtitle { font-size: 13px; color: var(--m-muted); margin: 8px 0 16px; }
+
+    .info-banner {
+        background: var(--m-primary-soft);
+        border-left: 3px solid var(--m-primary);
+        color: var(--m-text);
+        padding: 12px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 18px;
+    }
+    .info-banner i { color: var(--m-primary); margin-right: 6px; }
+
+    .module-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 14px;
+    }
+
+    .module-card {
+        border: 1px solid var(--m-border);
+        border-radius: 12px;
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: all 0.18s ease;
+        background: #fff;
+        position: relative;
+    }
+    .module-card:hover {
+        border-color: var(--m-primary);
+        box-shadow: 0 4px 16px rgba(27,94,150,0.08);
+    }
+    .module-card.is-enabled {
+        background: var(--m-primary-soft);
+        border-color: var(--m-primary);
+    }
+
+    .module-icon {
+        width: 44px; height: 44px;
+        border-radius: 10px;
+        background: var(--m-primary-soft);
+        color: var(--m-primary);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+        transition: all 0.18s ease;
+    }
+    .module-card.is-enabled .module-icon {
+        background: var(--m-primary);
+        color: #fff;
+    }
+
+    .module-info { flex: 1; min-width: 0; }
+    .module-info .name {
+        font-weight: 600;
+        color: var(--m-text);
+        font-size: 14px;
+        margin-bottom: 2px;
+    }
+    .module-info .status {
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--m-muted);
+        font-weight: 600;
+    }
+    .module-card.is-enabled .module-info .status {
+        color: var(--m-primary);
+    }
+
+    /* Custom switch — primary color only */
+    .module-switch {
+        position: relative;
+        width: 46px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+    .module-switch input {
+        opacity: 0;
+        width: 0; height: 0;
+        position: absolute;
+    }
+    .module-switch .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: #cfd8e3;
+        border-radius: 999px;
+        transition: 0.2s;
+    }
+    .module-switch .slider::before {
+        content: '';
+        position: absolute;
+        height: 18px; width: 18px;
+        left: 3px; top: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: 0.2s;
+    }
+    .module-switch input:checked + .slider {
+        background: var(--m-primary);
+    }
+    .module-switch input:checked + .slider::before {
+        transform: translateX(22px);
+    }
+
+    .save-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--m-border);
+    }
+    .save-bar .hint { font-size: 12px; color: var(--m-muted); }
+
+    .btn-primary-flat {
+        background: var(--m-primary);
+        border: 1px solid var(--m-primary);
+        color: #fff;
+        padding: 8px 18px;
+        font-weight: 600;
+        font-size: 13.5px;
+        border-radius: 8px;
+    }
+    .btn-primary-flat:hover { filter: brightness(1.05); color: #fff; }
+
+    .btn-primary-outline {
+        background: #fff;
+        border: 1px solid var(--m-border);
+        color: var(--m-primary);
+        padding: 6px 14px;
+        font-size: 13px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .btn-primary-outline:hover {
+        border-color: var(--m-primary);
+        background: var(--m-primary-soft);
+        color: var(--m-primary);
+    }
+</style>
+{% endblock %}
+
 {% block page_title %}
-    <div class="d-flex align-items-center">
-        <i class="bi bi-grid-fill me-3" style="font-size: 1.5rem; color: var(--alafia-primary);"></i>
-        <span style="background: var(--alafia-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700;">System Modules</span>
-    </div>
+<div class="d-flex align-items-center">
+    <i class="bi bi-grid-fill me-3" style="font-size: 1.5rem; color: var(--m-primary);"></i>
+    <span style="color: var(--m-primary); font-weight: 700;">System Modules</span>
+</div>
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card shadow">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="bi bi-toggles me-2"></i>Enable/Disable Modules
-                </h6>
-                <a href="{% url 'clinic_settings:settings' %}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Settings
-                </a>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-4">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Note:</strong> Disabled modules will be hidden from all users in the sidebar navigation. 
-                    Users will not be able to access disabled modules.
-                </div>
-                
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    <div class="row">
-                        {% for module in modules %}
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100 {% if module.is_enabled %}border-success{% else %}border-secondary{% endif %}">
-                                <div class="card-body d-flex align-items-center">
-                                    <div class="form-check form-switch me-3">
-                                        <input class="form-check-input module-toggle" 
-                                               type="checkbox" 
-                                               role="switch" 
-                                               id="module_{{ module.module_name }}" 
-                                               name="module_{{ module.module_name }}"
-                                               data-module="{{ module.module_name }}"
-                                               {% if module.is_enabled %}checked{% endif %}
-                                               style="width: 3em; height: 1.5em;">
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center mb-1">
-                                            <i class="{{ module.icon }} me-2" style="font-size: 1.25rem; color: var(--alafia-primary);"></i>
-                                            <label class="form-check-label fw-bold mb-0" for="module_{{ module.module_name }}">
-                                                {{ module.display_name }}
-                                            </label>
-                                        </div>
-                                        <small class="text-muted">
-                                            {% if module.is_enabled %}
-                                                <span class="fw-semibold text-success">Enabled</span>
-                                            {% else %}
-                                                <span class="fw-semibold text-secondary">Disabled</span>
-                                            {% endif %}
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    
-                    <hr class="my-4">
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                            <i class="bi bi-info-circle"></i> Changes will take effect immediately after saving.
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle me-1"></i> Save Module Settings
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+<div class="modules-hero">
+    <div>
+        <h1>Module Configuration</h1>
+        <p>Enable or disable system features. Disabled modules are hidden from the sidebar for everyone.</p>
     </div>
-    
-    <div class="col-lg-4">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="bi bi-bar-chart me-2"></i>Module Summary
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="text-muted">Total Modules</span>
-                    <span class="fw-semibold text-primary">{{ modules.count }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="text-success">Enabled</span>
-                    <span class="fw-semibold text-success" id="enabled-count">
-                        {% with enabled=modules|dictsort:"is_enabled"|last %}
-                            {{ modules|length }}
-                        {% endwith %}
-                    </span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span class="text-secondary">Disabled</span>
-                    <span class="fw-semibold text-secondary" id="disabled-count">0</span>
-                </div>
-                
-                <hr>
-                
-                <h6 class="mb-3">Quick Links</h6>
-                <div class="d-grid gap-2">
-                    <a href="{% url 'clinic_settings:settings' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-gear me-1"></i> General Settings
-                    </a>
-                    <a href="{% url 'clinic_settings:theme_customization' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-palette me-1"></i> Theme Customization
-                    </a>
-                </div>
-            </div>
+    <div class="stats">
+        <div class="stat-tile">
+            <div class="num">{{ modules.count }}</div>
+            <div class="lbl">Total</div>
         </div>
-        
-        <div class="card shadow mt-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="bi bi-question-circle me-2"></i>Help
-                </h6>
-            </div>
-            <div class="card-body">
-                <p class="small text-muted mb-2">
-                    <strong>Enabling a module</strong> will make it visible in the sidebar for users who have permission to access it.
-                </p>
-                <p class="small text-muted mb-0">
-                    <strong>Disabling a module</strong> will hide it from all users, regardless of their role or permissions.
-                </p>
-            </div>
+        <div class="stat-tile">
+            <div class="num" id="enabled-count">0</div>
+            <div class="lbl">Enabled</div>
+        </div>
+        <div class="stat-tile">
+            <div class="num" id="disabled-count">0</div>
+            <div class="lbl">Disabled</div>
         </div>
     </div>
 </div>
 
+<form method="post" id="modulesForm">
+    {% csrf_token %}
+
+    <div class="panel">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="panel-title">Available Modules</div>
+                <div class="panel-subtitle">Toggle each module on or off, then save.</div>
+            </div>
+            <a href="{% url 'clinic_settings:settings' %}" class="btn-primary-outline">
+                <i class="bi bi-arrow-left"></i> Back to Settings
+            </a>
+        </div>
+
+        <div class="info-banner">
+            <i class="bi bi-info-circle"></i>
+            <strong>Note:</strong> Disabling a module hides it from all users regardless of role. Enabling it makes it visible to users with permission.
+        </div>
+
+        <div class="module-grid">
+            {% for module in modules %}
+            <label class="module-card {% if module.is_enabled %}is-enabled{% endif %}" for="module_{{ module.module_name }}">
+                <div class="module-icon">
+                    <i class="{{ module.icon|default:'bi bi-grid' }}"></i>
+                </div>
+                <div class="module-info">
+                    <div class="name">{{ module.display_name }}</div>
+                    <div class="status">{% if module.is_enabled %}Enabled{% else %}Disabled{% endif %}</div>
+                </div>
+                <div class="module-switch">
+                    <input class="module-toggle"
+                           type="checkbox"
+                           id="module_{{ module.module_name }}"
+                           name="module_{{ module.module_name }}"
+                           data-module="{{ module.module_name }}"
+                           {% if module.is_enabled %}checked{% endif %}>
+                    <span class="slider"></span>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+
+        <div class="save-bar">
+            <span class="hint"><i class="bi bi-info-circle"></i> Changes take effect immediately after saving.</span>
+            <button type="submit" class="btn-primary-flat">
+                <i class="bi bi-check-circle"></i> Save Module Settings
+            </button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">Quick Links</div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'clinic_settings:settings' %}" class="btn-primary-outline">
+                <i class="bi bi-gear"></i> General Settings
+            </a>
+            <a href="{% url 'clinic_settings:theme_customization' %}" class="btn-primary-outline">
+                <i class="bi bi-palette"></i> Theme Customization
+            </a>
+        </div>
+    </div>
+</form>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Update counts
+    const checkboxes = document.querySelectorAll('.module-toggle');
+    const enabledEl = document.getElementById('enabled-count');
+    const disabledEl = document.getElementById('disabled-count');
+
     function updateCounts() {
-        const checkboxes = document.querySelectorAll('.module-toggle');
         let enabled = 0, disabled = 0;
-        checkboxes.forEach(cb => {
-            if (cb.checked) enabled++;
-            else disabled++;
-        });
-        document.getElementById('enabled-count').textContent = enabled;
-        document.getElementById('disabled-count').textContent = disabled;
+        checkboxes.forEach(cb => cb.checked ? enabled++ : disabled++);
+        enabledEl.textContent = enabled;
+        disabledEl.textContent = disabled;
     }
-    
-    // Update badge and border on toggle
-    document.querySelectorAll('.module-toggle').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            const card = this.closest('.card');
-            const badge = card.querySelector('.badge');
-            
+
+    checkboxes.forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            const card = this.closest('.module-card');
+            const status = card.querySelector('.status');
             if (this.checked) {
-                card.classList.remove('border-secondary');
-                card.classList.add('border-success');
-                badge.classList.remove('bg-secondary');
-                badge.classList.add('bg-success');
-                badge.textContent = 'Enabled';
+                card.classList.add('is-enabled');
+                status.textContent = 'Enabled';
             } else {
-                card.classList.remove('border-success');
-                card.classList.add('border-secondary');
-                badge.classList.remove('bg-success');
-                badge.classList.add('bg-secondary');
-                badge.textContent = 'Disabled';
+                card.classList.remove('is-enabled');
+                status.textContent = 'Disabled';
             }
-            
             updateCounts();
         });
     });
-    
-    // Initial count
+
     updateCounts();
 });
 </script>

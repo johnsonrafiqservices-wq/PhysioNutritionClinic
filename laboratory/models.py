@@ -343,7 +343,20 @@ class LabTestPriceGroup(models.Model):
 	
 	def __str__(self):
 		return f"{self.lab_test.name} – {self.patient_group.name}: {self.price}"
-	
+
+	@property
+	def price_difference(self):
+		"""Calculate the difference between group price and default test price"""
+		return self.price - self.lab_test.price
+
+	@property
+	def discount_percentage(self):
+		"""Calculate the discount percentage compared to default test price"""
+		if self.lab_test.price == 0:
+			return 0
+		diff = self.lab_test.price - self.price
+		return (diff / self.lab_test.price) * 100 if diff > 0 else 0
+
 	@staticmethod
 	def get_price_for_patient(lab_test, patient):
 		"""

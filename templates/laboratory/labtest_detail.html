@@ -182,7 +182,7 @@
     </div>
 </div>
 
-<!-- Tabbed Card: Parameters / Requests & Results -->
+<!-- Tabbed Card: Parameters / Requests & Results / Group Pricing -->
 <div class="card shadow-sm border-0 mb-2">
     <div class="card-header py-1 px-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #1B5E96 0%, #2980b9 100%);">
         <div class="d-flex gap-1">
@@ -191,6 +191,9 @@
             </button>
             <button type="button" class="btn btn-sm detail-tab-btn" id="tabBtnRR" onclick="switchDetailTab('requests')" style="padding:0.2rem 0.6rem;font-size:0.78rem;border-radius:4px;">
                 <i class="bi bi-file-earmark-medical me-1"></i>Requests & Results
+            </button>
+            <button type="button" class="btn btn-sm detail-tab-btn" id="tabBtnGP" onclick="switchDetailTab('group_pricing')" style="padding:0.2rem 0.6rem;font-size:0.78rem;border-radius:4px;">
+                <i class="bi bi-tags me-1"></i>Group Pricing
             </button>
         </div>
         <div class="d-flex gap-1 align-items-center" id="rrBulkActions" style="display:none!important;">
@@ -405,6 +408,82 @@
         </nav>
         {% endif %}
     </div>
+
+    <!-- ===== Group Pricing Panel ===== -->
+    <div id="panelGroupPricing" class="card-body p-2" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <small class="text-muted" style="font-size:0.75rem;">Default Price:</small>
+                <span class="fw-bold text-primary" style="font-size:1rem;">{{ test.price|intcomma }} {{ test.currency }}</span>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openAddGroupPriceModal()" style="padding:0.2rem 0.6rem;font-size:0.78rem;">
+                <i class="bi bi-plus-circle me-1"></i>Add Group Price
+            </button>
+        </div>
+        
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+            <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.82rem;">
+                <thead style="position: sticky; top: 0; z-index: 10; background: #f0f4f8;">
+                    <tr style="background: #f0f4f8;">
+                        <th class="ps-2">Patient Group</th>
+                        <th class="text-center">Group Price</th>
+                        <th class="text-center">Difference</th>
+                        <th class="text-center">Discount %</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for group_price in group_prices %}
+                    <tr>
+                        <td class="ps-2 fw-semibold">{{ group_price.patient_group.name }}</td>
+                        <td class="text-center">
+                            <span class="fw-bold">{{ group_price.price|intcomma }}</span>
+                            <small class="text-muted">{{ test.currency }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% with diff=group_price.price_difference %}
+                                {% if diff > 0 %}
+                                    <span class="text-success">+{{ diff|intcomma }}</span>
+                                {% elif diff < 0 %}
+                                    <span class="text-danger">{{ diff|intcomma }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            {% with discount=group_price.discount_percentage %}
+                                {% if discount %}
+                                    <span class="badge bg-info" style="font-size:0.72rem;">{{ discount|floatformat:1 }}%</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="openEditGroupPriceModal({{ group_price.patient_group.id }}, {{ group_price.price }})" style="padding:0.15rem 0.4rem;font-size:0.72rem;" title="Edit Price">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteGroupPrice({{ test.pk }}, {{ group_price.patient_group.id }}, '{{ group_price.patient_group.name }}')" style="padding:0.15rem 0.4rem;font-size:0.72rem;" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-3">
+                            <i class="bi bi-tags text-muted" style="font-size:1.2rem;"></i>
+                            <p class="text-muted mb-0 mt-1" style="font-size:0.82rem;">No group pricing configured</p>
+                            <button type="button" class="btn btn-primary btn-sm mt-2" onclick="openAddGroupPriceModal()" style="padding:0.2rem 0.6rem;font-size:0.78rem;">
+                                <i class="bi bi-plus-circle me-1"></i>Add First Group Price
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <!-- Tab switching + parameter search + bulk export scripts -->
@@ -417,21 +496,39 @@
 function switchDetailTab(tab) {
     var pp = document.getElementById('panelParameters');
     var rr = document.getElementById('panelRequests');
+    var gp = document.getElementById('panelGroupPricing');
     var btnP = document.getElementById('tabBtnParams');
     var btnR = document.getElementById('tabBtnRR');
+    var btnG = document.getElementById('tabBtnGP');
     var bulkActions = document.getElementById('rrBulkActions');
+    
+    // Hide all panels
+    pp.style.display = 'none';
+    rr.style.display = 'none';
+    gp.style.display = 'none';
+    
+    // Remove active class from all buttons
+    btnP.classList.remove('active');
+    btnR.classList.remove('active');
+    btnG.classList.remove('active');
+    
+    // Show selected panel and activate button
     if (tab === 'requests') {
-        pp.style.display = 'none'; rr.style.display = 'block';
-        btnP.classList.remove('active'); btnR.classList.add('active');
+        rr.style.display = 'block';
+        btnR.classList.add('active');
         bulkActions.style.cssText = 'display:flex!important;';
+    } else if (tab === 'group_pricing') {
+        gp.style.display = 'block';
+        btnG.classList.add('active');
+        bulkActions.style.cssText = 'display:none!important;';
     } else {
-        pp.style.display = 'block'; rr.style.display = 'none';
-        btnP.classList.add('active'); btnR.classList.remove('active');
+        pp.style.display = 'block';
+        btnP.classList.add('active');
         bulkActions.style.cssText = 'display:none!important;';
     }
 }
 // Restore active tab from server
-{% if active_tab == 'requests' %}switchDetailTab('requests');{% endif %}
+{% if active_tab == 'requests' %}switchDetailTab('requests');{% elif active_tab == 'group_pricing' %}switchDetailTab('group_pricing');{% endif %}
 
 // Parameter search
 var paramSearch = document.getElementById('parameterSearch');
@@ -785,7 +882,133 @@ function bulkUploadReports() {
 
     toggleMsg();
 })();
+
+// ===== Group Pricing Functions =====
+function openAddGroupPriceModal() {
+    var modal = new bootstrap.Modal(document.getElementById('groupPriceModal'));
+    document.getElementById('groupPriceModalTitle').textContent = 'Add Group Price';
+    document.getElementById('patientGroup').value = '';
+    document.getElementById('groupPrice').value = '';
+    document.getElementById('groupPriceModal').dataset.mode = 'add';
+    modal.show();
+}
+
+function openEditGroupPriceModal(groupId, price) {
+    var modal = new bootstrap.Modal(document.getElementById('groupPriceModal'));
+    document.getElementById('groupPriceModalTitle').textContent = 'Edit Group Price';
+    document.getElementById('patientGroup').value = groupId;
+    document.getElementById('groupPrice').value = price;
+    document.getElementById('groupPriceModal').dataset.mode = 'edit';
+    modal.show();
+}
+
+function saveGroupPrice() {
+    var form = document.getElementById('groupPriceForm');
+    var formData = new FormData(form);
+    var url = '{% url "laboratory:lab_test_price_group_set" %}';
+    
+    var btn = document.getElementById('saveGroupPriceBtn');
+    var originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Group price saved successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Error saving group price');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+function deleteGroupPrice(labTestId, groupId, groupName) {
+    if (!confirm('Are you sure you want to delete the group price for "' + groupName + '"?')) {
+        return;
+    }
+    
+    var formData = new FormData();
+    formData.append('lab_test_id', labTestId);
+    formData.append('group_id', groupId);
+    
+    fetch('{% url "laboratory:lab_test_price_group_delete" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Group price deleted successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Error deleting group price');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
 </script>
+
+<!-- Group Price Modal -->
+<div class="modal fade" id="groupPriceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="groupPriceModalTitle">Add Group Price</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="groupPriceForm">
+                {% csrf_token %}
+                <input type="hidden" name="lab_test_id" value="{{ test.pk }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="patientGroup" class="form-label">Patient Group</label>
+                        <select class="form-select" id="patientGroup" name="group_id" required>
+                            <option value="">Select a group...</option>
+                            {% for group in all_groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="groupPrice" class="form-label">Price ({{ test.currency }})</label>
+                        <input type="number" class="form-control" id="groupPrice" name="price" step="0.01" min="0" required>
+                        <small class="text-muted">Default price: {{ test.price }}</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveGroupPriceBtn" onclick="saveGroupPrice()">
+                        <i class="bi bi-save me-1"></i>Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <style>
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

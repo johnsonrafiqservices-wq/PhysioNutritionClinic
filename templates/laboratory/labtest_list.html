@@ -353,8 +353,9 @@
                         <div class="col-md-4">
                             <label class="form-label fw-semibold small text-uppercase text-muted">Category <span class="text-danger">*</span></label>
                             <select name="category" id="m_category" class="form-select">
+                                <option value="">Select Category</option>
                                 {% for category in categories %}
-                                <option value="{{ category.code }}">{{ category.name }}</option>
+                                <option value="{{ category.id }}">{{ category.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -520,7 +521,7 @@
     function clearForm() {
         document.getElementById('m_name').value = '';
         document.getElementById('m_code').value = '';
-        document.getElementById('m_category').value = 'other';
+        document.getElementById('m_category').value = '';
         document.getElementById('m_sample_type').value = '';
         document.getElementById('m_duration_hours').value = '24';
         document.getElementById('m_price').value = '';
